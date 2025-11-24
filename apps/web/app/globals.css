@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+:root {
+  /* 8-bit Modern Light Palette */
+  --pixel-cream: #fff5e6;
+  --pixel-white: #ffffff;
+  --pixel-yellow: #ffd93d;
+  --pixel-pink: #ff6bcb;
+  --pixel-blue: #6bcbff;
+  --pixel-purple: #a78bfa;
+  --pixel-orange: #ff8551;
+  --pixel-green: #6bffb8;
+  --pixel-dark: #2d3561;
+  --pixel-gray: #8b95b0;
+  
+  /* Shadows */
+  --shadow-pixel: 4px 4px 0px var(--pixel-dark);
+  --shadow-pixel-sm: 2px 2px 0px var(--pixel-dark);
+}
+
+@theme inline {
+  --color-background: var(--pixel-cream);
+  --color-foreground: var(--pixel-dark);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--pixel-cream);
+  color: var(--pixel-dark);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Pixel Grid Background - Removed, not used */
+
+/* Pixel Border - Sharp edges, no blur */
+.pixel-border {
+  border: 3px solid var(--pixel-dark);
+  box-shadow: var(--shadow-pixel);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.pixel-border-sm {
+  border: 2px solid var(--pixel-dark);
+  box-shadow: var(--shadow-pixel-sm);
+}
+
+/* Pixel Card - Game cartridge style */
+.pixel-card {
+  background: var(--pixel-white);
+  border: 3px solid var(--pixel-dark);
+  box-shadow: var(--shadow-pixel);
+  position: relative;
+  /* transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); */
+}
+
+.pixel-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px var(--pixel-dark);
+}
+
+/* Pixel Button - Bouncy and fun */
+.pixel-btn {
+  background: var(--pixel-yellow);
+  border: 3px solid var(--pixel-dark);
+  box-shadow: var(--shadow-pixel);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); */
+  cursor: pointer;
+}
+
+.pixel-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px var(--pixel-dark);
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px var(--pixel-dark);
+}
+
+.pixel-btn-pink {
+  background: var(--pixel-pink);
+  color: white;
+}
+
+.pixel-btn-blue {
+  background: var(--pixel-blue);
+  color: var(--pixel-dark);
+}
+
+.pixel-btn-green {
+  background: var(--pixel-green);
+  color: var(--pixel-dark);
+}
+
+/* Bounce Animation - 60fps smooth */
+@keyframes pixel-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.pixel-bounce {
+  animation: pixel-bounce 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Slide In Animation */
+@keyframes pixel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pixel-slide-in {
+  animation: pixel-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+/* Pop Animation - For new items */
+@keyframes pixel-pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pixel-pop {
+  animation: pixel-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.pixel-dots::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle, rgba(45, 53, 97, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px;
+  animation: pixel-scroll 10s linear infinite;
+}
+
+/* Custom Scrollbar - 8-bit style */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pixel-cream);
+  border: 2px solid var(--pixel-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pixel-yellow);
+  border: 2px solid var(--pixel-dark);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pixel-pink);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading Spinner - 8-bit style */
+@keyframes pixel-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.pixel-spinner {
+  border: 4px solid var(--pixel-gray);
+  border-top: 4px solid var(--pixel-yellow);
+  border-radius: 0;
+  animation: pixel-spin 0.8s linear infinite;
+}
+
+/* Glitch Effect - Subtle */
+@keyframes pixel-glitch {
+  0%, 100% {
+    transform: translate(0);
+  }
+  33% {
+    transform: translate(-2px, 0);
+  }
+  66% {
+    transform: translate(2px, 0);
+  }
+}
+
+.pixel-glitch {
+  animation: pixel-glitch 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
