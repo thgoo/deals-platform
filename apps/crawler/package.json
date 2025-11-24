@@ -1,0 +1,31 @@
+{
+  "name": "telegram-crawler",
+  "version": "1.0.0",
+  "description": "Telegram channel crawler for promo monitoring",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "type-check": "tsc --noEmit",
+    "setup": "bun run src/setup.ts"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.1.2",
+    "dotenv": "^16.3.1",
+    "telegram": "^2.26.22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@stylistic/eslint-plugin": "^5.5.0",
+    "@types/bun": "latest",
+    "@types/node": "^20.10.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.46.4"
+  }
+}
