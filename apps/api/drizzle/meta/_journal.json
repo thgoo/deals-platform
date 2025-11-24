@@ -1,0 +1,13 @@
+{
+  "version": "0",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1762990528649,
+      "tag": "0000_loose_thundra",
+      "breakpoints": true
+    }
+  ]
+}
