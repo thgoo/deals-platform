@@ -1,15 +1,6 @@
 'use client';
 
-import {
-  ExternalLink,
-  Sparkles,
-  Store,
-  Tag,
-  Zap,
-  TrendingDown,
-  Flame,
-  DollarSign,
-} from 'lucide-react';
+import { Store, Tag, Zap, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
@@ -74,28 +65,16 @@ export default function LiveClient({ initialData }: LiveClientProps) {
   return (
     <div className="bg-background pixel-dots relative min-h-screen">
       {/* Top Bar - Game Boy Style */}
-      <div className="border-foreground sticky top-0 z-40 border-b-4 bg-(--pixel-yellow)">
+      <div className="sticky top-0 z-40 border-(--pixel-gray) bg-(--pixel-gray)">
         <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <div className="flex items-center gap-4">
-            <div className="pixel-bounce border-foreground flex h-12 w-12 items-center justify-center rounded-full border-3 bg-(--pixel-pink) shadow-[3px_3px_0px_var(--pixel-dark)]">
-              <Flame className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-foreground text-2xl leading-none font-black tracking-tight">
-                NÃO FOI CARO
-              </h1>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-3">
-            <div className="border-foreground rounded border-2 bg-(--pixel-pink) px-2 py-1 text-xs font-black tracking-wider text-white uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-              <Sparkles className="inline h-3 w-3" /> {items.length} ofertas
-            </div>
-            <div className="border-foreground text-foreground hidden rounded border-2 bg-(--pixel-blue) px-2 py-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)] sm:block">
-              <TrendingDown className="inline h-3 w-3" /> Até -70%
-            </div>
+            <Image
+              src="/images/barga-dark.svg"
+              alt="Barga"
+              width={220}
+              height={198}
+            />
           </div>
         </div>
       </div>
@@ -123,18 +102,18 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                         className="object-contain transition-transform duration-300"
                         onError={() => handleImageError(item.id)}
                       />
+                      {/* Store Badge - Floating */}
+                      {item.store && (
+                        <div className="border-foreground text-foreground absolute bottom-2 left-2 w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
+                          <Store className="relative -top-px inline h-4 w-4" />{' '}
+                          {item.store}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* Content */}
                   <div className="flex flex-1 flex-col space-y-3 p-4">
-                    {/* Store */}
-                    {item.store && (
-                      <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 py-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                        <Store className="inline h-3 w-3" /> {item.store}
-                      </div>
-                    )}
-
                     {/* Title */}
                     <h3 className="text-foreground line-clamp-2 text-sm leading-tight font-black">
                       {removeUrls(displayText)}
@@ -142,22 +121,21 @@ export default function LiveClient({ initialData }: LiveClientProps) {
 
                     {/* Bottom Section - Price + Coupons + CTA */}
                     <div className="mt-auto space-y-3">
-                      {/* Price */}
-                      {item.price && (
-                        <div className="flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-(--pixel-yellow)" />
-                          <span className="text-2xl font-black text-(--pixel-pink)">
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
-                      )}
-
                       {/* Coupons */}
                       {item.coupons && item.coupons.length > 0 && (
                         <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-green) px-2 py-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
                           <Tag className="inline h-3 w-3" />{' '}
                           {item.coupons.length}{' '}
                           {item.coupons.length === 1 ? 'cupom' : 'cupons'}
+                        </div>
+                      )}
+
+                      {/* Price */}
+                      {item.price && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-black text-(--pixel-pink)">
+                            {formatPrice(item.price)}
+                          </span>
                         </div>
                       )}
 
@@ -191,7 +169,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
         </div>
       </div>
 
-      {/* Modal - Centered */}
+      {/* Modal  */}
       {selectedDeal && (
         <>
           {/* Backdrop */}
@@ -204,7 +182,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
           <div className="fixed inset-4 z-50 m-auto flex max-h-[90vh] max-w-lg items-start justify-center pt-0 sm:inset-8">
             <div className="pixel-pop border-foreground max-h-full w-full overflow-y-auto rounded-xl border-4 bg-white shadow-[4px_4px_0px_var(--pixel-dark)]">
               {/* Header */}
-              <div className="border-foreground sticky top-0 z-10 flex items-center justify-between border-b-4 bg-(--pixel-yellow) p-4">
+              <div className="border-foreground sticky top-0 z-10 flex items-center justify-between border-b-4 bg-(--pixel-green) p-4">
                 <h2 className="text-foreground text-lg font-black">
                   Detalhes da Oferta
                 </h2>
@@ -212,7 +190,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                   onClick={() => setSelectedDeal(null)}
                   className="pixel-btn rounded-lg px-3 py-2 text-xs"
                 >
-                  ✕ Fechar
+                  Fechar
                 </button>
               </div>
 
@@ -233,8 +211,9 @@ export default function LiveClient({ initialData }: LiveClientProps) {
 
                 {/* Store */}
                 {selectedDeal.store && (
-                  <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 py-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                    <Store className="inline h-4 w-4" /> {selectedDeal.store}
+                  <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
+                    <Store className="relative -top-px inline h-4 w-4" />{' '}
+                    {selectedDeal.store}
                   </div>
                 )}
 
@@ -256,13 +235,13 @@ export default function LiveClient({ initialData }: LiveClientProps) {
 
                 {/* Price */}
                 {selectedDeal.price && (
-                  <div className="border-foreground flex items-center gap-4 rounded-lg border-3 bg-(--pixel-yellow) p-6 shadow-[4px_4px_0px_var(--pixel-dark)]">
-                    <DollarSign className="text-foreground h-16 w-16" />
+                  <div className="border-foreground flex items-center gap-4 rounded-lg border-3 bg-(--pixel-yellow) p-4 shadow-[4px_4px_0px_var(--pixel-dark)]">
+                    <DollarSign className="text-foreground h-12 w-12" />
                     <div>
                       <div className="text-foreground/60 text-xs font-bold uppercase">
                         Preço
                       </div>
-                      <div className="text-4xl font-black text-(--pixel-pink)">
+                      <div className="text-foreground text-3xl font-black">
                         {formatPrice(selectedDeal.price)}
                       </div>
                     </div>
@@ -315,9 +294,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                         rel="noopener noreferrer"
                         className="pixel-btn pixel-btn-pink block w-full rounded-lg py-4 text-center text-base"
                       >
-                        <ExternalLink className="inline h-5 w-5" />{' '}
                         {idx === 0 ? 'Ver Oferta' : `Opção ${idx + 1}`}{' '}
-                        <Zap className="inline h-5 w-5" />
                       </a>
                     ))}
                   </div>
