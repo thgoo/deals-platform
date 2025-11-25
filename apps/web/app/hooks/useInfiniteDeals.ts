@@ -36,8 +36,9 @@ export default function useInfiniteDeals({
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
       revalidateFirstPage: false,
       revalidateOnFocus: false,
-      revalidateOnMount: false, // Don't revalidate on mount if we have initial data
+      revalidateOnMount: false,
       fallbackData: initialData ? [initialData] : undefined,
+      keepPreviousData: true, // Keep previous data while loading
     });
 
   // Flatten all pages into single items array
@@ -70,23 +71,26 @@ export default function useInfiniteDeals({
         try {
           const newDeal = JSON.parse(event.data);
           console.log('🆕 New deal data:', newDeal);
-          console.log('🔧 Mutate function exists?', typeof mutate);
 
           // Insert new deal at the top with animation flag
           mutate(
             (pages) => {
               console.log('🔄 Mutating pages, current pages:', pages?.length);
 
-              // If no pages yet, create first page with the new deal
+              // If no pages yet, use initial data or create first page
               if (!pages || pages.length === 0) {
                 console.log(
                   '⚠️ No pages yet, creating first page with new deal',
                 );
+                const firstPage = initialData || {
+                  items: [],
+                  hasMore: true,
+                  nextCursor: null,
+                };
                 return [
                   {
-                    items: [newDeal],
-                    hasMore: true,
-                    nextCursor: null,
+                    ...firstPage,
+                    items: [newDeal, ...firstPage.items],
                   },
                 ];
               }
@@ -102,7 +106,7 @@ export default function useInfiniteDeals({
               );
               return newPages;
             },
-            false, // Don't revalidate
+            { revalidate: false }, // Don't revalidate
           );
         } catch (error) {
           console.error('❌ Error processing new-deal event:', error);
@@ -126,7 +130,7 @@ export default function useInfiniteDeals({
             }));
             return newPages;
           },
-          false, // Don't revalidate
+          { revalidate: false }, // Don't revalidate
         );
       });
 
