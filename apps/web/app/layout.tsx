@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: '#naofoicaro.com.br',
+  title: '#bargah.com.br',
   description:
     'Ao invés de ficar de olho em várias redes sociais, veja as principais promoções em tempo real!',
 };
