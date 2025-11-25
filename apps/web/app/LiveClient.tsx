@@ -1,9 +1,11 @@
 'use client';
 
-import { Store, Tag, Zap, DollarSign } from 'lucide-react';
+import { Store, Tag, DollarSign, Zap, SearchX } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
+import SearchFilters from './components/SearchFilters';
+import { useDebounce } from './hooks/useDebounce';
 import useInfiniteDeals from './hooks/useInfiniteDeals';
 import { formatPrice, removeUrls } from './utils';
 
@@ -17,9 +19,25 @@ export default function LiveClient({ initialData }: LiveClientProps) {
     new Set(),
   );
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [hasCoupon, setHasCoupon] = useState<boolean | null>(null);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
 
-  const { items, hasMore, isLoadingMore, isInitialLoading, observerTarget } =
-    useInfiniteDeals({ initialData });
+  const debouncedSearch = useDebounce(search, 500);
+
+  const {
+    items,
+    hasMore,
+    isLoadingMore,
+    isInitialLoading,
+    isFilteringInProgress,
+    observerTarget,
+  } = useInfiniteDeals({
+    initialData,
+    search: debouncedSearch,
+    hasCoupon,
+    stores: selectedStores,
+  });
 
   const hasImage = (item: Item) =>
     item.mediaType && item.localPath && !imageLoadErrors.has(item.id);
@@ -55,7 +73,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
         <div className="space-y-4 text-center">
           <div className="pixel-spinner mx-auto h-16 w-16" />
           <p className="text-foreground text-sm font-black tracking-wider uppercase">
-            Carregando ofertas...
+            Carregando promos...
           </p>
         </div>
       </div>
@@ -81,75 +99,111 @@ export default function LiveClient({ initialData }: LiveClientProps) {
 
       {/* Main Content */}
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+        <SearchFilters
+          search={search}
+          onSearchChange={setSearch}
+          hasCoupon={hasCoupon}
+          onHasCouponChange={setHasCoupon}
+          selectedStores={selectedStores}
+          onStoresChange={setSelectedStores}
+          availableStores={initialData?.availableStores}
+        />
+
+        {/* Indicador de filtragem em andamento */}
+        {isFilteringInProgress && (
+          <div className="border-foreground mt-4 flex items-center justify-center gap-3 rounded-lg border-2 bg-white px-6 py-3 shadow-[3px_3px_0px_var(--pixel-dark)]">
+            <div className="pixel-spinner h-5 w-5" />
+            <span className="text-foreground text-sm font-black">
+              Aplicando filtros...
+            </span>
+          </div>
+        )}
+        {/* Estado de sem resultados */}
+        {!isFilteringInProgress && !isInitialLoading && items.length === 0 && (
+          <div className="mt-8 flex flex-col items-center justify-center py-12 text-center">
+            <div className="border-foreground mb-4 rounded-full border-3 bg-(--pixel-yellow) p-6 shadow-[3px_3px_0px_var(--pixel-dark)]">
+              <SearchX className="h-12 w-12" />
+            </div>
+            <h3 className="text-foreground mb-2 text-xl font-black uppercase">
+              Nenhuma promo encontrada
+            </h3>
+          </div>
+        )}
+
         {/* Grid - Responsive */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {items.map((item) => {
-            const displayText = item.product || item.description || item.text;
+        {items.length > 0 && (
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {items.map((item) => {
+              const displayText = item.product || item.description || item.text;
 
-            return (
-              <div key={item.id} className="pixel-slide-in h-full">
-                <button
-                  onClick={() => setSelectedDeal(item)}
-                  className="pixel-card group relative flex h-full w-full flex-col overflow-hidden rounded-lg text-left"
+              return (
+                <div
+                  key={item.id}
+                  className="pixel-slide-in h-full transition-all duration-300"
                 >
-                  {/* Image */}
-                  {hasImage(item) && (
-                    <div className="pixel-dots border-foreground relative aspect-square w-full overflow-hidden border-b-3">
-                      <Image
-                        src={`/api/media?file=${item.localPath}`}
-                        alt={displayText}
-                        fill
-                        className="object-contain transition-transform duration-300"
-                        onError={() => handleImageError(item.id)}
-                      />
-                      {/* Store Badge - Floating */}
-                      {item.store && (
-                        <div className="border-foreground text-foreground absolute bottom-2 left-2 w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                          <Store className="relative -top-px inline h-4 w-4" />{' '}
-                          {item.store}
+                  <button
+                    onClick={() => setSelectedDeal(item)}
+                    className="pixel-card group relative flex h-full w-full flex-col overflow-hidden rounded-lg text-left"
+                  >
+                    {/* Image */}
+                    {hasImage(item) && (
+                      <div className="pixel-dots border-foreground relative aspect-square w-full overflow-hidden border-b-3">
+                        <Image
+                          src={`/api/media?file=${item.localPath}`}
+                          alt={displayText}
+                          fill
+                          className="object-contain transition-transform duration-300"
+                          onError={() => handleImageError(item.id)}
+                        />
+                        {/* Store Badge - Floating */}
+                        {item.store && (
+                          <div className="border-foreground text-foreground absolute bottom-2 left-2 w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
+                            <Store className="relative -top-px inline h-4 w-4" />{' '}
+                            {item.store}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="flex flex-1 flex-col space-y-3 p-4">
+                      {/* Title */}
+                      <h3 className="text-foreground line-clamp-2 text-sm leading-tight font-black">
+                        {removeUrls(displayText)}
+                      </h3>
+
+                      {/* Bottom Section - Price + Coupons + CTA */}
+                      <div className="mt-auto space-y-3">
+                        {/* Coupons */}
+                        {item.coupons && item.coupons.length > 0 && (
+                          <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-green) px-2 py-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
+                            <Tag className="inline h-3 w-3" />{' '}
+                            {item.coupons.length}{' '}
+                            {item.coupons.length === 1 ? 'cupom' : 'cupons'}
+                          </div>
+                        )}
+
+                        {/* Price */}
+                        {item.price && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-black text-(--pixel-pink)">
+                              {formatPrice(item.price)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* CTA */}
+                        <div className="pixel-btn pixel-btn-pink w-full rounded-lg text-center text-xs">
+                          Ver detalhes
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="flex flex-1 flex-col space-y-3 p-4">
-                    {/* Title */}
-                    <h3 className="text-foreground line-clamp-2 text-sm leading-tight font-black">
-                      {removeUrls(displayText)}
-                    </h3>
-
-                    {/* Bottom Section - Price + Coupons + CTA */}
-                    <div className="mt-auto space-y-3">
-                      {/* Coupons */}
-                      {item.coupons && item.coupons.length > 0 && (
-                        <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-green) px-2 py-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                          <Tag className="inline h-3 w-3" />{' '}
-                          {item.coupons.length}{' '}
-                          {item.coupons.length === 1 ? 'cupom' : 'cupons'}
-                        </div>
-                      )}
-
-                      {/* Price */}
-                      {item.price && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-black text-(--pixel-pink)">
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* CTA */}
-                      <div className="pixel-btn pixel-btn-pink w-full rounded-lg py-2 text-center text-xs">
-                        Ver detalhes
                       </div>
                     </div>
-                  </div>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Load More */}
         <div ref={observerTarget} className="flex justify-center py-12">
@@ -162,8 +216,9 @@ export default function LiveClient({ initialData }: LiveClientProps) {
             </div>
           )}
           {!hasMore && items.length > 0 && (
-            <div className="text-sm font-black tracking-wider text-(--pixel-gray) uppercase">
-              ✨ Todas as ofertas carregadas ✨
+            <div className="flex flex-row items-center gap-x-2 text-lg font-black tracking-wider text-(--pixel-gray) uppercase">
+              <Zap className="h-8 w-8 text-(--pixel-yellow)" /> Você chegou ao
+              fim <Zap className="h-8 w-8 text-(--pixel-yellow)" />
             </div>
           )}
         </div>
@@ -184,11 +239,11 @@ export default function LiveClient({ initialData }: LiveClientProps) {
               {/* Header */}
               <div className="border-foreground sticky top-0 z-10 flex items-center justify-between border-b-4 bg-(--pixel-green) p-4">
                 <h2 className="text-foreground text-lg font-black">
-                  Detalhes da Oferta
+                  Detalhes da promo
                 </h2>
                 <button
                   onClick={() => setSelectedDeal(null)}
-                  className="pixel-btn rounded-lg px-3 py-2 text-xs"
+                  className="pixel-btn rounded-lg px-2! py-1! text-xs"
                 >
                   Fechar
                 </button>
@@ -270,7 +325,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                               setCopiedCoupon(coupon.code);
                               setTimeout(() => setCopiedCoupon(null), 2000);
                             }}
-                            className="pixel-btn rounded px-3 py-1 text-xs"
+                            className="pixel-btn rounded py-1! text-xs"
                             title="Copiar cupom"
                           >
                             {copiedCoupon === coupon.code
@@ -292,9 +347,9 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                         href={link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="pixel-btn pixel-btn-pink block w-full rounded-lg py-4 text-center text-base"
+                        className="pixel-btn pixel-btn-pink block w-full rounded-lg text-center text-base"
                       >
-                        {idx === 0 ? 'Ver Oferta' : `Opção ${idx + 1}`}{' '}
+                        {idx === 0 ? 'Ver promo' : `Opção ${idx + 1}`}{' '}
                       </a>
                     ))}
                   </div>

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   /* 8-bit Modern Light Palette */
@@ -53,13 +53,11 @@ body {
   box-shadow: var(--shadow-pixel-sm);
 }
 
-/* Pixel Card - Game cartridge style */
 .pixel-card {
   background: var(--pixel-white);
   border: 3px solid var(--pixel-dark);
   box-shadow: var(--shadow-pixel);
   position: relative;
-  /* transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); */
 }
 
 .pixel-card:active {
@@ -69,14 +67,16 @@ body {
 
 /* Pixel Button - Bouncy and fun */
 .pixel-btn {
+  position: relative;
   background: var(--pixel-yellow);
   border: 3px solid var(--pixel-dark);
   box-shadow: var(--shadow-pixel);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  /* transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); */
   cursor: pointer;
+  padding: 0.5rem 1rem;
+  z-index: 10;
 }
 
 .pixel-btn:hover {
@@ -164,6 +164,7 @@ body {
   background-image: radial-gradient(circle, rgba(45, 53, 97, 0.08) 1px, transparent 1px);
   background-size: 8px 8px;
   animation: pixel-scroll 10s linear infinite;
+  z-index: 0;
 }
 
 /* Custom Scrollbar - 8-bit style */

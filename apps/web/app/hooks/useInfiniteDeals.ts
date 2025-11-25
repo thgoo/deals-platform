@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
+import { mutate as globalMutate } from 'swr';
 import useSWRInfinite from 'swr/infinite';
 import { getApiUrl } from '@/lib/config';
 import { PaginatedResponse } from '../types';
@@ -8,27 +9,48 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface UseInfiniteDealsProps {
   initialData?: PaginatedResponse | null;
+  search?: string;
+  hasCoupon?: boolean | null;
+  stores?: string[];
 }
 
 export default function useInfiniteDeals({
   initialData,
+  search = '',
+  hasCoupon = null,
+  stores = [],
 }: UseInfiniteDealsProps = {}) {
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Build query params - memoizado com useCallback
+  const buildQueryParams = useCallback(
+    (cursor?: string) => {
+      const params = new URLSearchParams();
+      params.set('limit', '16');
+
+      if (cursor) params.set('cursor', cursor);
+      if (search) params.set('search', search);
+      if (hasCoupon !== null) params.set('hasCoupon', String(hasCoupon));
+      if (stores.length > 0) params.set('stores', stores.join(','));
+
+      return params.toString();
+    },
+    [search, hasCoupon, stores],
+  );
 
   // SWR Infinite for pagination
   const getKey = (
     pageIndex: number,
     previousPageData: PaginatedResponse | null,
   ) => {
-    // Reached the end
     if (previousPageData && !previousPageData.hasMore) return null;
 
-    // First page
-    if (pageIndex === 0) return getApiUrl('/api/deals?limit=16');
+    if (pageIndex === 0) {
+      return getApiUrl(`/api/deals?${buildQueryParams()}`);
+    }
 
-    // Next pages with cursor
     return getApiUrl(
-      `/api/deals?limit=16&cursor=${previousPageData?.nextCursor}`,
+      `/api/deals?${buildQueryParams(previousPageData?.nextCursor || undefined)}`,
     );
   };
 
@@ -36,9 +58,12 @@ export default function useInfiniteDeals({
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
       revalidateFirstPage: false,
       revalidateOnFocus: false,
-      revalidateOnMount: false,
-      fallbackData: initialData ? [initialData] : undefined,
-      keepPreviousData: true, // Keep previous data while loading
+      revalidateOnMount: true,
+      fallbackData:
+        initialData && !search && hasCoupon === null && stores.length === 0
+          ? [initialData]
+          : undefined,
+      keepPreviousData: true, // Manter dados durante transições
     });
 
   // Flatten all pages into single items array
@@ -46,10 +71,13 @@ export default function useInfiniteDeals({
   const hasMore = data ? (data[data.length - 1]?.hasMore ?? true) : true;
   const isLoadingMore =
     isLoading || (size > 0 && data && typeof data[size - 1] === 'undefined');
+  // Considerar apenas carregamento inicial quando não há dados em nenhuma página
   const isInitialLoading = !data && isLoading;
 
-  // SSE - Real-time new deals
+  // SSE - Real-time new deals (always active)
   useEffect(() => {
+    // Always connect to SSE, even with filters active
+
     const url = getApiUrl('/api/deals/stream');
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
@@ -58,30 +86,61 @@ export default function useInfiniteDeals({
     const baseDelay = 1000; // 1s base
 
     const connect = () => {
-      console.log('Attempting SSE connection to:', url);
       eventSource = new EventSource(url);
 
       eventSource.onopen = () => {
-        console.log('✅ SSE connected successfully');
         reconnectAttempts = 0; // Reset on successful connection
       };
 
       eventSource.addEventListener('new-deal', (event) => {
-        console.log('🆕 SSE: new-deal event received');
         try {
           const newDeal = JSON.parse(event.data);
-          console.log('🆕 New deal data:', newDeal);
 
-          // Insert new deal at the top with animation flag
+          // Verificar se o novo deal corresponde aos filtros ativos
+          let matchesFilters = true;
+
+          // Verificar filtro de busca
+          if (search) {
+            const searchLower = search.toLowerCase();
+            const textToSearch = [
+              newDeal.product,
+              newDeal.description,
+              newDeal.text,
+              newDeal.store,
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+
+            if (!textToSearch.includes(searchLower)) {
+              matchesFilters = false;
+            }
+          }
+
+          // Verificar filtro de cupom
+          if (hasCoupon !== null) {
+            const hasCoupons = newDeal.coupons && newDeal.coupons.length > 0;
+            if ((hasCoupon && !hasCoupons) || (!hasCoupon && hasCoupons)) {
+              matchesFilters = false;
+            }
+          }
+
+          // Verificar filtro de lojas
+          if (stores.length > 0 && newDeal.store) {
+            if (!stores.includes(newDeal.store)) {
+              matchesFilters = false;
+            }
+          }
+
+          // Se não corresponde aos filtros, não adicionar
+          if (!matchesFilters) {
+            return;
+          }
+
+          // Adicionar o novo deal que corresponde aos filtros
           mutate(
             (pages) => {
-              console.log('🔄 Mutating pages, current pages:', pages?.length);
-
-              // If no pages yet, use initial data or create first page
               if (!pages || pages.length === 0) {
-                console.log(
-                  '⚠️ No pages yet, creating first page with new deal',
-                );
                 const firstPage = initialData || {
                   items: [],
                   hasMore: true,
@@ -96,18 +155,22 @@ export default function useInfiniteDeals({
               }
 
               const newPages = [...pages];
-              const oldItemsCount = newPages[0].items.length;
               newPages[0] = {
                 ...newPages[0],
                 items: [newDeal, ...newPages[0].items],
               };
-              console.log(
-                `✅ Added new deal. Items: ${oldItemsCount} → ${newPages[0].items.length}`,
-              );
               return newPages;
             },
             { revalidate: false }, // Don't revalidate
           );
+
+          // Programar uma revalidação do cache após um curto delay
+          // Isso garante que os dados estejam sincronizados com o servidor
+          setTimeout(() => {
+            // Invalidar especificamente a primeira página
+            const firstPageKey = getApiUrl(`/api/deals?${buildQueryParams()}`);
+            globalMutate(firstPageKey);
+          }, 10000); // 10 segundos de delay para não sobrecarregar
         } catch (error) {
           console.error('❌ Error processing new-deal event:', error);
         }
@@ -115,13 +178,9 @@ export default function useInfiniteDeals({
 
       eventSource.addEventListener('image-updated', (event) => {
         const { id, localPath } = JSON.parse(event.data);
-
-        // Update existing deal with image
         mutate(
           (pages) => {
             if (!pages || pages.length === 0) return pages;
-
-            // Map through all pages and update the matching deal
             const newPages = pages.map((page) => ({
               ...page,
               items: page.items.map((item) =>
@@ -136,20 +195,12 @@ export default function useInfiniteDeals({
 
       eventSource.onerror = () => {
         if (eventSource?.readyState === 2) {
-          // CLOSED
-          console.error('❌ SSE connection closed, reconnecting...');
           eventSource.close();
-
-          // Exponential backoff with max delay
           const delay = Math.min(
             baseDelay * Math.pow(2, reconnectAttempts),
             maxReconnectDelay,
           );
           reconnectAttempts++;
-
-          console.log(
-            `🔄 Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts})...`,
-          );
           reconnectTimeout = setTimeout(connect, delay);
         }
       };
@@ -158,11 +209,10 @@ export default function useInfiniteDeals({
     connect();
 
     return () => {
-      console.log('🔌 Closing SSE connection');
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       eventSource?.close();
     };
-  }, [mutate]);
+  }, [mutate, search, hasCoupon, stores, initialData, buildQueryParams]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -187,12 +237,16 @@ export default function useInfiniteDeals({
     };
   }, [hasMore, isLoadingMore, size, setSize]);
 
+  const isFilteringInProgress =
+    isValidating && data && data.length > 0 && !initialData;
+
   return {
     items,
     hasMore,
     isLoadingMore,
     isInitialLoading,
     isValidating,
+    isFilteringInProgress,
     observerTarget,
   };
 }

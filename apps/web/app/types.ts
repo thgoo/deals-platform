@@ -27,6 +27,7 @@ export interface PaginatedResponse {
   items: Item[];
   nextCursor: string | null;
   hasMore: boolean;
+  availableStores?: string[];
 }
 
 export const ANIMATION_TIMING = {
