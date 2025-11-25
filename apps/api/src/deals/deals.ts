@@ -67,11 +67,13 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
 
 /**
  * GET /api/deals
- * Lista deals com cursor-based pagination
+ * Lista deals com cursor-based pagination e filtros
  * Query params:
  *   - limit: número de itens (padrão: 16, máx: 100)
  *   - cursor: timestamp ISO do último deal carregado (opcional)
- *   - chat: filtrar por canal (opcional)
+ *   - search: busca em text, product, description, store (opcional)
+ *   - stores: lojas separadas por vírgula (opcional) - ex: "Amazon,Magalu,Kabum"
+ *   - hasCoupon: true para filtrar apenas deals com cupom (opcional)
  *
  * Response:
  *   - items: array de deals
@@ -80,15 +82,19 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
  */
 app.get('/', zValidator('query', listDealsQuerySchema), async c => {
   const dealService = c.get('dealService');
-  const { limit, cursor, chat } = c.req.valid('query');
+  const { limit, cursor, search, stores, hasCoupon } = c.req.valid('query');
 
   // Converter cursor string para Date se fornecido
   const cursorDate = cursor ? new Date(cursor) : undefined;
 
   // Buscar limit + 1 para saber se há mais itens
-  const deals = chat
-    ? await dealService.findByChatPaginated(chat, limit + 1, cursorDate)
-    : await dealService.findAllPaginated(limit + 1, cursorDate);
+  const deals = await dealService.findWithFilters({
+    limit: limit + 1,
+    cursor: cursorDate,
+    search,
+    stores,
+    hasCoupon,
+  });
 
   // Verificar se há mais itens
   const hasMore = deals.length > limit;
@@ -197,6 +203,29 @@ app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c =
 
   logger.warn('Photo ID not found', { photoId: photo_id });
   return c.json({ ok: true, updated: false });
+});
+
+/**
+ * GET /api/deals/stores
+ * Lista todas as lojas disponíveis para filtros
+ *
+ * Query params:
+ * - orderBy: 'count' (default) ou 'name' - ordenação das lojas
+ *
+ * Response:
+ * - stores: array de strings com nomes de lojas
+ */
+app.get('/stores', async c => {
+  const dealService = c.get('dealService');
+  const { orderBy } = c.req.query();
+
+  // Se orderBy=name, ordena alfabeticamente, caso contrário ordena por contagem
+  const orderByCount = orderBy !== 'name';
+  const stores = await dealService.getAvailableStores(orderByCount);
+
+  return c.json({
+    stores,
+  });
 });
 
 export default app;

@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Deal, NewDeal } from '~/db/schemas/deals';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
@@ -13,6 +13,40 @@ export class DealService {
       links: typeof deal.links === 'string' ? JSON.parse(deal.links) : deal.links,
       coupons: deal.coupons && typeof deal.coupons === 'string' ? JSON.parse(deal.coupons) : deal.coupons,
     };
+  }
+
+  /**
+   * Lista todas as lojas disponíveis para filtros
+   * @param orderByCount Se true, ordena pela frequência (mais comum primeiro)
+   * @returns Array de nomes de lojas distintas
+   */
+  async getAvailableStores(orderByCount = true): Promise<string[]> {
+    // Se orderByCount for true, adiciona contagem e ordena por ela
+    if (orderByCount) {
+      const result = await db.select({
+        store: dealsTable.store,
+        count: sql`COUNT(${dealsTable.store})`.as('count'),
+      })
+        .from(dealsTable)
+        .where(isNotNull(dealsTable.store))
+        .groupBy(dealsTable.store)
+        .orderBy(desc(sql`count`));
+
+      return result
+        .map(row => row.store as string)
+        .filter(Boolean);
+    }
+
+    // Caso contrário, ordena alfabeticamente
+    const result = await db.select({ store: dealsTable.store })
+      .from(dealsTable)
+      .where(isNotNull(dealsTable.store))
+      .groupBy(dealsTable.store)
+      .orderBy(dealsTable.store);
+
+    return result
+      .map(row => row.store as string)
+      .filter(Boolean);
   }
 
   /**
@@ -152,6 +186,66 @@ export class DealService {
       .where(conditions)
       .orderBy(desc(dealsTable.ts))
       .limit(limit);
+
+    return deals.map(deal => this.parseDeal(deal));
+  }
+
+  /**
+   * Busca deals com filtros avançados
+   * @param params - Parâmetros de busca e filtros
+   * @returns Deals que correspondem aos filtros, ordenados por data (mais recente primeiro)
+   */
+  async findWithFilters(params: {
+    limit: number;
+    cursor?: Date;
+    search?: string;
+    stores?: string[];
+    hasCoupon?: boolean;
+  }): Promise<Deal[]> {
+    const conditions = [];
+
+    // Cursor para paginação
+    if (params.cursor) {
+      conditions.push(lt(dealsTable.ts, params.cursor));
+    }
+
+    // Busca de texto em múltiplos campos (case-insensitive)
+    if (params.search) {
+      const searchPattern = `%${params.search}%`;
+      conditions.push(
+        or(
+          sql`${dealsTable.text} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
+          sql`${dealsTable.product} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
+          sql`${dealsTable.description} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
+          sql`${dealsTable.store} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
+        ),
+      );
+    }
+
+    // Filtro por múltiplas lojas (busca parcial, case-insensitive)
+    // Ex: "Magalu" encontra "Magalu no Aliexpress"
+    if (params.stores && params.stores.length > 0) {
+      conditions.push(
+        or(...params.stores.map(store =>
+          sql`${dealsTable.store} LIKE ${`%${store}%`} COLLATE utf8mb4_unicode_ci`,
+        )),
+      );
+    }
+
+    // Filtro de cupom
+    if (params.hasCoupon !== undefined) {
+      if (params.hasCoupon) {
+        conditions.push(isNotNull(dealsTable.coupons));
+      } else {
+        conditions.push(isNull(dealsTable.coupons));
+      }
+    }
+
+    const deals = await db.select()
+      .from(dealsTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(dealsTable.ts))
+      .limit(params.limit);
 
     return deals.map(deal => this.parseDeal(deal));
   }

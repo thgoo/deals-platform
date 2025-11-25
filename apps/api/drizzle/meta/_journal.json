@@ -8,6 +8,13 @@
       "when": 1762990528649,
       "tag": "0000_loose_thundra",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1764081101638,
+      "tag": "0001_cloudy_greymalkin",
+      "breakpoints": true
     }
   ]
 }

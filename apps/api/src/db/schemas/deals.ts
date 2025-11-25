@@ -49,6 +49,8 @@ export const dealsTable = mysqlTable('deals', {
   photoIdIdx: index('photo_id_idx').on(table.photoId),
   // Índice único para evitar duplicatas
   chatMessageIdx: index('chat_message_idx').on(table.chat, table.messageId),
+  // Índice para filtro por loja
+  storeIdx: index('store_idx').on(table.store),
 }));
 
 export type Deal = InferSelectModel<typeof dealsTable>;
