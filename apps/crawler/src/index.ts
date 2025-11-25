@@ -15,6 +15,7 @@ import {
   downloadAndNotify,
   cleanPromoText,
   generateCouponFallbackLinks,
+  filterRelevantLinks,
 } from './utils';
 
 // ============================================================================
@@ -108,11 +109,12 @@ async function main() {
       const rawText = message.message || '';
       const text = cleanPromoText(rawText);
       const links = extractLinks(message);
+      const filteredLinks = filterRelevantLinks(links);
       const serverTs = new Date(message.date * 1000);
       const receivedTs = new Date();
       const latencyS = (receivedTs.getTime() - serverTs.getTime()) / 1000;
 
-      const rewrittenLinks = await rewriteLinks(links.slice(0, 5), AFFILIATE_CONFIG);
+      const rewrittenLinks = await rewriteLinks(filteredLinks, AFFILIATE_CONFIG);
 
       console.log('[NEW]' +
         ` ${chatAlias}` +

@@ -289,3 +289,61 @@ export async function notifyBackendImageReady(
     console.error('✗ Failed to notify backend:', error);
   }
 }
+
+// ============================================================================
+// FILTER LINKS
+// ============================================================================
+/**
+ * Filtra links irrelevantes como canais de Telegram, links de afiliados para páginas sociais, etc.
+ * Mantém apenas links que apontam para produtos ou páginas relevantes.
+ */
+export function filterRelevantLinks(links: string[]): string[] {
+  if (!links || links.length === 0) return [];
+
+  return links.filter(link => {
+    // Ignorar links para canais do Telegram
+    if (link.includes('t.me/')) return false;
+
+    // Ignorar links encurtados para canais
+    if (link.includes('bit.ly/canal') ||
+        link.includes('adrena.click/ofertas') ||
+        link.includes('linkmc.click/ofertas')) return false;
+
+    // Ignorar links para páginas sociais do Mercado Livre
+    if (link.includes('mercadolivre.com.br/social/')) return false;
+
+    // Manter links de produtos específicos (Amazon, ML, etc)
+    if (link.includes('amazon.com.br/dp/') ||
+        link.includes('mercadolivre.com.br/p/MLB')) return true;
+
+    // Manter links de produtos Shopee
+    if (link.includes('shopee.com.br') && link.includes('/product/')) return true;
+
+    // Manter links de produtos AliExpress
+    if (link.includes('aliexpress.com/item/')) return true;
+
+    // Manter links de cupons específicos
+    if (link.includes('mercadolivre.com.br/cupons') ||
+        link.includes('amazon.com.br/promotion')) return true;
+
+    // Manter links encurtados que não são para canais (podem ser produtos)
+    if (link.includes('curt.link/') ||
+        link.includes('tidd.ly/') ||
+        link.includes('mercadolivre.com/sec/')) return true;
+
+    // Manter links da Natura
+    if (link.includes('natura.divulgador.link/')) return true;
+
+    // Para links da Amazon que não são de produtos específicos, verificar se são relevantes
+    // if (link.includes('amazon.com.br')) {
+    //   // Ignorar links para a página principal com parâmetros de afiliados
+    //   if (link.match(/amazon\.com\.br\/\?.*tag=/)) return false;
+
+    //   // Manter links para blackfriday e outras páginas de ofertas
+    //   return true;
+    // }
+
+    // Por padrão, manter links que não foram explicitamente filtrados
+    return true;
+  });
+}
