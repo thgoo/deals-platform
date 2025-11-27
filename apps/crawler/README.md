@@ -71,4 +71,50 @@ docker run --env-file .env -v ./sessions:/app/session -v ./media:/app/media tele
 - ✅ Send webhooks to backend
 - ✅ Handle 2FA authentication
 - ✅ Persistent sessions
+- ✅ Affiliate link generation via external APIs
+
+## External API Services
+
+The project includes a modular structure for interacting with external APIs for affiliate link generation:
+
+```
+src/
+├── services/
+│   ├── api/
+│   │   ├── interfaces.ts       # Common interfaces
+│   │   ├── config.ts          # API configurations
+│   │   ├── factory.ts         # Service factory
+│   │   ├── integration.ts      # Integration helpers
+│   │   ├── index.ts           # Exports
+│   │   └── providers/         # API implementations
+│   │       └── aliexpress.ts    # AliExpress API
+```
+
+### Using API Services
+
+```typescript
+// Example: Generate AliExpress affiliate link
+import { ApiServiceFactory } from './services/api';
+
+const aliexpressService = ApiServiceFactory.createService('aliexpress');
+if (aliexpressService) {
+  // Generate API URL
+  const apiUrl = await aliexpressService.generateLink(productUrl);
+  
+  // Make request and get affiliate link
+  const result = await aliexpressService.makeRequest(productUrl);
+  console.log('Affiliate link:', result.affiliateLink);
+}
+```
+
+### Environment Variables for API Services
+
+Add these to your `.env` file:
+
+```env
+# AliExpress API Service
+ALIEXPRESS_APP_KEY=your_app_key
+ALIEXPRESS_APP_SECRET=your_app_secret
+ALIEXPRESS_TRACKING_ID=your_tracking_id
+```
 
