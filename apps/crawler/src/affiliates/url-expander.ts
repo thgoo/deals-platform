@@ -32,7 +32,8 @@ export async function expandUrl(shortUrl: string): Promise<string> {
     });
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
-    logger.debug(`Initial response URL: ${finalUrl}, status: ${response.status}`);
+    // eslint-disable-next-line @stylistic/max-len
+    logger.debug(`Initial response URL: ${finalUrl}, status: ${response.status}, headers: ${JSON.stringify(response.headers)}`);
 
     // If it went through an affiliate network, try to follow one more redirect
     logger.debug(`Checking if ${finalUrl} is an affiliate network URL`);
