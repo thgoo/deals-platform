@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { fetchWithCloudflareBypass } from '../http';
 import { logger } from '../logger';
 
 const AFFILIATE_NETWORK_DOMAINS = [
@@ -38,9 +39,14 @@ export async function expandUrl(shortUrl: string): Promise<string> {
       },
     });
 
+    // If we got 403, try with CloudFlare bypass
+    if (response.status === 403) {
+      logger.debug(`Got 403, attempting CloudFlare bypass for ${shortUrl}`);
+      return expandUrlWithCloudflareBypass(shortUrl);
+    }
+
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
-    // eslint-disable-next-line @stylistic/max-len
-    logger.debug(`Initial response URL: ${finalUrl}, status: ${response.status}, headers: ${JSON.stringify(response.headers)}`);
+    logger.debug(`Initial response URL: ${finalUrl}, status: ${response.status}`);
 
     // If it went through an affiliate network, try to follow one more redirect
     logger.debug(`Checking if ${finalUrl} is an affiliate network URL`);
@@ -74,6 +80,32 @@ export async function expandUrl(shortUrl: string): Promise<string> {
     return finalUrl;
   } catch (error) {
     logger.error(`Failed to expand ${shortUrl}`, { error: error instanceof Error ? error.message : String(error) });
+    return shortUrl;
+  }
+}
+
+async function expandUrlWithCloudflareBypass(shortUrl: string): Promise<string> {
+  try {
+    logger.debug(`Using CloudFlare bypass for ${shortUrl}`);
+    const response = await fetchWithCloudflareBypass(shortUrl);
+
+    logger.debug(`CloudFlare bypass response received for ${shortUrl}`);
+
+    // Try to extract from HTML for known shorteners
+    if (response.data && (shortUrl.includes('tecno.click') || shortUrl.includes('tidd.ly'))) {
+      logger.debug(`Attempting to extract link from HTML for ${shortUrl}`);
+      const extractedLink = extractLinkFromHtml(response.data, shortUrl);
+      logger.debug(`Extracted link: ${extractedLink || 'null'}`);
+      if (extractedLink && isValidProductLink(extractedLink)) {
+        return extractedLink;
+      }
+    }
+
+    return shortUrl;
+  } catch (error) {
+    logger.error(`CloudFlare bypass failed for ${shortUrl}`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return shortUrl;
   }
 }
