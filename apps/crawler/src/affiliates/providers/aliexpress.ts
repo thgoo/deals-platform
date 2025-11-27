@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
-import { logger } from '../../logger';
 import type { AffiliateProvider } from './base';
+import { logger } from '../../logger';
 
 interface AliExpressConfig {
   appKey: string;
@@ -14,10 +14,10 @@ interface AliExpressApiResponse {
     resp_result?: {
       result?: {
         promotion_links?: {
-          promotion_link?: Array<{
+          promotion_link?: {
             promotion_link?: string;
             source_value?: string;
-          }>;
+          }[];
         };
       };
     };
@@ -38,9 +38,9 @@ class AliExpressProvider implements AffiliateProvider {
   }
 
   isConfigured(): boolean {
-    return this.config !== null && 
-           this.config.appKey !== '' && 
-           this.config.appSecret !== '' && 
+    return this.config !== null &&
+           this.config.appKey !== '' &&
+           this.config.appSecret !== '' &&
            this.config.trackingId !== '';
   }
 
@@ -48,7 +48,7 @@ class AliExpressProvider implements AffiliateProvider {
    * Rewrite using AliExpress API
    * If not configured or fails, returns null (original URL will be used)
    */
-  async rewrite(url: string, _config: unknown): Promise<string | null> {
+  async rewrite(url: string): Promise<string | null> {
     if (!this.isConfigured()) {
       logger.warn('AliExpress API not configured, skipping affiliate rewrite');
       return null;
@@ -57,7 +57,7 @@ class AliExpressProvider implements AffiliateProvider {
     try {
       // Limpa a URL
       const cleanUrl = this.cleanProductUrl(url);
-      
+
       // Gera a URL da API
       const apiUrl = this.generateApiUrl(cleanUrl);
 
@@ -98,7 +98,7 @@ class AliExpressProvider implements AffiliateProvider {
     try {
       const urlObj = new URL(url);
       return `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
-    } catch (error) {
+    } catch {
       logger.error('Invalid AliExpress URL', { url });
       throw new Error('Invalid URL');
     }

@@ -1,38 +1,40 @@
 import type { AffiliateConfig } from '../../config';
 import { logger } from '../../logger';
-import { providerRegistry } from './registry';
-import { amazonProvider } from './amazon';
-import { shopeeProvider } from './shopee';
-import { mercadoLivreProvider } from './mercadolivre';
 import { aliExpressProvider } from './aliexpress';
+import { amazonProvider } from './amazon';
 import { magaluProvider } from './magalu';
+import { mercadoLivreProvider } from './mercadolivre';
 import { naturaProvider } from './natura';
+import { providerRegistry } from './registry';
+import { shopeeProvider } from './shopee';
 
 /**
  * Initialize all affiliate providers
  * Call this once at startup
  */
 export function initializeProviders(config: AffiliateConfig): void {
-  // Register all providers
-  providerRegistry.register(amazonProvider);
-  providerRegistry.register(shopeeProvider);
-  providerRegistry.register(mercadoLivreProvider);
-  providerRegistry.register(magaluProvider);
-  providerRegistry.register(naturaProvider);
-  
-  // AliExpress needs special initialization if API is configured
+  const providers = [
+    amazonProvider,
+    shopeeProvider,
+    mercadoLivreProvider,
+    magaluProvider,
+    naturaProvider,
+    aliExpressProvider,
+  ];
+  for (const provider of providers) {
+    providerRegistry.register(provider);
+  }
+
   const aliConfig = config.aliexpress;
   if (aliConfig && typeof aliConfig === 'object') {
     const { appKey, appSecret, trackingId } = aliConfig;
     if (appKey && appSecret && trackingId) {
       aliExpressProvider.configure(appKey, appSecret, trackingId);
-      logger.info('AliExpress API configured');
     }
   }
-  providerRegistry.register(aliExpressProvider);
 
-  logger.info('Affiliate providers initialized', { 
-    count: providerRegistry.getAll().length 
+  logger.info('Affiliate providers initialized', {
+    count: providerRegistry.getAll().length,
   });
 }
 
