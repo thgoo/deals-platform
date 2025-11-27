@@ -16,7 +16,7 @@ export async function expandUrl(shortUrl: string): Promise<string> {
   try {
     const response = await axios.get(shortUrl, {
       maxRedirects: 10,
-      timeout: 5000,
+      timeout: 15000,
       validateStatus: () => true,
       headers: {
         // eslint-disable-next-line @stylistic/max-len
