@@ -1,8 +1,8 @@
 import type { AffiliateConfig } from '../config';
 import { logger } from '../logger';
+import { cleanUrl } from '../processing/utils';
 import { initializeProviders, providerRegistry } from './providers';
 import { expandUrl } from './url-expander';
-import { cleanUrl } from '../processing/utils';
 
 const SHORTENER_DOMAINS = [
   'amzn.to',
