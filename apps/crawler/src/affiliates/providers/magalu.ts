@@ -5,7 +5,12 @@ class MagaluProvider implements AffiliateProvider {
 
   canHandle(url: string): boolean {
     const urlLower = url.toLowerCase();
-    return urlLower.includes('magazineluiza.com.br') || urlLower.includes('magalu.');
+    const knownDomains = [
+      'magazineluiza.com.br',
+      'magalu.',
+      'magazinevoce.com.br',
+    ];
+    return knownDomains.some(domain => urlLower.includes(domain));
   }
 
   async rewrite(url: string, config: unknown): Promise<string | null> {
@@ -14,11 +19,13 @@ class MagaluProvider implements AffiliateProvider {
     try {
       const urlObj = new URL(url);
 
-      // Remove existing parameters
-      urlObj.searchParams.delete('partner_id');
+      const pathMatch = urlObj.pathname.match(/^\/([^/]+)(\/.*)/);
 
-      // Add affiliate parameter
-      urlObj.searchParams.set('partner_id', config);
+      if (!pathMatch) {
+        return null;
+      }
+
+      urlObj.pathname = `/${config}${pathMatch[2]}`;
 
       return urlObj.toString();
     } catch {

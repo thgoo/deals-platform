@@ -10,7 +10,7 @@ export interface AffiliateConfig {
   amazon?: string;
   shopee?: string;
   mercadolivre?: string;
-  aliexpress?: AliExpressApiConfig;
+  aliexpress: AliExpressApiConfig;
   magalu?: string;
   natura?: string;
 }
@@ -72,15 +72,11 @@ export const config: Config = {
     shopee: process.env.SHOPEE_AFFILIATE_ID,
     mercadolivre: process.env.MERCADOLIVRE_AFFILIATE_ID,
     // AliExpress: API oficial (obrigatório para funcionar)
-    aliexpress: process.env.ALIEXPRESS_APP_KEY && 
-                process.env.ALIEXPRESS_APP_SECRET && 
-                process.env.ALIEXPRESS_TRACKING_ID
-      ? {
-          appKey: process.env.ALIEXPRESS_APP_KEY,
-          appSecret: process.env.ALIEXPRESS_APP_SECRET,
-          trackingId: process.env.ALIEXPRESS_TRACKING_ID,
-        }
-      : undefined,
+    aliexpress: {
+      appKey: process.env.ALIEXPRESS_APP_KEY || '',
+      appSecret: process.env.ALIEXPRESS_APP_SECRET || '',
+      trackingId: process.env.ALIEXPRESS_TRACKING_ID || '',
+    },
     magalu: process.env.MAGALU_AFFILIATE_ID,
     natura: process.env.NATURA_AFFILIATE_ID,
   },
