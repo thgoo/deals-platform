@@ -28,6 +28,13 @@ export async function expandUrl(shortUrl: string): Promise<string> {
         'Accept-Encoding': 'gzip, deflate',
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.google.com/',
+        'Sec-CH-UA': '"Google Chrome";v="131", "Chromium";v="131", ";Not A Brand";v="24"',
+        'Sec-CH-UA-Mobile': '?0',
+        'Sec-CH-UA-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
       },
     });
 
