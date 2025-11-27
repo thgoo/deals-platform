@@ -2,6 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import type { AffiliateProvider } from './base';
 import { logger } from '../../logger';
+import { cleanUrl } from '../../processing/utils';
 
 interface AliExpressConfig {
   appKey: string;
@@ -56,12 +57,12 @@ class AliExpressProvider implements AffiliateProvider {
 
     try {
       // Limpa a URL
-      const cleanUrl = this.cleanProductUrl(url);
+      const cleanedUrl = cleanUrl(url);
 
       // Gera a URL da API
-      const apiUrl = this.generateApiUrl(cleanUrl);
+      const apiUrl = this.generateApiUrl(cleanedUrl);
 
-      logger.info('Calling AliExpress API', { productUrl: cleanUrl });
+      logger.info('Calling AliExpress API', { productUrl: cleanedUrl });
 
       // Faz a requisição
       const response = await axios.get<AliExpressApiResponse>(apiUrl, {
@@ -88,19 +89,6 @@ class AliExpressProvider implements AffiliateProvider {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Error calling AliExpress API', { error: errorMsg });
       return null;
-    }
-  }
-
-  /**
-   * Limpa a URL do produto removendo query params
-   */
-  private cleanProductUrl(url: string): string {
-    try {
-      const urlObj = new URL(url);
-      return `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
-    } catch {
-      logger.error('Invalid AliExpress URL', { url });
-      throw new Error('Invalid URL');
     }
   }
 

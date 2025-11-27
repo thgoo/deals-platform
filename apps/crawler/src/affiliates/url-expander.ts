@@ -13,7 +13,9 @@ const AFFILIATE_NETWORK_DOMAINS = [
  * Expands shortened URLs by following redirects
  */
 export async function expandUrl(shortUrl: string): Promise<string> {
+  logger.debug(`Attempting to expand URL: ${shortUrl}`);
   try {
+    logger.debug(`Making HTTP request to: ${shortUrl}`);
     const response = await axios.get(shortUrl, {
       maxRedirects: 10,
       timeout: 15000,
@@ -36,8 +38,10 @@ export async function expandUrl(shortUrl: string): Promise<string> {
     });
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
+    logger.debug(`Initial response URL: ${finalUrl}, status: ${response.status}`);
 
     // If it went through an affiliate network, try to follow one more redirect
+    logger.debug(`Checking if ${finalUrl} is an affiliate network URL`);
     if (isAffiliateNetworkUrl(finalUrl)) {
       const actualDestination = await followAffiliateNetwork(finalUrl);
       if (actualDestination) {
@@ -47,14 +51,18 @@ export async function expandUrl(shortUrl: string): Promise<string> {
 
     // If redirect worked and changed URL
     if (finalUrl !== shortUrl && !finalUrl.includes('/ap/signin')) {
+      logger.debug(`URL expanded successfully to: ${finalUrl}`);
       return finalUrl;
     }
 
     // Try to extract from HTML for known shorteners
     const contentType = response.headers['content-type'] || '';
+    logger.debug(`Content-Type: ${contentType}`);
     if (contentType.includes('text/html') && response.data) {
       if (shortUrl.includes('tecno.click') || shortUrl.includes('tidd.ly')) {
+        logger.debug(`Attempting to extract link from HTML for ${shortUrl}`);
         const extractedLink = extractLinkFromHtml(response.data, shortUrl);
+        logger.debug(`Extracted link: ${extractedLink || 'null'}`);
         if (extractedLink && isValidProductLink(extractedLink)) {
           return extractedLink;
         }
@@ -63,7 +71,7 @@ export async function expandUrl(shortUrl: string): Promise<string> {
 
     return finalUrl;
   } catch (error) {
-    logger.error(`Failed to expand ${shortUrl}`, { error });
+    logger.error(`Failed to expand ${shortUrl}`, { error: error instanceof Error ? error.message : String(error) });
     return shortUrl;
   }
 }

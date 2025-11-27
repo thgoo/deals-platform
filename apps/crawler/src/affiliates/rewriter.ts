@@ -2,6 +2,7 @@ import type { AffiliateConfig } from '../config';
 import { logger } from '../logger';
 import { initializeProviders, providerRegistry } from './providers';
 import { expandUrl } from './url-expander';
+import { cleanUrl } from '../processing/utils';
 
 const SHORTENER_DOMAINS = [
   'amzn.to',
@@ -49,9 +50,10 @@ async function rewriteSingleLink(
 
     let finalUrl = url;
 
-    // Expand shortened links
+    // Always try to expand if it's a shortener
     if (isShortened) {
       finalUrl = await expandUrl(url);
+      logger.debug(`Expanded ${url} to ${finalUrl}`);
     }
 
     // Find provider that can handle this URL
@@ -59,7 +61,10 @@ async function rewriteSingleLink(
 
     if (!provider) {
       logger.debug(`No provider found for URL: ${finalUrl}`);
-      return url;
+      // If no provider, return expanded URL without query params
+      const cleanedUrl = cleanUrl(finalUrl);
+      logger.debug(`Cleaned URL (no provider): ${cleanedUrl}`);
+      return cleanedUrl;
     }
 
     // Get config for this provider
@@ -68,7 +73,8 @@ async function rewriteSingleLink(
     // Rewrite using provider
     const rewritten = await provider.rewrite(finalUrl, providerConfig);
 
-    return rewritten ?? url;
+    // Always return the expanded/rewritten URL, not the original
+    return rewritten ?? finalUrl;
   } catch (error) {
     logger.error(`Error rewriting link ${url}`, { error });
     return url;

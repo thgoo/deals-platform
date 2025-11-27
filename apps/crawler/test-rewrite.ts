@@ -20,7 +20,7 @@ async function testSingleUrl(originalUrl: string): Promise<void> {
 
   const expandedUrl = await expandUrl(originalUrl);
 
-  if (expandedUrl) {
+  if (expandedUrl != rewrittenUrl) {
     console.log('\n🌐 EXPANDED URL');
     console.log(`   ${expandedUrl}`);
   }

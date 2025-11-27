@@ -20,3 +20,19 @@ export function calculateMessageLatency(serverTimestamp: number): {
     formattedLatency: `${latencySeconds.toFixed(1)}s`,
   };
 }
+
+/**
+ * Removes all query parameters and hash fragments from a URL
+ * @param url The URL to clean
+ * @returns The cleaned URL with only protocol, host, and pathname
+ */
+export function cleanUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    // Remove query params and hash by reconstructing the URL
+    return `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
+  } catch {
+    // If URL parsing fails, return the original
+    return url;
+  }
+}
