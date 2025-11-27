@@ -1,4 +1,4 @@
-import cloudscraper from 'cloudscraper';
+import CloudScraper from 'cloudscraper.js';
 import { logger } from '../logger';
 
 export interface CloudflareResponse {
@@ -7,6 +7,11 @@ export interface CloudflareResponse {
   headers: Record<string, string>;
 }
 
+const scraper = new CloudScraper({
+  usePython3: true,
+  timeoutInSeconds: 15,
+});
+
 /**
  * HTTP client that bypasses CloudFlare protection
  */
@@ -14,17 +19,14 @@ export async function fetchWithCloudflareBypass(url: string): Promise<Cloudflare
   try {
     logger.debug(`Fetching URL with CloudFlare bypass: ${url}`);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await (cloudscraper as any)(url, {
-      timeout: 15000,
-    });
+    const response = await scraper.get(url);
 
-    logger.debug(`CloudFlare bypass successful for ${url}`);
+    logger.debug(`CloudFlare bypass successful for ${url}, status: ${response.status}`);
 
     return {
-      status: 200,
-      data: response,
-      headers: {},
+      status: response.status,
+      data: response.text(),
+      headers: (typeof response.headers === 'object' ? response.headers : {}) as Record<string, string>,
     };
   } catch (error) {
     logger.error(`CloudFlare bypass failed for ${url}`, {
