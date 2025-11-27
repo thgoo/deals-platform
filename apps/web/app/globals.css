@@ -60,11 +60,6 @@ body {
   position: relative;
 }
 
-.pixel-card:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px var(--pixel-dark);
-}
-
 /* Pixel Button - Bouncy and fun */
 .pixel-btn {
   position: relative;

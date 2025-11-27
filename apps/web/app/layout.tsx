@@ -1,6 +1,7 @@
+import { GoogleTagManager } from '@next/third-parties/google';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Inter } from 'next/font/google';
 import './globals.css';
+import { Geist, Geist_Mono, Inter } from 'next/font/google';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,7 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
+      <GoogleTagManager gtmId="GTM-KWSXXTV4" />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
       >
