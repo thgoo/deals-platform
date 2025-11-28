@@ -1,4 +1,4 @@
-import { GoogleTagManager } from '@next/third-parties/google';
+import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import './globals.css';
 import { Geist, Geist_Mono, Inter } from 'next/font/google';
@@ -32,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <GoogleTagManager gtmId="GTM-KWSXXTV4" />
+      <GoogleAnalytics gaId="G-5CE7FZ2TYX" />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
       >

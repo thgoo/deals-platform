@@ -3,9 +3,9 @@
 import { sendGAEvent } from '@next/third-parties/google';
 import { Store, Tag, DollarSign, Zap, SearchX, ArrowUp } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
+import DefaultDealImage from './components/DefaultDealImage';
 import SearchFilters from './components/SearchFilters';
 import { useDebounce } from './hooks/useDebounce';
 import useInfiniteDeals from './hooks/useInfiniteDeals';
@@ -44,6 +44,10 @@ export default function LiveClient({ initialData }: LiveClientProps) {
 
   const hasImage = (item: Item) =>
     item.mediaType && item.localPath && !imageLoadErrors.has(item.id);
+
+  const getImageSrc = (item: Item) => {
+    return hasImage(item) ? `/api/media?file=${item.localPath}` : null;
+  };
 
   const handleLogoClick = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -123,7 +127,13 @@ export default function LiveClient({ initialData }: LiveClientProps) {
             className="relative flex h-20 w-36 cursor-pointer items-center gap-4 sm:w-48"
             aria-label="Voltar para o início"
           >
-            <Image src="/images/barga-dark.svg" alt="Barga" fill sizes="100%" />
+            <Image
+              src="/images/barga-dark.svg"
+              alt="Barga"
+              fill
+              sizes="100%"
+              loading="eager"
+            />
           </button>
         </div>
       </div>
@@ -170,24 +180,26 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                   className="pixel-slide-in h-full transition-all duration-300"
                 >
                   <div className="pixel-card group relative flex h-full w-full flex-col overflow-hidden rounded-lg text-left">
-                    {hasImage(item) && (
-                      <div className="pixel-dots border-foreground relative aspect-square w-full overflow-hidden border-b-3">
+                    <div className="pixel-dots border-foreground relative aspect-square w-full overflow-hidden border-b-3">
+                      {getImageSrc(item) ? (
                         <Image
-                          src={`/api/media?file=${item.localPath}`}
+                          src={getImageSrc(item)!}
                           alt={displayText}
                           fill
                           sizes="100%"
                           className="object-contain transition-transform duration-300"
                           onError={() => handleImageError(item.id)}
                         />
-                        {item.store && (
-                          <div className="border-foreground text-foreground absolute bottom-2 left-2 w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                            <Store className="relative -top-px inline h-4 w-4" />{' '}
-                            {item.store}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      ) : (
+                        <DefaultDealImage />
+                      )}
+                      {item.store && (
+                        <div className="border-foreground text-foreground absolute bottom-2 left-2 w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
+                          <Store className="relative -top-px inline h-4 w-4" />{' '}
+                          {item.store}
+                        </div>
+                      )}
+                    </div>
 
                     <div className="flex flex-1 flex-col space-y-3 p-4">
                       <h3 className="text-foreground line-clamp-2 text-sm leading-tight font-black">
@@ -266,17 +278,20 @@ export default function LiveClient({ initialData }: LiveClientProps) {
               </div>
 
               <div className="space-y-6 p-6">
-                {hasImage(selectedDeal) && (
-                  <div className="pixel-dots border-foreground relative aspect-video w-full overflow-hidden rounded-lg border-3">
+                <div className="pixel-dots border-foreground relative aspect-video w-full overflow-hidden rounded-lg border-3">
+                  {getImageSrc(selectedDeal) ? (
                     <Image
-                      src={`/api/media?file=${selectedDeal.localPath}`}
+                      src={getImageSrc(selectedDeal)!}
                       alt={selectedDeal.product || selectedDeal.text}
                       fill
+                      sizes="100%"
                       className="object-contain p-6"
                       onError={() => handleImageError(selectedDeal.id)}
                     />
-                  </div>
-                )}
+                  ) : (
+                    <DefaultDealImage />
+                  )}
+                </div>
 
                 {selectedDeal.store && (
                   <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
