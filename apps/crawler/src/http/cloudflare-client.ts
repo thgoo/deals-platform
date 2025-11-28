@@ -29,9 +29,15 @@ export async function fetchWithCloudflareBypass(url: string): Promise<Cloudflare
       headers: (typeof response.headers === 'object' ? response.headers : {}) as Record<string, string>,
     };
   } catch (error) {
-    logger.error(`CloudFlare bypass failed for ${url}`, {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      errorMessage = JSON.stringify(error);
+    } else {
+      errorMessage = String(error);
+    }
+    logger.error(`CloudFlare bypass failed for ${url}`, { error: errorMessage });
     throw error;
   }
 }
