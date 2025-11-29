@@ -60,11 +60,11 @@ export default function LiveClient({ initialData }: LiveClientProps) {
   };
 
   const handleDealClick = (deal: Item) => {
-    setSelectedDeal(deal);
     sendGAEvent('event', 'deal_click', {
       deal_id: deal.id,
       deal_title: deal.product,
     });
+    setSelectedDeal(deal);
   };
 
   useEffect(() => {
@@ -311,7 +311,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                       {selectedDeal.store}
                     </div>
                   )}
-                  <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-gray) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider shadow-[2px_2px_0px_var(--pixel-dark)]">
+                  <div className="border-foreground text-foreground bg-background w-fit rounded border-2 px-2 pt-[5px] pb-1 text-xs font-black tracking-wider shadow-[2px_2px_0px_var(--pixel-dark)]">
                     {formatDateTime(selectedDeal.ts)}
                   </div>
                 </div>
