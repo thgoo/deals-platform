@@ -23,7 +23,7 @@ export function formatPrice(priceInCents: number): string {
  * Format date/time for display
  */
 export function formatDateTime(dateString: string): string {
-  return new Date(dateString).toLocaleString('pt-BR');
+  return new Date(dateString).toLocaleString('pt-BR').replace(',', ' às');
 }
 
 /**
@@ -41,6 +41,26 @@ export function formatTime(dateString: string): string {
  */
 export function getFilename(path: string): string {
   return path.split('/').pop() || '';
+}
+
+/**
+ * Format relative time (e.g., "há 2h", "há 30m")
+ */
+export function formatRelativeTime(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSecs < 60) return 'agora';
+  if (diffMins < 60) return `há ${diffMins}m`;
+  if (diffHours < 24) return `há ${diffHours}h`;
+  if (diffDays < 7) return `há ${diffDays}d`;
+
+  return new Date(dateString).toLocaleDateString('pt-BR');
 }
 
 /**

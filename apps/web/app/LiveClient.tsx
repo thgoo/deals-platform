@@ -9,7 +9,12 @@ import DefaultDealImage from './components/DefaultDealImage';
 import SearchFilters from './components/SearchFilters';
 import { useDebounce } from './hooks/useDebounce';
 import useInfiniteDeals from './hooks/useInfiniteDeals';
-import { formatPrice, removeUrls } from './utils';
+import {
+  formatPrice,
+  removeUrls,
+  formatRelativeTime,
+  formatDateTime,
+} from './utils';
 
 interface LiveClientProps {
   initialData: PaginatedResponse | null;
@@ -56,7 +61,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
 
   const handleDealClick = (deal: Item) => {
     setSelectedDeal(deal);
-    sendGAEvent('deal_click', {
+    sendGAEvent('event', 'deal_click', {
       deal_id: deal.id,
       deal_title: deal.product,
     });
@@ -199,6 +204,12 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                           {item.store}
                         </div>
                       )}
+                      <div
+                        className="border-foreground text-foreground bg-background absolute top-2 right-2 w-fit rounded border-2 px-2 pt-[5px] pb-1 text-xs font-black tracking-wider shadow-[2px_2px_0px_var(--pixel-dark)]"
+                        title={formatDateTime(item.ts)}
+                      >
+                        {formatRelativeTime(item.ts)}
+                      </div>
                     </div>
 
                     <div className="flex flex-1 flex-col space-y-3 p-4">
@@ -293,12 +304,17 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                   )}
                 </div>
 
-                {selectedDeal.store && (
-                  <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                    <Store className="relative -top-px inline h-4 w-4" />{' '}
-                    {selectedDeal.store}
+                <div className="flex flex-wrap gap-2">
+                  {selectedDeal.store && (
+                    <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
+                      <Store className="relative -top-px inline h-4 w-4" />{' '}
+                      {selectedDeal.store}
+                    </div>
+                  )}
+                  <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-gray) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider shadow-[2px_2px_0px_var(--pixel-dark)]">
+                    {formatDateTime(selectedDeal.ts)}
                   </div>
-                )}
+                </div>
 
                 <h3 className="text-foreground text-2xl leading-tight font-black">
                   {removeUrls(
