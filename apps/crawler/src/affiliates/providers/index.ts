@@ -2,6 +2,7 @@ import type { AffiliateConfig } from '../../config';
 import { logger } from '../../logger';
 import { aliExpressProvider } from './aliexpress';
 import { amazonProvider } from './amazon';
+import { awinProvider } from './awin';
 import { magaluProvider } from './magalu';
 import { mercadoLivreProvider } from './mercadolivre';
 import { naturaProvider } from './natura';
@@ -20,6 +21,7 @@ export function initializeProviders(config: AffiliateConfig): void {
     magaluProvider,
     naturaProvider,
     aliExpressProvider,
+    awinProvider,
   ];
   for (const provider of providers) {
     providerRegistry.register(provider);

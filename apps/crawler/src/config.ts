@@ -6,6 +6,11 @@ export interface AliExpressApiConfig {
   trackingId: string;
 }
 
+export interface AwinApiConfig {
+  publisherId: string;
+  token: string;
+}
+
 export interface AffiliateConfig {
   amazon?: string;
   shopee?: string;
@@ -13,6 +18,7 @@ export interface AffiliateConfig {
   aliexpress: AliExpressApiConfig;
   magalu?: string;
   natura?: string;
+  awin?: AwinApiConfig;
 }
 
 export interface Config {
@@ -76,6 +82,10 @@ export const config: Config = {
       appKey: process.env.ALIEXPRESS_APP_KEY || '',
       appSecret: process.env.ALIEXPRESS_APP_SECRET || '',
       trackingId: process.env.ALIEXPRESS_TRACKING_ID || '',
+    },
+    awin: {
+      publisherId: process.env.AWIN_PUBLISHER_ID || '',
+      token: process.env.AWIN_TOKEN || '',
     },
     magalu: process.env.MAGALU_AFFILIATE_ID,
     natura: process.env.NATURA_AFFILIATE_ID,
