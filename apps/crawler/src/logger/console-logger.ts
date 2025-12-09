@@ -6,13 +6,16 @@ import type { Logger } from './types';
  */
 export class ConsoleLogger implements Logger {
   private readonly isDevelopment: boolean;
+  private readonly logLevel: string;
+  private readonly levels = ['debug', 'info', 'warn', 'error'];
 
   constructor() {
     this.isDevelopment = process.env.NODE_ENV !== 'production';
+    this.logLevel = process.env.LOG_LEVEL || (this.isDevelopment ? 'debug' : 'info');
   }
 
-  private shouldLog(): boolean {
-    return process.env.NODE_ENV !== 'test';
+  private shouldLogLevel(level: string): boolean {
+    return this.levels.indexOf(level) >= this.levels.indexOf(this.logLevel);
   }
 
   private getLogIcon(level: string): string {
@@ -51,7 +54,7 @@ export class ConsoleLogger implements Logger {
   }
 
   private log(level: string, message: string, meta?: Record<string, unknown>) {
-    if (!this.shouldLog()) return;
+    if (!this.shouldLogLevel(level)) return;
 
     const now = new Date();
     const timestamp = now.toISOString();

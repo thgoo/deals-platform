@@ -36,3 +36,21 @@ export function cleanUrl(url: string): string {
     return url;
   }
 }
+
+/**
+ * Removes specific query parameters from a URL
+ * @param url The URL to clean
+ * @param params Array of parameter names to remove
+ * @returns The URL without the specified parameters
+ */
+export function removeUrlParams(url: string, params: string[]): string {
+  try {
+    const urlObj = new URL(url);
+    for (const param of params) {
+      urlObj.searchParams.delete(param);
+    }
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
+}

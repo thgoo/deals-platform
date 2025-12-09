@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AffiliateProvider } from './base';
 import { logger } from '../../logger';
+import { removeUrlParams } from '../../processing/utils';
 
 const AWIN_API_URL = 'https://api.awin.com/publishers';
 
@@ -34,7 +35,6 @@ class AwinProvider implements AffiliateProvider {
       const urlObj = new URL(url);
       const domain = urlObj.hostname.replace('www.', '');
 
-      // Encontrar advertiser ID para este domínio
       const advertiserId = Object.entries(ADVERTISER_IDS)
         .find(([d]) => domain.includes(d))?.[1];
 
@@ -43,15 +43,8 @@ class AwinProvider implements AffiliateProvider {
         return null;
       }
 
-      // Limpar URL antes de enviar (remover parâmetros de afiliado existentes)
-      urlObj.searchParams.delete('aw_affid');
-      urlObj.searchParams.delete('awc');
-      urlObj.searchParams.delete('utm_source');
-      urlObj.searchParams.delete('utm_medium');
-      urlObj.searchParams.delete('utm_campaign');
-      urlObj.searchParams.delete('utm_content');
-      urlObj.searchParams.delete('utm_term');
-      const cleanUrl = urlObj.toString();
+      const AWIN_PARAMS = ['aw_affid', 'awc', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+      const cleanUrl = removeUrlParams(url, AWIN_PARAMS);
 
       logger.debug(`Generating Awin link for ${cleanUrl}`, { advertiserId });
 
@@ -60,7 +53,7 @@ class AwinProvider implements AffiliateProvider {
         {
           advertiserId,
           destinationUrl: cleanUrl,
-          shorten: false,
+          shorten: true,
         },
         {
           headers: {
