@@ -16,6 +16,7 @@ const SHORTENER_DOMAINS = [
   'natura.divulgador.link',
   'tecno.click',
   'curt.link',
+  'cutt.ly',
 ];
 
 let providersInitialized = false;

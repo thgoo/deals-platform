@@ -9,6 +9,16 @@ const AFFILIATE_NETWORK_DOMAINS = [
   'redirect.viglink.com',
 ];
 
+const HEADERS = {
+  // eslint-disable-next-line @stylistic/max-len
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate',
+  'Connection': 'keep-alive',
+  'Cache-Control': 'max-age=0',
+};
+
 /**
  * Expands shortened URLs by following redirects
  */
@@ -20,15 +30,7 @@ export async function expandUrl(shortUrl: string): Promise<string> {
       maxRedirects: 10,
       timeout: 15000,
       validateStatus: () => true,
-      headers: {
-        // eslint-disable-next-line @stylistic/max-len
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'max-age=0',
-      },
+      headers: HEADERS,
     });
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
@@ -89,9 +91,7 @@ async function followAffiliateNetwork(networkUrl: string): Promise<string | null
       maxRedirects: 5,
       timeout: 5000,
       validateStatus: () => true,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
+      headers: HEADERS,
     });
 
     const finalUrl = response.request.res?.responseUrl || response.config.url;
