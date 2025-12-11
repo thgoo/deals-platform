@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "test:rewrite": "bun test-rewrite.ts",
-    "test:ali": "bun test-ali.ts"
+    "reprocess": "bun reprocess-deals.ts"
   },
   "dependencies": {
     "axios": "^1.6.0",
