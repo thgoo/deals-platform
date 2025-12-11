@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// Schema para media (opcional)
 export const mediaSchema = z.object({
   type: z.string(),
   photo_id: z.union([z.string(), z.number()]).optional(),
@@ -13,7 +12,6 @@ export const mediaSchema = z.object({
   local_path: z.string().optional(),
 }).optional();
 
-// Schema para cupom
 export const couponSchema = z.object({
   code: z.string(),
   discount: z.string().optional(),
@@ -22,7 +20,6 @@ export const couponSchema = z.object({
   url: z.string().optional(),
 });
 
-// Schema para criar deal (webhook do crawler)
 export const createDealSchema = z.object({
   message_id: z.number(),
   chat: z.string().min(1),
@@ -38,25 +35,20 @@ export const createDealSchema = z.object({
   product: z.string().nullable().optional(),
 });
 
-// Schema para atualizar imagem
 export const updateImageSchema = z.object({
   photo_id: z.string().min(1),
   local_path: z.string().min(1),
 });
 
-// Schema para query params (GET /api/deals)
 export const listDealsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(16),
-  cursor: z.string().datetime().optional(), // timestamp do último deal carregado
+  cursor: z.string().datetime().optional(),
 
-  // Filtros de busca
-  search: z.string().min(1).optional(), // busca em text, product, description, store
-  stores: z.string().optional(), // lojas separadas por vírgula: "Amazon,Magalu,Kabum"
-  hasCoupon: z.string().optional(), // 'true' ou 'false' como string
+  search: z.string().min(1).optional(),
+  stores: z.string().optional(),
+  hasCoupon: z.string().optional(),
 }).transform(data => ({
   ...data,
-  // Converter string separada por vírgula em array
   stores: data.stores ? data.stores.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-  // Converter string 'true'/'false' para boolean
   hasCoupon: data.hasCoupon === 'true' ? true : data.hasCoupon === 'false' ? false : undefined,
 }));

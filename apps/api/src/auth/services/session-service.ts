@@ -45,7 +45,6 @@ class SessionService {
       || new Date(Date.now() + SESSION_DURATION_MS)
     ).toUTCString();
     if (config.NODE_ENV === 'production') {
-      // When deployed over HTTPS
       response.headers.append(
         'Set-Cookie',
         `session=${
@@ -55,7 +54,6 @@ class SessionService {
         }; Path=/; Secure;`,
       );
     } else {
-      // When deployed over HTTP (localhost)
       response.headers.append(
         'Set-Cookie',
         `session=${
@@ -113,13 +111,11 @@ class SessionService {
 
   public deleteSessionTokenCookie(response: Response): void {
     if (config.NODE_ENV === 'production') {
-      // When deployed over HTTPS
       response.headers.append(
         'Set-Cookie',
         'session=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/; Secure;',
       );
     } else {
-      // When deployed over HTTP
       response.headers.append(
         'Set-Cookie',
         'session=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/',

@@ -13,7 +13,5 @@ export const usersTable = mysqlTable('users', {
   password: varchar({ length: 255 }).notNull(),
 });
 
-// User type excludes password for safety - password should only be accessed
-// during authentication (login/register), never exposed in API responses or context
 export type User = Omit<InferSelectModel<typeof usersTable>, 'password'>;
 export type NewUser = typeof usersTable.$inferInsert;

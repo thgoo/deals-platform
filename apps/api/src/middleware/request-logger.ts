@@ -1,17 +1,12 @@
 import type { MiddlewareHandler } from 'hono';
 
-/**
- * Custom request logger middleware that includes query strings
- * Follows the same format as ConsoleLogger with timestamp and colored query params
- */
 export const requestLogger = (): MiddlewareHandler => {
   return async (c, next) => {
     const { method, path } = c.req;
     const start = Date.now();
 
-    // Capturar query string
     const url = new URL(c.req.url);
-    const queryString = url.search; // Retorna ?param=value ou string vazia
+    const queryString = url.search;
 
     await next();
 
@@ -19,16 +14,15 @@ export const requestLogger = (): MiddlewareHandler => {
     const elapsed = end - start;
     const status = c.res.status;
 
-    // Colorir status baseado no código
-    let statusColor = '\x1b[32m'; // Verde para 2xx
-    if (status >= 300 && status < 400) statusColor = '\x1b[36m'; // Cyan para 3xx
-    if (status >= 400 && status < 500) statusColor = '\x1b[33m'; // Amarelo para 4xx
-    if (status >= 500) statusColor = '\x1b[31m'; // Vermelho para 5xx
+    // Color status based on code
+    let statusColor = '\x1b[32m'; // Green for 2xx
+    if (status >= 300 && status < 400) statusColor = '\x1b[36m'; // Cyan for 3xx
+    if (status >= 400 && status < 500) statusColor = '\x1b[33m'; // Yellow for 4xx
+    if (status >= 500) statusColor = '\x1b[31m'; // Red for 5xx
 
     const reset = '\x1b[0m';
     const gray = '\x1b[90m';
 
-    // Formatar hora no mesmo padrão do ConsoleLogger (HH:MM:SS)
     const now = new Date();
     const time = now.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
@@ -37,7 +31,6 @@ export const requestLogger = (): MiddlewareHandler => {
       hour12: false,
     });
 
-    // Construir log com query string em cinza
     const pathPart = path;
     const queryPart = queryString ? `${gray}${queryString}${reset}` : '';
     const methodLabel = `[${method}]`;

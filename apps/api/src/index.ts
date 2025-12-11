@@ -12,8 +12,6 @@ import DealService from '~/deals/services/deal-service';
 import { ConsoleLogger } from '~/logger';
 import { requestLogger } from '~/middleware/request-logger';
 import { HttpError } from '~/utils/errors';
-import { isAuthorized } from './auth/middleware/isAuthorized';
-import { isGuest } from './auth/middleware/isGuest';
 import { HTTP_STATUS_CODE } from './constants/http';
 
 export function createApp({
@@ -26,7 +24,6 @@ export function createApp({
 } = {}) {
   const app = new Hono({ strict: true });
 
-  // CORS - permitir requisições do frontend
   app.use('*', cors({
     origin: config.CORS_ORIGINS.split(',').map(o => o.trim()),
     credentials: true,
@@ -46,19 +43,6 @@ export function createApp({
 
   app.route('/api/auth', auth);
   app.route('/api/deals', deals);
-
-  app.get('/api/example/public', c => {
-    return c.json({ message: 'This is a public route. Anyone can access it.' });
-  });
-
-  app.get('/api/example/protected', isAuthorized, c => {
-    const user = c.get('user');
-    return c.json({ message: `Welcome, ${user.name}! This is a protected route.` });
-  });
-
-  app.get('/api/example/guest-only', isGuest, c => {
-    return c.json({ message: 'You are a guest. This route is only for unauthenticated users.' });
-  });
 
   app.onError(async (err, c) => {
     const logger = c.get('logger');

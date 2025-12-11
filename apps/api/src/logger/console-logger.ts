@@ -1,9 +1,5 @@
 import type { Logger } from './types';
 
-/**
- * Console Logger with pretty output for development
- * Uses colored, human-readable format in dev and JSON in production
- */
 export class ConsoleLogger implements Logger {
   private readonly isDevelopment: boolean;
 
@@ -56,7 +52,6 @@ export class ConsoleLogger implements Logger {
     const now = new Date();
     const timestamp = now.toISOString();
 
-    // Production: JSON format for log aggregators
     if (!this.isDevelopment) {
       const logData = {
         level,
@@ -70,13 +65,11 @@ export class ConsoleLogger implements Logger {
       return;
     }
 
-    // Development: Pretty format with local time
     const color = this.getLogColor(level);
     const icon = this.getLogIcon(level);
     const reset = '\x1b[0m';
     const gray = '\x1b[90m';
 
-    // Format time in local timezone (HH:MM:SS)
     const time = now.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit',

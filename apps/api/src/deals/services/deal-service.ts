@@ -5,7 +5,7 @@ import { dealsTable } from '~/db/schemas/deals';
 
 export class DealService {
   /**
-   * Parse JSON fields que podem vir como string do MySQL
+   * Parse JSON fields that may come as string from MySQL
    */
   private parseDeal(deal: Deal): Deal {
     return {
@@ -16,16 +16,12 @@ export class DealService {
   }
 
   /**
-   * Lista todas as lojas disponíveis para filtros
-   * @param orderByCount Se true, ordena pela frequência (mais comum primeiro)
-   * @param sinceDays Número de dias para considerar na contagem (default: 3)
-   * @returns Array de nomes de lojas distintas
+   * List all available stores for filtering
    */
   async getAvailableStores(orderByCount = true, sinceDays = 3): Promise<string[]> {
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - sinceDays);
 
-    // Se orderByCount for true, adiciona contagem e ordena por ela
     if (orderByCount) {
       const result = await db.select({
         store: dealsTable.store,
@@ -44,7 +40,6 @@ export class DealService {
         .filter(Boolean);
     }
 
-    // Caso contrário, ordena alfabeticamente
     const result = await db.select({ store: dealsTable.store })
       .from(dealsTable)
       .where(and(
@@ -60,7 +55,7 @@ export class DealService {
   }
 
   /**
-   * Cria um novo deal
+   * Create a new deal
    */
   async create(data: NewDeal): Promise<Deal> {
     const [result] = await db.insert(dealsTable).values(data);
@@ -74,7 +69,7 @@ export class DealService {
   }
 
   /**
-   * Lista deals ordenados por timestamp (mais recentes primeiro)
+   * List deals ordered by timestamp (most recent first)
    */
   async findAll(limit = 32): Promise<Deal[]> {
     const deals = await db.select()
@@ -86,7 +81,7 @@ export class DealService {
   }
 
   /**
-   * Busca deal por ID
+   * Find deal by ID
    */
   async findById(id: number): Promise<Deal | null> {
     const [deal] = await db.select()
@@ -97,8 +92,7 @@ export class DealService {
   }
 
   /**
-   * Verifica se deal já existe (deduplicação)
-   * Equivalente ao keyOf(chat, id) do Next.js
+   * Check if deal already exists (deduplication)
    */
   async exists(chat: string, messageId: number): Promise<boolean> {
     const [deal] = await db.select({ id: dealsTable.id })
@@ -115,9 +109,7 @@ export class DealService {
   }
 
   /**
-   * Atualiza o caminho local da imagem quando o download termina
-   * Chamado pelo webhook /api/deals/image
-   * @returns Deal atualizado ou null se não encontrado
+   * Update local image path when download completes
    */
   async updateImage(photoId: string, localPath: string): Promise<Deal | null> {
     const result = await db.update(dealsTable)
@@ -128,7 +120,6 @@ export class DealService {
       return null;
     }
 
-    // Buscar deal atualizado
     const [deal] = await db.select()
       .from(dealsTable)
       .where(eq(dealsTable.photoId, photoId));
@@ -137,7 +128,7 @@ export class DealService {
   }
 
   /**
-   * Busca deals por canal
+   * Find deals by chat channel
    */
   async findByChat(chat: string, limit = 100): Promise<Deal[]> {
     const deals = await db.select()
@@ -150,7 +141,7 @@ export class DealService {
   }
 
   /**
-   * Conta total de deals
+   * Count total deals
    */
   async count(): Promise<number> {
     const [result] = await db.select({ count: dealsTable.id })
@@ -160,10 +151,7 @@ export class DealService {
   }
 
   /**
-   * Lista deals com cursor-based pagination (para infinite scroll)
-   * @param limit - Número de itens a retornar
-   * @param cursor - Timestamp do último deal carregado (opcional)
-   * @returns Deals mais antigos que o cursor, ordenados do mais recente ao mais antigo
+   * List deals with cursor-based pagination
    */
   async findAllPaginated(limit: number, cursor?: Date): Promise<Deal[]> {
     const query = db.select()
@@ -180,11 +168,7 @@ export class DealService {
   }
 
   /**
-   * Lista deals por chat com cursor-based pagination
-   * @param chat - Nome do canal
-   * @param limit - Número de itens a retornar
-   * @param cursor - Timestamp do último deal carregado (opcional)
-   * @returns Deals mais antigos que o cursor, ordenados do mais recente ao mais antigo
+   * List deals by chat with cursor-based pagination
    */
   async findByChatPaginated(chat: string, limit: number, cursor?: Date): Promise<Deal[]> {
     const conditions = cursor
@@ -201,9 +185,7 @@ export class DealService {
   }
 
   /**
-   * Busca deals com filtros avançados
-   * @param params - Parâmetros de busca e filtros
-   * @returns Deals que correspondem aos filtros, ordenados por data (mais recente primeiro)
+   * Find deals with advanced filters
    */
   async findWithFilters(params: {
     limit: number;
@@ -214,12 +196,10 @@ export class DealService {
   }): Promise<Deal[]> {
     const conditions = [];
 
-    // Cursor para paginação
     if (params.cursor) {
       conditions.push(lt(dealsTable.ts, params.cursor));
     }
 
-    // Busca de texto em múltiplos campos (case-insensitive)
     if (params.search) {
       const searchPattern = `%${params.search}%`;
       conditions.push(
@@ -232,8 +212,6 @@ export class DealService {
       );
     }
 
-    // Filtro por múltiplas lojas (busca parcial, case-insensitive)
-    // Ex: "Magalu" encontra "Magalu no Aliexpress"
     if (params.stores && params.stores.length > 0) {
       conditions.push(
         or(...params.stores.map(store =>
@@ -242,7 +220,6 @@ export class DealService {
       );
     }
 
-    // Filtro de cupom
     if (params.hasCoupon !== undefined) {
       if (params.hasCoupon) {
         conditions.push(isNotNull(dealsTable.coupons));
