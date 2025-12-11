@@ -29,7 +29,6 @@ export async function rewriteLinks(
   links: string[],
   config: AffiliateConfig,
 ): Promise<string[]> {
-  // Initialize providers on first call
   if (!providersInitialized) {
     initializeProviders(config);
     providersInitialized = true;
@@ -47,35 +46,28 @@ async function rewriteSingleLink(
   config: AffiliateConfig,
 ): Promise<string> {
   try {
-    // Detect if it's a shortener
     const isShortened = SHORTENER_DOMAINS.some(domain => url.includes(domain));
 
     let finalUrl = url;
 
-    // Always try to expand if it's a shortener
     if (isShortened) {
       finalUrl = await expandUrl(url);
       logger.debug(`Expanded ${url} to ${finalUrl}`);
     }
 
-    // Find provider that can handle this URL
     const provider = providerRegistry.findProvider(finalUrl);
 
     if (!provider) {
       logger.debug(`No provider found for URL: ${finalUrl}`);
-      // If no provider, return expanded URL without query params
       const cleanedUrl = cleanUrl(finalUrl);
       logger.debug(`Cleaned URL (no provider): ${cleanedUrl}`);
       return cleanedUrl;
     }
 
-    // Get config for this provider
     const providerConfig = config[provider.name as keyof AffiliateConfig];
 
-    // Rewrite using provider
     const rewritten = await provider.rewrite(finalUrl, providerConfig);
 
-    // Always return the expanded/rewritten URL, not the original
     return rewritten ?? finalUrl;
   } catch (error) {
     logger.error(`Error rewriting link ${url}`, { error });

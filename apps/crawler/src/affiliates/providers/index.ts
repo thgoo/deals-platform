@@ -9,10 +9,6 @@ import { naturaProvider } from './natura';
 import { providerRegistry } from './registry';
 import { shopeeProvider } from './shopee';
 
-/**
- * Initialize all affiliate providers
- * Call this once at startup
- */
 export function initializeProviders(config: AffiliateConfig): void {
   const providers = [
     amazonProvider,

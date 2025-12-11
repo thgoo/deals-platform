@@ -45,10 +45,6 @@ class AliExpressProvider implements AffiliateProvider {
            this.config.trackingId !== '';
   }
 
-  /**
-   * Rewrite using AliExpress API
-   * If not configured or fails, returns null (original URL will be used)
-   */
   async rewrite(url: string): Promise<string | null> {
     if (!this.isConfigured()) {
       logger.warn('AliExpress API not configured, skipping affiliate rewrite');
@@ -56,15 +52,12 @@ class AliExpressProvider implements AffiliateProvider {
     }
 
     try {
-      // Limpa a URL
       const cleanedUrl = cleanUrl(url);
 
-      // Gera a URL da API
       const apiUrl = this.generateApiUrl(cleanedUrl);
 
       logger.info('Calling AliExpress API', { productUrl: cleanedUrl });
 
-      // Faz a requisição
       const response = await axios.get<AliExpressApiResponse>(apiUrl, {
         timeout: 10000,
         headers: {
@@ -72,7 +65,6 @@ class AliExpressProvider implements AffiliateProvider {
         },
       });
 
-      // Extrai o link de afiliado da resposta
       const affiliateLink = response.data
         ?.aliexpress_affiliate_link_generate_response
         ?.resp_result?.result?.promotion_links?.promotion_link?.[0]?.promotion_link;
@@ -82,7 +74,6 @@ class AliExpressProvider implements AffiliateProvider {
         return affiliateLink;
       }
 
-      // Se não conseguiu gerar link, retorna null
       logger.warn('Failed to extract affiliate link from AliExpress API response');
       return null;
     } catch (error) {
@@ -93,26 +84,21 @@ class AliExpressProvider implements AffiliateProvider {
   }
 
   /**
-   * Gera a assinatura MD5 para a API
+   * Generates MD5 signature for API authentication
+   * Formula: MD5(appSecret + sortedParams + appSecret).toUpperCase()
    */
   private generateSign(params: Record<string, string>, appSecret: string): string {
-    // 1. Ordena os parâmetros por chave (alfabeticamente)
     const sortedKeys = Object.keys(params).sort();
 
-    // 2. Concatena: app_secret + k1+v1 + k2+v2 + ... + app_secret
     let signString = appSecret;
     for (const key of sortedKeys) {
       signString += key + params[key];
     }
     signString += appSecret;
 
-    // 3. Calcula MD5 e retorna em maiúsculas
     return crypto.createHash('md5').update(signString, 'utf8').digest('hex').toUpperCase();
   }
 
-  /**
-   * Gera a URL completa da API com todos os parâmetros e assinatura
-   */
   private generateApiUrl(cleanUrl: string): string {
     if (!this.config) {
       throw new Error('AliExpress provider not configured');
@@ -120,7 +106,6 @@ class AliExpressProvider implements AffiliateProvider {
 
     const timestamp = Date.now().toString();
 
-    // Parâmetros da requisição (sem o 'sign')
     const params: Record<string, string> = {
       app_key: this.config.appKey,
       format: 'json',
@@ -134,11 +119,9 @@ class AliExpressProvider implements AffiliateProvider {
       v: '1',
     };
 
-    // Gera a assinatura
     const sign = this.generateSign(params, this.config.appSecret);
     params.sign = sign;
 
-    // Monta a URL completa
     const baseUrl = 'https://api-sg.aliexpress.com/sync';
     const queryString = new URLSearchParams(params).toString();
     return `${baseUrl}?${queryString}`;

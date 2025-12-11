@@ -39,7 +39,6 @@ async function main() {
   console.log(`✓ API_HASH: ${API_HASH.substring(0, 10)}...`);
   console.log(`✓ Session Dir: ${SESSION_DIR}\n`);
 
-  // Create session directory
   await fs.mkdir(SESSION_DIR, { recursive: true });
 
   const sessionPath = path.join(SESSION_DIR, `${SESSION_NAME}.session`);
@@ -72,7 +71,6 @@ async function main() {
       process.exit(1);
     }
 
-    // Save session
     const newSessionString = client.session.save();
     if (typeof newSessionString === 'string') {
       await fs.writeFile(sessionPath, newSessionString, 'utf-8');

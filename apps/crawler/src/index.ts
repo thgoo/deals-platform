@@ -19,7 +19,6 @@ async function main() {
       throw new Error('TARGET_CHATS is empty. Set @channel1,@channel2,... in environment.');
     }
 
-    // Initialize Telegram client
     await telegramClient.initialize(
       config.telegram.apiId,
       config.telegram.apiHash,
@@ -28,7 +27,6 @@ async function main() {
       config.targetChats,
     );
 
-    // Set up message handler
     telegramClient.onMessage(async message => {
       try {
         await messageHandler.handle(message);

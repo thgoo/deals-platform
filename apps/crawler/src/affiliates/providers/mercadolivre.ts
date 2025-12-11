@@ -14,17 +14,14 @@ class MercadoLivreProvider implements AffiliateProvider {
     try {
       const urlObj = new URL(url);
 
-      // Skip non-product links
       if (urlObj.pathname.includes('/social/') ||
           urlObj.pathname.includes('/stores/') ||
           urlObj.pathname.includes('/ofertas/')) {
         return null;
       }
 
-      // Remove existing parameters
       urlObj.searchParams.delete('pdp_source');
 
-      // Add affiliate parameter
       urlObj.searchParams.set('pdp_source', config);
 
       return urlObj.toString();

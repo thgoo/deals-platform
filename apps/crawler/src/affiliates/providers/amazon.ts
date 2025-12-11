@@ -14,12 +14,10 @@ class AmazonProvider implements AffiliateProvider {
     try {
       const urlObj = new URL(url);
 
-      // Remove existing affiliate parameters
       urlObj.searchParams.delete('tag');
       urlObj.searchParams.delete('linkCode');
       urlObj.searchParams.delete('ref_');
 
-      // Add affiliate tag
       urlObj.searchParams.set('tag', config);
 
       return urlObj.toString();

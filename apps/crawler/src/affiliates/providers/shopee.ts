@@ -41,7 +41,7 @@ class ShopeeProvider implements AffiliateProvider {
   }
 
   /**
-   * Gera a assinatura SHA256 para autenticação
+   * Generates SHA256 signature for authentication
    * Signature = SHA256(AppId + Timestamp + Payload + Secret)
    */
   private generateSignature(timestamp: number, payload: string): string {
@@ -54,7 +54,7 @@ class ShopeeProvider implements AffiliateProvider {
   }
 
   /**
-   * Gera o header de autorização
+   * Generates authorization header
    * Authorization: SHA256 Credential={AppId}, Timestamp={Timestamp}, Signature={Signature}
    */
   private generateAuthHeader(timestamp: number, payload: string): string {

@@ -31,10 +31,8 @@ class TelegramClientService {
   ): Promise<void> {
     logger.info('Initializing Telegram client...', { apiId, sessionDir });
 
-    // Create session directory
     await fs.mkdir(sessionDir, { recursive: true });
 
-    // Load or create session
     const sessionPath = path.join(sessionDir, `${sessionName}.session`);
     let sessionString = '';
     try {
@@ -58,13 +56,11 @@ class TelegramClientService {
     }
     logger.info('User authorized');
 
-    // Save session
     const newSessionString = this.client.session.save();
     if (typeof newSessionString === 'string') {
       await fs.writeFile(sessionPath, newSessionString, 'utf-8');
     }
 
-    // Setup event handlers
     this.client.addEventHandler(
       this.handleNewMessage.bind(this),
       new NewMessage({ chats: targetChats }),

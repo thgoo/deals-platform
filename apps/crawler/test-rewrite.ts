@@ -8,7 +8,6 @@ async function testSingleUrl(originalUrl: string): Promise<void> {
   console.log(`   ${originalUrl}`);
   console.log(`   ${originalUrl.length} characters`);
 
-  // Call the REAL rewriter code (this is the actual production code!)
   const results = await rewriteLinks([originalUrl], config.affiliates);
   const rewrittenUrl = results[0];
 

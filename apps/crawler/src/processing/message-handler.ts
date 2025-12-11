@@ -15,7 +15,6 @@ import { calculateMessageLatency } from './utils';
 class MessageHandler {
   async handle(message: TelegramMessage): Promise<void> {
     try {
-      // Extract basic message info
       const { id, peerId, message: rawText, date } = message;
 
       if (!(peerId instanceof Api.PeerChannel)) {
@@ -25,16 +24,13 @@ class MessageHandler {
 
       const chatId = peerId.channelId.toString();
 
-      // Get chat entity
       const entity = await telegramClient.getEntity(Number(peerId.channelId));
       const chatAlias = entity.className === 'Channel'
         ? (entity.username as string || chatId)
         : chatId;
 
-      // Clean text
       const cleanedText = cleanPromoText(rawText);
 
-      // Process links
       const links = await linkProcessor.processLinks(message, config.affiliates);
 
       const serverTs = new Date(date * 1000);
@@ -48,13 +44,11 @@ class MessageHandler {
         textLength: cleanedText.length,
       });
 
-      // Rule: require any link OR 'r$' in text
       if (!links.length && !cleanedText.toLowerCase().includes('r$')) {
         logger.debug('Message has no links and no price mention, skipping');
         return;
       }
 
-      // Extract using AI service
       let extraction;
       try {
         extraction = await aiExtractor.extract(
@@ -70,7 +64,6 @@ class MessageHandler {
         return;
       }
 
-      // If there are coupons but no product links, add fallback link
       let finalLinks = links;
       if (extraction.coupons.length > 0 && links.length === 0) {
         const fallbackLinks = linkProcessor.generateCouponFallbackLinks(
@@ -83,7 +76,6 @@ class MessageHandler {
         }
       }
 
-      // Build payload
       const payload: DealPayload = {
         message_id: id,
         chat: chatAlias,
@@ -98,21 +90,17 @@ class MessageHandler {
         product: extraction.product ?? undefined,
       };
 
-      // Process media if present
       if (message.media) {
         const mediaInfo = mediaDownloader.extractMediaInfo(message.media);
         if (mediaInfo) {
           payload.media = mediaInfo;
         }
 
-        // Download photo if it's a photo
         if (mediaInfo?.type === 'photo' && mediaInfo.photo_id) {
-          // Download async (don't wait)
           this.downloadAndNotifyMedia(mediaInfo.photo_id, id, chatId);
         }
       }
 
-      // Send to webhook
       await webhookClient.sendDeal(payload);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

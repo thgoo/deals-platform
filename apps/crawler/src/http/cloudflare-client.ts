@@ -12,9 +12,6 @@ const scraper = new CloudScraper({
   timeoutInSeconds: 15,
 });
 
-/**
- * HTTP client that bypasses CloudFlare protection
- */
 export async function fetchWithCloudflareBypass(url: string): Promise<CloudflareResponse> {
   try {
     logger.debug(`Fetching URL with CloudFlare bypass: ${url}`);

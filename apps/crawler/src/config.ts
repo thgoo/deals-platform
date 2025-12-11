@@ -90,7 +90,6 @@ export const config: Config = {
       secret: process.env.SHOPEE_SECRET || '',
     },
     mercadolivre: process.env.MERCADOLIVRE_AFFILIATE_ID,
-    // AliExpress: API oficial (obrigatório para funcionar)
     aliexpress: {
       appKey: process.env.ALIEXPRESS_APP_KEY || '',
       appSecret: process.env.ALIEXPRESS_APP_SECRET || '',

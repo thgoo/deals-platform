@@ -5,7 +5,6 @@ import { removeUrlParams } from '../../processing/utils';
 
 const AWIN_API_URL = 'https://api.awin.com/publishers';
 
-// Mapeamento de domínios para advertiser IDs na Awin
 const ADVERTISER_IDS: Record<string, number> = {
   'kabum.com.br': 17729,
   'adidas.com.br': 79926,

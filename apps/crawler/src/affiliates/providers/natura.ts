@@ -13,10 +13,8 @@ class NaturaProvider implements AffiliateProvider {
     try {
       const urlObj = new URL(url);
 
-      // Remove existing parameters
       urlObj.searchParams.delete('consultoria');
 
-      // Add affiliate parameter
       urlObj.searchParams.set('consultoria', config);
 
       return urlObj.toString();

@@ -19,9 +19,6 @@ const HEADERS = {
   'Cache-Control': 'max-age=0',
 };
 
-/**
- * Expands shortened URLs by following redirects
- */
 export async function expandUrl(shortUrl: string): Promise<string> {
   logger.debug(`Attempting to expand URL: ${shortUrl}`);
   try {
@@ -36,7 +33,6 @@ export async function expandUrl(shortUrl: string): Promise<string> {
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
     logger.debug(`Initial response URL: ${finalUrl}, status: ${response.status}`);
 
-    // If it went through an affiliate network, try to follow one more redirect
     logger.debug(`Checking if ${finalUrl} is an affiliate network URL`);
     if (isAffiliateNetworkUrl(finalUrl)) {
       const actualDestination = await followAffiliateNetwork(finalUrl);
@@ -45,13 +41,11 @@ export async function expandUrl(shortUrl: string): Promise<string> {
       }
     }
 
-    // If redirect worked and changed URL
     if (finalUrl !== shortUrl && !finalUrl.includes('/ap/signin')) {
       logger.debug(`URL expanded successfully to: ${finalUrl}`);
       return finalUrl;
     }
 
-    // Try to extract from HTML for known shorteners
     const contentType = response.headers['content-type'] || '';
     logger.debug(`Content-Type: ${contentType}`);
     if (contentType.includes('text/html') && response.data) {

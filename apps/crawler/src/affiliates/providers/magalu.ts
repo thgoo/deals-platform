@@ -36,13 +36,12 @@ class MagaluProvider implements AffiliateProvider {
       if (url.includes('az-request-verify') && magaluConfig.promoterId) {
         const encodedUrl = urlObj.searchParams.get('url');
         if (encodedUrl) {
-          // Extrair a URL real e substituir o promoter_id
           let realUrl = decodeURIComponent(encodedUrl);
           realUrl = realUrl
             .replace(/promoter_id=\d+/g, `promoter_id=${magaluConfig.promoterId}`)
             .replace(/utm_campaign=\d+/g, `utm_campaign=${magaluConfig.promoterId}`);
 
-          return realUrl; // Retorna a URL limpa, sem o az-request-verify
+          return realUrl;
         }
       }
 

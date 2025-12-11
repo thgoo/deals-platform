@@ -5,7 +5,6 @@ import type { MediaInfo } from '../shared/types';
 import { logger } from '../logger';
 import { telegramClient } from '../telegram/client';
 
-// Type helpers for Telegram API objects
 interface TelegramDocument {
   id: bigint;
   mimeType?: string;
@@ -75,18 +74,16 @@ class MediaDownloader {
       const fileName = `${photoId}.jpg`;
       const filePath = path.join(mediaDir, fileName);
 
-      // Check if file already exists (deduplication)
       try {
         await fs.access(filePath);
         logger.info(`Photo already exists: ${fileName}`);
         return filePath;
       } catch {
-        // File doesn't exist, continue with download
+        // File doesn't exist, proceed with download
       }
 
       await this.ensureMediaDir(mediaDir);
 
-      // Get message and download
       const messages = await client.getMessages(parseInt(chatId, 10), { ids: messageId });
       const message = Array.isArray(messages) ? messages[0] : messages;
 
