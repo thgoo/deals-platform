@@ -63,9 +63,10 @@ class AwinProvider implements AffiliateProvider {
         },
       );
 
-      if (response.data?.url) {
-        logger.debug(`Awin link generated: ${response.data.url}`);
-        return response.data.url;
+      const generatedUrl = response.data?.shortUrl || response.data?.url;
+      if (generatedUrl) {
+        logger.debug(`Awin link generated: ${generatedUrl}`);
+        return generatedUrl;
       }
 
       return null;
