@@ -18,7 +18,7 @@ export class DealService {
   /**
    * List all available stores for filtering
    */
-  async getAvailableStores(orderByCount = true, sinceDays = 3): Promise<string[]> {
+  async getAvailableStores(orderByCount = true, sinceDays = 2): Promise<string[]> {
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - sinceDays);
 
