@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { Deal } from '~/db/schemas/deals';
 import { webhookAuth } from './middleware/webhook-auth';
-import { createDealSchema, listDealsQuerySchema, updateImageSchema } from './schemas';
+import { createDealSchema, listDealsQuerySchema, updateImageSchema, updateLinksSchema } from './schemas';
 
 const app = new Hono();
 
@@ -159,6 +159,44 @@ app.get('/stores', async c => {
   return c.json({
     stores,
   });
+});
+
+app.get('/:id', async c => {
+  const dealService = c.get('dealService');
+  const id = parseInt(c.req.param('id'), 10);
+
+  if (isNaN(id)) {
+    return c.json({ error: 'Invalid deal ID' }, 400);
+  }
+
+  const deal = await dealService.findById(id);
+
+  if (!deal) {
+    return c.json({ error: 'Deal not found' }, 404);
+  }
+
+  return c.json(deal);
+});
+
+app.patch('/:id/links', webhookAuth, zValidator('json', updateLinksSchema), async c => {
+  const dealService = c.get('dealService');
+  const logger = c.get('logger');
+  const id = parseInt(c.req.param('id'), 10);
+  const { links } = c.req.valid('json');
+
+  if (isNaN(id)) {
+    return c.json({ error: 'Invalid deal ID' }, 400);
+  }
+
+  const deal = await dealService.updateLinks(id, links);
+
+  if (!deal) {
+    return c.json({ error: 'Deal not found' }, 404);
+  }
+
+  logger.info('Deal links updated', { dealId: id, linksCount: links.length });
+
+  return c.json({ ok: true, id: deal.id, links: deal.links });
 });
 
 export default app;

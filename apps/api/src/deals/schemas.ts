@@ -40,6 +40,10 @@ export const updateImageSchema = z.object({
   local_path: z.string().min(1),
 });
 
+export const updateLinksSchema = z.object({
+  links: z.array(z.string().url()).max(5),
+});
+
 export const listDealsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(16),
   cursor: z.string().datetime().optional(),

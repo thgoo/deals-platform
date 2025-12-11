@@ -185,6 +185,25 @@ export class DealService {
   }
 
   /**
+   * Update deal links
+   */
+  async updateLinks(id: number, links: string[]): Promise<Deal | null> {
+    const result = await db.update(dealsTable)
+      .set({ links })
+      .where(eq(dealsTable.id, id));
+
+    if (result[0].affectedRows === 0) {
+      return null;
+    }
+
+    const [deal] = await db.select()
+      .from(dealsTable)
+      .where(eq(dealsTable.id, id));
+
+    return deal ? this.parseDeal(deal) : null;
+  }
+
+  /**
    * Find deals with advanced filters
    */
   async findWithFilters(params: {
