@@ -35,6 +35,14 @@ export function initializeProviders(config: AffiliateConfig): void {
     }
   }
 
+  const shopeeConfig = config.shopee;
+  if (shopeeConfig && typeof shopeeConfig === 'object') {
+    const { appId, secret } = shopeeConfig;
+    if (appId && secret) {
+      shopeeProvider.configure(appId, secret);
+    }
+  }
+
   logger.info('Affiliate providers initialized', {
     count: providerRegistry.getAll().length,
   });

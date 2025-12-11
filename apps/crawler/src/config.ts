@@ -11,9 +11,14 @@ export interface AwinApiConfig {
   token: string;
 }
 
+export interface ShopeeApiConfig {
+  appId: string;
+  secret: string;
+}
+
 export interface AffiliateConfig {
   amazon?: string;
-  shopee?: string;
+  shopee?: ShopeeApiConfig;
   mercadolivre?: string;
   aliexpress: AliExpressApiConfig;
   magalu?: MagaluConfig;
@@ -80,7 +85,10 @@ export const config: Config = {
     .filter(Boolean),
   affiliates: {
     amazon: process.env.AMAZON_AFFILIATE_TAG,
-    shopee: process.env.SHOPEE_AFFILIATE_ID,
+    shopee: {
+      appId: process.env.SHOPEE_APP_ID || '',
+      secret: process.env.SHOPEE_SECRET || '',
+    },
     mercadolivre: process.env.MERCADOLIVRE_AFFILIATE_ID,
     // AliExpress: API oficial (obrigatório para funcionar)
     aliexpress: {
