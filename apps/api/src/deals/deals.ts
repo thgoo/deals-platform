@@ -211,17 +211,19 @@ app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c =
  *
  * Query params:
  * - orderBy: 'count' (default) ou 'name' - ordenação das lojas
+ * - sinceDays: número de dias para considerar na contagem (default: 3)
  *
  * Response:
  * - stores: array de strings com nomes de lojas
  */
 app.get('/stores', async c => {
   const dealService = c.get('dealService');
-  const { orderBy } = c.req.query();
+  const { orderBy, sinceDays } = c.req.query();
 
   // Se orderBy=name, ordena alfabeticamente, caso contrário ordena por contagem
   const orderByCount = orderBy !== 'name';
-  const stores = await dealService.getAvailableStores(orderByCount);
+  const days = sinceDays ? parseInt(sinceDays, 10) : 3;
+  const stores = await dealService.getAvailableStores(orderByCount, days);
 
   return c.json({
     stores,

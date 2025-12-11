@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Deal, NewDeal } from '~/db/schemas/deals';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
@@ -18,9 +18,13 @@ export class DealService {
   /**
    * Lista todas as lojas disponíveis para filtros
    * @param orderByCount Se true, ordena pela frequência (mais comum primeiro)
+   * @param sinceDays Número de dias para considerar na contagem (default: 3)
    * @returns Array de nomes de lojas distintas
    */
-  async getAvailableStores(orderByCount = true): Promise<string[]> {
+  async getAvailableStores(orderByCount = true, sinceDays = 3): Promise<string[]> {
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - sinceDays);
+
     // Se orderByCount for true, adiciona contagem e ordena por ela
     if (orderByCount) {
       const result = await db.select({
@@ -28,7 +32,10 @@ export class DealService {
         count: sql`COUNT(${dealsTable.store})`.as('count'),
       })
         .from(dealsTable)
-        .where(isNotNull(dealsTable.store))
+        .where(and(
+          isNotNull(dealsTable.store),
+          gte(dealsTable.ts, sinceDate),
+        ))
         .groupBy(dealsTable.store)
         .orderBy(desc(sql`count`));
 
@@ -40,7 +47,10 @@ export class DealService {
     // Caso contrário, ordena alfabeticamente
     const result = await db.select({ store: dealsTable.store })
       .from(dealsTable)
-      .where(isNotNull(dealsTable.store))
+      .where(and(
+        isNotNull(dealsTable.store),
+        gte(dealsTable.ts, sinceDate),
+      ))
       .groupBy(dealsTable.store)
       .orderBy(dealsTable.store);
 
