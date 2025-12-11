@@ -17,6 +17,7 @@ const SHORTENER_DOMAINS = [
   'tecno.click',
   'curt.link',
   'cutt.ly',
+  'divulgador.magalu.com',
 ];
 
 let providersInitialized = false;

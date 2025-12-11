@@ -16,9 +16,14 @@ export interface AffiliateConfig {
   shopee?: string;
   mercadolivre?: string;
   aliexpress: AliExpressApiConfig;
-  magalu?: string;
+  magalu?: MagaluConfig;
   natura?: string;
   awin?: AwinApiConfig;
+}
+
+export interface MagaluConfig {
+  username?: string;
+  promoterId?: string;
 }
 
 export interface Config {
@@ -87,7 +92,10 @@ export const config: Config = {
       publisherId: process.env.AWIN_PUBLISHER_ID || '',
       token: process.env.AWIN_TOKEN || '',
     },
-    magalu: process.env.MAGALU_AFFILIATE_ID,
+    magalu: {
+      username: process.env.MAGALU_AFFILIATE_ID,
+      promoterId: process.env.MAGALU_PROMOTER_ID,
+    },
     natura: process.env.NATURA_AFFILIATE_ID,
   },
 };

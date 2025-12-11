@@ -1,5 +1,10 @@
 import type { AffiliateProvider } from './base';
 
+interface MagaluConfig {
+  username?: string;
+  promoterId?: string;
+}
+
 class MagaluProvider implements AffiliateProvider {
   readonly name = 'magalu';
 
@@ -14,20 +19,53 @@ class MagaluProvider implements AffiliateProvider {
   }
 
   async rewrite(url: string, config: unknown): Promise<string | null> {
-    if (typeof config !== 'string' || !config) return null;
+    const magaluConfig = config as MagaluConfig;
+    if (!magaluConfig) return null;
 
     try {
       const urlObj = new URL(url);
 
-      const pathMatch = urlObj.pathname.match(/^\/([^/]+)(\/.*)/);
-
-      if (!pathMatch) {
-        return null;
+      if (url.includes('magazinevoce.com.br') && magaluConfig.username) {
+        const pathMatch = urlObj.pathname.match(/^\/([^/]+)(\/.*)/);
+        if (pathMatch) {
+          urlObj.pathname = `/${magaluConfig.username}${pathMatch[2]}`;
+          return urlObj.toString();
+        }
       }
 
-      urlObj.pathname = `/${config}${pathMatch[2]}`;
+      if (url.includes('az-request-verify') && magaluConfig.promoterId) {
+        const encodedUrl = urlObj.searchParams.get('url');
+        if (encodedUrl) {
+          // Extrair a URL real e substituir o promoter_id
+          let realUrl = decodeURIComponent(encodedUrl);
+          realUrl = realUrl
+            .replace(/promoter_id=\d+/g, `promoter_id=${magaluConfig.promoterId}`)
+            .replace(/utm_campaign=\d+/g, `utm_campaign=${magaluConfig.promoterId}`);
 
-      return urlObj.toString();
+          return realUrl; // Retorna a URL limpa, sem o az-request-verify
+        }
+      }
+
+      if (url.includes('magazineluiza.com.br') && magaluConfig.promoterId) {
+        if (urlObj.searchParams.has('promoter_id')) {
+          urlObj.searchParams.set('promoter_id', magaluConfig.promoterId);
+          urlObj.searchParams.set('utm_campaign', magaluConfig.promoterId);
+          urlObj.searchParams.set('c', magaluConfig.promoterId);
+
+          const deepLinkValue = urlObj.searchParams.get('deep_link_value');
+          if (deepLinkValue) {
+            const decodedDeepLink = decodeURIComponent(deepLinkValue);
+            const updatedDeepLink = decodedDeepLink
+              .replace(/promoter_id=\d+/g, `promoter_id=${magaluConfig.promoterId}`)
+              .replace(/utm_campaign=\d+/g, `utm_campaign=${magaluConfig.promoterId}`);
+            urlObj.searchParams.set('deep_link_value', updatedDeepLink);
+          }
+
+          return urlObj.toString();
+        }
+      }
+
+      return null;
     } catch {
       return null;
     }
