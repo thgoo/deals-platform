@@ -4,7 +4,13 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { Deal } from '~/db/schemas/deals';
 import { webhookAuth } from './middleware/webhook-auth';
-import { createDealSchema, listDealsQuerySchema, updateImageSchema, updateLinksSchema } from './schemas';
+import {
+  createDealSchema,
+  listDealsQuerySchema,
+  updateImageSchema,
+  updateLinksSchema,
+  updateProductKeySchema,
+} from './schemas';
 
 const app = new Hono();
 
@@ -37,6 +43,8 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     store: body.store || null,
     description: body.description || null,
     product: body.product || null,
+    productKey: body.product_key || null,
+    category: body.category || null,
     mediaType: body.media?.type,
     photoId: body.media?.photo_id ? String(body.media.photo_id) : undefined,
     localPath: body.media?.local_path,
@@ -197,6 +205,22 @@ app.patch('/:id/links', webhookAuth, zValidator('json', updateLinksSchema), asyn
   logger.info('Deal links updated', { dealId: id, linksCount: links.length });
 
   return c.json({ ok: true, id: deal.id, links: deal.links });
+});
+
+app.patch('/:id/product-key', webhookAuth, zValidator('json', updateProductKeySchema), async c => {
+  const dealService = c.get('dealService');
+  const logger = c.get('logger');
+  const id = parseInt(c.req.param('id'), 10);
+  const { product_key, category } = c.req.valid('json');
+  if (isNaN(id)) {
+    return c.json({ error: 'Invalid deal ID' }, 400);
+  }
+  const deal = await dealService.updateProductKey(id, product_key ?? null, category ?? null);
+  if (!deal) {
+    return c.json({ error: 'Deal not found' }, 404);
+  }
+  logger.info('Deal product key updated', { dealId: id, productKey: product_key, category });
+  return c.json({ ok: true, id: deal.id, productKey: deal.productKey, category: deal.category });
 });
 
 export default app;

@@ -204,6 +204,22 @@ export class DealService {
   }
 
   /**
+ * Update deal product key and category
+ */
+  async updateProductKey(id: number, productKey: string | null, category: string | null): Promise<Deal | null> {
+    const result = await db.update(dealsTable)
+      .set({ productKey, category })
+      .where(eq(dealsTable.id, id));
+    if (result[0].affectedRows === 0) {
+      return null;
+    }
+    const [deal] = await db.select()
+      .from(dealsTable)
+      .where(eq(dealsTable.id, id));
+    return deal ? this.parseDeal(deal) : null;
+  }
+
+  /**
    * Find deals with advanced filters
    */
   async findWithFilters(params: {

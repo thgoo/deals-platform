@@ -33,6 +33,8 @@ export const createDealSchema = z.object({
   store: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   product: z.string().nullable().optional(),
+  product_key: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
 });
 
 export const updateImageSchema = z.object({
@@ -56,3 +58,8 @@ export const listDealsQuerySchema = z.object({
   stores: data.stores ? data.stores.split(',').map(s => s.trim()).filter(Boolean) : undefined,
   hasCoupon: data.hasCoupon === 'true' ? true : data.hasCoupon === 'false' ? false : undefined,
 }));
+
+export const updateProductKeySchema = z.object({
+  product_key: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+});
