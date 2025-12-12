@@ -7,6 +7,8 @@ export interface ExtractionResult {
   product: string | null;
   store: string | null;
   description: string | null;
+  productKey: string | null;
+  category: string | null;
 }
 
 interface ExtractorRequest {
@@ -22,6 +24,8 @@ interface ExtractorResponse {
   product: string | null;
   store: string | null;
   description: string | null;
+  productKey: string | null;
+  category: string | null;
 }
 
 class AIExtractor {
@@ -75,6 +79,8 @@ class AIExtractor {
         product: data.product,
         store: data.store,
         description: data.description,
+        productKey: data.productKey,
+        category: data.category,
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

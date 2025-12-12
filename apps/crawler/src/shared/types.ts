@@ -10,6 +10,8 @@ export interface DealPayload {
   store?: string;
   description?: string;
   product?: string;
+  product_key?: string;
+  category?: string;
   media?: MediaInfo;
 }
 
@@ -30,4 +32,6 @@ export interface ExtractionResult {
   product: string | null;
   store: string | null;
   description: string | null;
+  productKey: string | null;
+  category: string | null;
 }

@@ -88,6 +88,8 @@ class MessageHandler {
         store: extraction.store ?? undefined,
         description: extraction.description ?? undefined,
         product: extraction.product ?? undefined,
+        product_key: extraction.productKey ?? undefined,
+        category: extraction.category ?? undefined,
       };
 
       if (message.media) {
