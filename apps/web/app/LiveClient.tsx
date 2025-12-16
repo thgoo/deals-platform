@@ -5,6 +5,7 @@ import { Store, Tag, DollarSign, Zap, SearchX, ArrowUp } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
+import CouponCopy from './components/CouponCopy';
 import DefaultDealImage from './components/DefaultDealImage';
 import SearchFilters from './components/SearchFilters';
 import { useDebounce } from './hooks/useDebounce';
@@ -25,7 +26,6 @@ export default function LiveClient({ initialData }: LiveClientProps) {
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<number>>(
     new Set(),
   );
-  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [hasCoupon, setHasCoupon] = useState<boolean | null>(null);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
@@ -267,6 +267,27 @@ export default function LiveClient({ initialData }: LiveClientProps) {
         </div>
       </div>
 
+      <footer className="border-foreground relative z-10 mt-8 border-t-3 bg-white">
+        <div className="mx-auto max-w-[1400px] px-4 py-8 text-sm text-(--pixel-gray) sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <div className="text-foreground text-xs font-black tracking-wider uppercase">
+                Disclosures
+              </div>
+              <div className="mt-3 space-y-2">
+                <a href="/amazon" className="font-bold underline">
+                  Amazon
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center text-xs text-(--pixel-gray)/70">
+            © {new Date().getFullYear()} #bargah.com.br
+          </div>
+        </div>
+      </footer>
+
       {selectedDeal && (
         <>
           <div
@@ -350,29 +371,8 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                       Cupons Disponíveis
                     </h4>
                     <div className="space-y-2">
-                      {selectedDeal.coupons.map((coupon, idx) => (
-                        <div
-                          key={idx}
-                          className="border-foreground flex items-center gap-3 rounded-lg border-3 bg-(--pixel-purple) p-3 shadow-[3px_3px_0px_var(--pixel-dark)]"
-                        >
-                          <Tag className="h-4 w-4 text-white" />
-                          <code className="flex-1 text-sm font-bold text-white">
-                            {coupon.code}
-                          </code>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(coupon.code);
-                              setCopiedCoupon(coupon.code);
-                              setTimeout(() => setCopiedCoupon(null), 2000);
-                            }}
-                            className="pixel-btn rounded py-1! text-xs"
-                            title="Copiar cupom"
-                          >
-                            {copiedCoupon === coupon.code
-                              ? '✓ Copiado!'
-                              : 'Copiar'}
-                          </button>
-                        </div>
+                      {selectedDeal.coupons.map((coupon) => (
+                        <CouponCopy key={coupon.code} code={coupon.code} />
                       ))}
                     </div>
                   </div>
