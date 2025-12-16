@@ -14,10 +14,13 @@ class AmazonProvider implements AffiliateProvider {
     try {
       const urlObj = new URL(url);
 
-      urlObj.searchParams.delete('tag');
-      urlObj.searchParams.delete('linkCode');
-      urlObj.searchParams.delete('ref_');
+      const asin = extractAmazonAsin(urlObj.pathname);
+      if (asin) {
+        urlObj.pathname = `/dp/${asin}`;
+      }
 
+      urlObj.hash = '';
+      urlObj.search = '';
       urlObj.searchParams.set('tag', config);
 
       return urlObj.toString();
@@ -25,6 +28,21 @@ class AmazonProvider implements AffiliateProvider {
       return null;
     }
   }
+}
+
+function extractAmazonAsin(pathname: string): string | null {
+  const candidates = [
+    /\/dp\/([A-Z0-9]{10})(?:\b|\/)/i,
+    /\/gp\/product\/([A-Z0-9]{10})(?:\b|\/)/i,
+  ];
+
+  for (const re of candidates) {
+    const match = pathname.match(re);
+    const asin = match?.[1];
+    if (asin) return asin.toUpperCase();
+  }
+
+  return null;
 }
 
 export const amazonProvider = new AmazonProvider();
