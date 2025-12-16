@@ -77,7 +77,7 @@ function extractMercadoLivreUrlFromHtml(html: string): string | null {
 
     const productLinks = $('a[href*="/p/MLB"]').toArray()
       .map(el => $(el).attr('href'))
-      .filter((href): href is string => Boolean(href) && isMercadoLivreUrl(href || ''));
+      .filter(href => href && isMercadoLivreUrl(href));
     const last = productLinks.at(-1);
     if (last) return last;
 
