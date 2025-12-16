@@ -16,7 +16,7 @@ class AmazonProvider implements AffiliateProvider {
 
       const asin = extractAmazonAsin(urlObj.pathname);
       if (asin) {
-        urlObj.pathname = `/dp/${asin}`;
+        urlObj.pathname = `/dp/${asin}/ref=nosim`;
       }
 
       urlObj.hash = '';
