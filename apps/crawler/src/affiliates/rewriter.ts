@@ -18,6 +18,7 @@ const SHORTENER_DOMAINS = [
   'curt.link',
   'cutt.ly',
   'divulgador.magalu.com',
+  'eusoubarone.link',
 ];
 
 let providersInitialized = false;
