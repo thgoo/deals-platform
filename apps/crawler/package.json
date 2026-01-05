@@ -20,6 +20,9 @@
     "cheerio": "^1.1.2",
     "cloudscraper.js": "^0.1.1",
     "dotenv": "^16.3.1",
+    "@mtcute/bun": "^0.27.5",
+    "@mtcute/core": "^0.27.5",
+    "@mtcute/dispatcher": "^0.27.5",
     "telegram": "^2.26.22"
   },
   "devDependencies": {

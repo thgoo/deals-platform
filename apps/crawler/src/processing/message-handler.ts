@@ -1,11 +1,10 @@
-import { Api } from 'telegram';
 import type { DealPayload } from '../shared/types';
-import type { TelegramMessage } from '../telegram/client';
+import type { TelegramIncomingMessage } from '../telegram';
 import { config } from '../config';
 import { logger } from '../logger';
 import { mediaDownloader } from '../media/downloader';
 import { ProcessingError } from '../shared/errors';
-import { telegramClient } from '../telegram/client';
+import { getCurrentTelegramGateway } from '../telegram/runtime';
 import { webhookClient } from '../webhook/client';
 import { aiExtractor } from './ai-extractor';
 import { linkProcessor } from './link-processor';
@@ -13,21 +12,17 @@ import { cleanPromoText } from './text-cleaner';
 import { calculateMessageLatency } from './utils';
 
 class MessageHandler {
-  async handle(message: TelegramMessage): Promise<void> {
+  async handle(message: TelegramIncomingMessage): Promise<void> {
     try {
-      const { id, peerId, message: rawText, date } = message;
+      const { id, chat, text: rawText, date } = message;
 
-      if (!(peerId instanceof Api.PeerChannel)) {
+      if (chat.type !== 'channel') {
         logger.debug('Message is not from a channel, skipping');
         return;
       }
 
-      const chatId = peerId.channelId.toString();
-
-      const entity = await telegramClient.getEntity(Number(peerId.channelId));
-      const chatAlias = entity.className === 'Channel'
-        ? (entity.username as string || chatId)
-        : chatId;
+      const chatId = chat.id;
+      const chatAlias = await getCurrentTelegramGateway().resolveChatAlias(chatId);
 
       const cleanedText = cleanPromoText(rawText);
 
@@ -93,13 +88,10 @@ class MessageHandler {
       };
 
       if (message.media) {
-        const mediaInfo = mediaDownloader.extractMediaInfo(message.media);
-        if (mediaInfo) {
-          payload.media = mediaInfo;
-        }
+        payload.media = message.media;
 
-        if (mediaInfo?.type === 'photo' && mediaInfo.photo_id) {
-          this.downloadAndNotifyMedia(mediaInfo.photo_id, id, chatId);
+        if (message.media.type === 'photo' && message.media.photo_id) {
+          this.downloadAndNotifyMedia(message.media.photo_id, id, chatId);
         }
       }
 

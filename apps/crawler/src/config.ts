@@ -37,6 +37,7 @@ export interface Config {
     apiHash: string;
     sessionDir: string;
     sessionName: string;
+    backend: string;
   };
   backend: {
     baseUrl: string;
@@ -63,6 +64,7 @@ export const config: Config = {
     apiHash: process.env.TG_API_HASH || '',
     sessionDir: process.env.SESSION_DIR || './sessions',
     sessionName: process.env.SESSION_NAME || 'promo_session',
+    backend: process.env.TELEGRAM_BACKEND || 'gramjs',
   },
   backend: {
     baseUrl: process.env.BACKEND_BASE_URL || 'http://localhost:8000',

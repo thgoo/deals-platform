@@ -1,25 +1,20 @@
-import { Api } from 'telegram';
 import type { AffiliateConfig } from '../config';
-import type { TelegramMessage } from '../telegram/client';
+import type { TelegramIncomingMessage } from '../telegram';
 import { rewriteLinks } from '../affiliates/rewriter';
 import { logger } from '../logger';
 
 const LINK_REGEX = /https?:\/\/\S+/gi;
 
 class LinkProcessor {
-  extractLinks(message: TelegramMessage): string[] {
+  extractLinks(message: TelegramIncomingMessage): string[] {
     const links: string[] = [];
-    const text = message.message || '';
+    const text = message.text || '';
 
     const textLinks = text.match(LINK_REGEX);
     if (textLinks) links.push(...textLinks);
 
-    if (message.entities) {
-      for (const entity of message.entities) {
-        if (entity instanceof Api.MessageEntityTextUrl) {
-          if (entity.url) links.push(entity.url);
-        }
-      }
+    if (message.links && message.links.length > 0) {
+      links.push(...message.links);
     }
 
     const seen = new Set<string>();
@@ -66,7 +61,7 @@ class LinkProcessor {
     });
   }
 
-  async processLinks(message: TelegramMessage, affiliateConfig: AffiliateConfig): Promise<string[]> {
+  async processLinks(message: TelegramIncomingMessage, affiliateConfig: AffiliateConfig): Promise<string[]> {
     const extractedLinks = this.extractLinks(message);
     if (extractedLinks.length === 0) {
       return [];

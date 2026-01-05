@@ -2,13 +2,13 @@ import 'dotenv/config';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as readline from 'readline';
-import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
+import { getTelegramAuthProvider } from './telegram/auth';
 
 const API_ID = parseInt(process.env.TG_API_ID || '0');
 const API_HASH = process.env.TG_API_HASH || '';
 const SESSION_DIR = process.env.SESSION_DIR || './sessions';
 const SESSION_NAME = process.env.SESSION_NAME || 'promo_session';
+const TELEGRAM_BACKEND = process.env.TELEGRAM_BACKEND || 'gramjs';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -37,45 +37,49 @@ async function main() {
 
   console.log(`✓ API_ID: ${API_ID}`);
   console.log(`✓ API_HASH: ${API_HASH.substring(0, 10)}...`);
+  console.log(`✓ Telegram Backend: ${TELEGRAM_BACKEND}`);
   console.log(`✓ Session Dir: ${SESSION_DIR}\n`);
 
   await fs.mkdir(SESSION_DIR, { recursive: true });
 
-  const sessionPath = path.join(SESSION_DIR, `${SESSION_NAME}.session`);
+  const sessionPath = path.join(SESSION_DIR, `${SESSION_NAME}.${TELEGRAM_BACKEND}.session`);
+  const legacySessionPath = path.join(SESSION_DIR, `${SESSION_NAME}.session`);
   let sessionString = '';
 
   try {
     sessionString = await fs.readFile(sessionPath, 'utf-8');
     console.log('✓ Existing session found. Reusing...\n');
   } catch {
-    console.log('ℹ Creating new session...\n');
+    if (TELEGRAM_BACKEND === 'gramjs') {
+      try {
+        sessionString = await fs.readFile(legacySessionPath, 'utf-8');
+        console.log('✓ Existing legacy session found. Reusing...\n');
+      } catch {
+        console.log('ℹ Creating new session...\n');
+      }
+    } else {
+      console.log('ℹ Creating new session...\n');
+    }
   }
 
-  const session = new StringSession(sessionString);
-  const client = new TelegramClient(session, API_ID, API_HASH, {
-    connectionRetries: 5,
-  });
-
   try {
-    await client.start({
-      phoneNumber: async () => await question('Enter phone number: '),
-      password: async () => await question('Enter password: '),
-      phoneCode: async () => await question('Enter code: '),
-      onError: err => console.error(err),
-    });
+    const authProvider = getTelegramAuthProvider(TELEGRAM_BACKEND);
+    const { sessionString: newSessionString } = await authProvider.authenticate(
+      {
+        apiId: API_ID,
+        apiHash: API_HASH,
+        sessionString,
+      },
+      {
+        phoneNumber: async () => await question('Enter phone number: '),
+        password: async () => await question('Enter password: '),
+        phoneCode: async () => await question('Enter code: '),
+        onError: err => console.error(err),
+      },
+    );
 
-    const isAuthorized = await client.isUserAuthorized();
-    if (!isAuthorized) {
-      console.error('❌ Error: Unauthorized');
-      rl.close();
-      process.exit(1);
-    }
-
-    const newSessionString = client.session.save();
-    if (typeof newSessionString === 'string') {
-      await fs.writeFile(sessionPath, newSessionString, 'utf-8');
-      console.log(`✓ Session saved to ${sessionPath}\n`);
-    }
+    await fs.writeFile(sessionPath, newSessionString, 'utf-8');
+    console.log(`✓ Session saved to ${sessionPath}\n`);
 
     console.log('╔════════════════════════════════════════════════════════════╗');
     console.log('║     ✓ Setup Complete!                                     ║');
