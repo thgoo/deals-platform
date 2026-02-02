@@ -61,22 +61,28 @@ class LinkProcessor {
     });
   }
 
-  async processLinks(message: TelegramIncomingMessage, affiliateConfig: AffiliateConfig): Promise<string[]> {
+  async processLinks(
+    message: TelegramIncomingMessage,
+    affiliateConfig: AffiliateConfig,
+  ): Promise<{ final: string[], allVersions: string[] }> {
     const extractedLinks = this.extractLinks(message);
     if (extractedLinks.length === 0) {
-      return [];
+      return { final: [], allVersions: [] };
     }
 
     const filteredLinks = this.filterRelevantLinks(extractedLinks);
     if (filteredLinks.length === 0) {
-      return [];
+      return { final: [], allVersions: [] };
     }
 
-    logger.info(`Processing ${filteredLinks.length} links from message #${message.id}`);
+    logger.info(`Processing ${filteredLinks.length} links from message #${message.id} (with history for extractor)`);
 
-    const rewrittenLinks = await rewriteLinks(filteredLinks, affiliateConfig);
+    const results = await rewriteLinks(filteredLinks, affiliateConfig);
 
-    return rewrittenLinks;
+    const finalLinks = results.map(r => r.final);
+    const allVersions = results.flatMap(r => r.allVersions);
+
+    return { final: finalLinks, allVersions };
   }
 
   generateCouponFallbackLinks(store: string | null, affiliateConfig: AffiliateConfig): string[] {

@@ -4,6 +4,13 @@ import { cleanUrl } from '../processing/utils';
 import { initializeProviders, providerRegistry } from './providers';
 import { expandUrl } from './url-expander';
 
+export interface RewriteResult {
+  original: string;
+  expanded?: string;
+  final: string;
+  allVersions: string[];
+}
+
 const SHORTENER_DOMAINS = [
   'amzn.to',
   'amzn.divulgador.link',
@@ -24,12 +31,13 @@ const SHORTENER_DOMAINS = [
 let providersInitialized = false;
 
 /**
- * Rewrites a list of links by replacing affiliate IDs
+ * Rewrites links and returns structured results with all versions.
+ * Each result contains original, expanded (if applicable), final, and allVersions array.
  */
 export async function rewriteLinks(
   links: string[],
   config: AffiliateConfig,
-): Promise<string[]> {
+): Promise<RewriteResult[]> {
   if (!providersInitialized) {
     initializeProviders(config);
     providersInitialized = true;
@@ -45,33 +53,51 @@ export async function rewriteLinks(
 async function rewriteSingleLink(
   url: string,
   config: AffiliateConfig,
-): Promise<string> {
+): Promise<RewriteResult> {
   try {
+    const originalUrl = url;
+    const allVersions: string[] = [originalUrl];
+
     const isShortened = SHORTENER_DOMAINS.some(domain => url.includes(domain));
 
-    let finalUrl = url;
+    let expandedUrl: string | undefined;
 
     if (isShortened) {
-      finalUrl = await expandUrl(url);
-      logger.debug(`Expanded ${url} to ${finalUrl}`);
+      const expanded = await expandUrl(url);
+      logger.debug(`Expanded ${url} to ${expanded}`);
+      if (expanded !== originalUrl) {
+        expandedUrl = expanded;
+        allVersions.push(expandedUrl);
+      }
     }
 
-    const provider = providerRegistry.findProvider(finalUrl);
+    const urlToProcess = expandedUrl ?? originalUrl;
+    const provider = providerRegistry.findProvider(urlToProcess);
 
     if (!provider) {
-      logger.debug(`No provider found for URL: ${finalUrl}`);
-      const cleanedUrl = cleanUrl(finalUrl);
+      logger.debug(`No provider found for URL: ${urlToProcess}`);
+      const cleanedUrl = cleanUrl(urlToProcess);
       logger.debug(`Cleaned URL (no provider): ${cleanedUrl}`);
-      return cleanedUrl;
+
+      const finalUrl = cleanedUrl !== urlToProcess ? cleanedUrl : urlToProcess;
+      if (finalUrl !== urlToProcess && finalUrl !== originalUrl) {
+        allVersions.push(finalUrl);
+      }
+
+      return { original: originalUrl, expanded: expandedUrl, final: finalUrl, allVersions };
     }
 
     const providerConfig = config[provider.name as keyof AffiliateConfig];
+    const rewritten = await provider.rewrite(urlToProcess, providerConfig);
+    const finalUrl = rewritten ?? urlToProcess;
 
-    const rewritten = await provider.rewrite(finalUrl, providerConfig);
+    if (finalUrl !== urlToProcess && finalUrl !== originalUrl) {
+      allVersions.push(finalUrl);
+    }
 
-    return rewritten ?? finalUrl;
+    return { original: originalUrl, expanded: expandedUrl, final: finalUrl, allVersions };
   } catch (error) {
     logger.error(`Error rewriting link ${url}`, { error });
-    return url;
+    return { original: url, final: url, allVersions: [url] };
   }
 }

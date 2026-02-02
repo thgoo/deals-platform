@@ -74,7 +74,8 @@ async function reprocessDeals(deals: Deal[], dryRun: boolean): Promise<void> {
 
     console.log(`   📎 ${deal.links.length} link(s)`);
 
-    const rewritten = await rewriteLinks(deal.links, config.affiliates);
+    const results = await rewriteLinks(deal.links, config.affiliates);
+    const rewritten = results.map(r => r.final);
 
     const hasChanges = JSON.stringify(deal.links) !== JSON.stringify(rewritten);
 

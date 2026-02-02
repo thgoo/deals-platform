@@ -9,7 +9,8 @@ async function testSingleUrl(originalUrl: string): Promise<void> {
   console.log(`   ${originalUrl.length} characters`);
 
   const results = await rewriteLinks([originalUrl], config.affiliates);
-  const rewrittenUrl = results[0];
+  const result = results[0];
+  const rewrittenUrl = result?.final;
 
   if (!rewrittenUrl) {
     console.log('\n❌ ERROR');

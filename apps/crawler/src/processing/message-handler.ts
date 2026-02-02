@@ -26,7 +26,8 @@ class MessageHandler {
 
       const cleanedText = cleanPromoText(rawText);
 
-      const links = await linkProcessor.processLinks(message, config.affiliates);
+      const { final: links, allVersions: linksForExtractor } =
+        await linkProcessor.processLinks(message, config.affiliates);
 
       const serverTs = new Date(date * 1000);
       const { formattedLatency } = calculateMessageLatency(date);
@@ -50,7 +51,7 @@ class MessageHandler {
           cleanedText,
           chatAlias,
           id,
-          links,
+          linksForExtractor,
         );
       } catch (error) {
         logger.error('AI extraction failed, skipping message', {
