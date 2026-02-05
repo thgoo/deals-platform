@@ -12,7 +12,7 @@
   --pixel-green: #6bffb8;
   --pixel-dark: #2d3561;
   --pixel-gray: #181819;
-  
+
   /* Shadows */
   --shadow-pixel: 4px 4px 0px var(--pixel-dark);
   --shadow-pixel-sm: 2px 2px 0px var(--pixel-dark);
@@ -101,7 +101,8 @@ body {
 
 /* Bounce Animation - 60fps smooth */
 @keyframes pixel-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -156,7 +157,11 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: radial-gradient(circle, rgba(45, 53, 97, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(45, 53, 97, 0.08) 1px,
+    transparent 1px
+  );
   background-size: 8px 8px;
   animation: pixel-scroll 10s linear infinite;
   z-index: 0;
@@ -206,7 +211,8 @@ html {
 
 /* Glitch Effect - Subtle */
 @keyframes pixel-glitch {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0);
   }
   33% {
@@ -219,4 +225,11 @@ html {
 
 .pixel-glitch {
   animation: pixel-glitch 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.visx-tooltip,
+.visx-crosshair,
+.visx-tooltip-glyph {
+  position: absolute;
+  z-index: 9999 !important;
 }

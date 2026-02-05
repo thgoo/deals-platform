@@ -22,6 +22,7 @@ import {
 import { getPriceIndicator } from '../utils/priceIndicator';
 import CouponCopy from './CouponCopy';
 import DefaultDealImage from './DefaultDealImage';
+import PriceHistoryChart from './PriceHistoryChart';
 
 interface DealModalProps {
   deal: Item;
@@ -275,30 +276,6 @@ export default function DealModal({
     }
 
     const { stats, history } = priceHistory;
-    const sparkHistory = [...history].reverse();
-    const sparkWidth = 280;
-    const sparkHeight = 64;
-    const sparkPadding = 6;
-    const sparkMin = stats.minPrice;
-    const sparkMax = stats.maxPrice;
-    const sparkRange = sparkMax - sparkMin;
-
-    let sparkPoints = '';
-    if (sparkHistory.length >= 2 && sparkRange > 0) {
-      sparkPoints = sparkHistory
-        .map((h, idx) => {
-          const x =
-            sparkPadding +
-            (idx * (sparkWidth - sparkPadding * 2)) / (sparkHistory.length - 1);
-          const t = (h.price - sparkMin) / sparkRange;
-          const y =
-            sparkPadding +
-            (1 - Math.min(1, Math.max(0, t))) *
-              (sparkHeight - sparkPadding * 2);
-          return `${x.toFixed(2)},${y.toFixed(2)}`;
-        })
-        .join(' ');
-    }
 
     return (
       <div className="space-y-6">
@@ -368,30 +345,9 @@ export default function DealModal({
             Evolução de preços
           </h4>
           <div className="border-foreground rounded-lg border-2 bg-white p-3 shadow-[2px_2px_0px_var(--pixel-dark)]">
-            <svg
-              width={sparkWidth}
-              height={sparkHeight}
-              viewBox={`0 0 ${sparkWidth} ${sparkHeight}`}
-              className="w-full"
-              role="img"
-              aria-label="Gráfico de preços"
-            >
-              <polyline
-                points={sparkPoints}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                className="text-(--pixel-blue)"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            </svg>
+            <PriceHistoryChart history={history} />
             <div className="mt-2 flex items-center justify-between text-xs text-(--pixel-gray)">
-              <span>
-                {formatPrice(stats.minPrice)} {'-'}{' '}
-                {formatPrice(stats.maxPrice)}
-              </span>
-              <span>{stats.totalDeals} ofertas</span>
+              <span className="ml-auto">{stats.totalDeals} ofertas</span>
             </div>
           </div>
         </div>
