@@ -21,6 +21,8 @@ export interface Item {
   mediaType?: string;
   photoId?: string;
   localPath?: string;
+  productKey?: string | null;
+  category?: string | null;
 }
 
 export interface PaginatedResponse {
@@ -35,3 +37,25 @@ export const ANIMATION_TIMING = {
   CLOSE: 0.3,
   OPACITY: 0,
 } as const;
+
+export interface PriceHistoryItem {
+  price: number;
+  store: string | null;
+  date: string;
+  dealId: number;
+}
+
+export interface PriceHistoryStats {
+  minPrice: number;
+  maxPrice: number;
+  avgPrice: number;
+  totalDeals: number;
+}
+
+export interface PriceHistoryResponse {
+  productKey: string;
+  category: string | null;
+  product: string | null;
+  history: PriceHistoryItem[];
+  stats: PriceHistoryStats;
+}

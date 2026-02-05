@@ -1,11 +1,11 @@
 'use client';
 
 import { sendGAEvent } from '@next/third-parties/google';
-import { Store, Tag, DollarSign, Zap, SearchX, ArrowUp } from 'lucide-react';
+import { Store, Tag, Zap, SearchX, ArrowUp } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
-import CouponCopy from './components/CouponCopy';
+import DealModal from './components/DealModal';
 import DefaultDealImage from './components/DefaultDealImage';
 import SearchFilters from './components/SearchFilters';
 import { useDebounce } from './hooks/useDebounce';
@@ -289,114 +289,12 @@ export default function LiveClient({ initialData }: LiveClientProps) {
       </footer>
 
       {selectedDeal && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-(--pixel-dark)/60 backdrop-blur-sm"
-            onClick={() => setSelectedDeal(null)}
-          />
-
-          <div className="fixed inset-4 z-50 m-auto flex max-h-[90vh] max-w-lg items-start justify-center pt-0 sm:inset-8">
-            <div className="pixel-pop border-foreground max-h-full w-full overflow-y-auto rounded-xl border-4 bg-white shadow-[4px_4px_0px_var(--pixel-dark)]">
-              <div className="border-foreground sticky top-0 z-10 flex items-center justify-between border-b-4 bg-(--pixel-green) p-4">
-                <h2 className="text-foreground text-lg font-black">
-                  Detalhes da promo
-                </h2>
-                <button
-                  onClick={() => setSelectedDeal(null)}
-                  className="pixel-btn rounded-lg px-2! py-1! text-xs"
-                >
-                  Fechar
-                </button>
-              </div>
-
-              <div className="space-y-6 p-6">
-                <div className="pixel-dots border-foreground relative aspect-video w-full overflow-hidden rounded-lg border-3">
-                  {getImageSrc(selectedDeal) ? (
-                    <Image
-                      src={getImageSrc(selectedDeal)!}
-                      alt={selectedDeal.product || selectedDeal.text}
-                      fill
-                      sizes="100%"
-                      className="object-contain p-6"
-                      onError={() => handleImageError(selectedDeal.id)}
-                    />
-                  ) : (
-                    <DefaultDealImage />
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {selectedDeal.store && (
-                    <div className="border-foreground text-foreground w-fit rounded border-2 bg-(--pixel-blue) px-2 pt-[5px] pb-1 text-xs font-black tracking-wider uppercase shadow-[2px_2px_0px_var(--pixel-dark)]">
-                      <Store className="relative -top-px inline h-4 w-4" />{' '}
-                      {selectedDeal.store}
-                    </div>
-                  )}
-                  <div className="border-foreground text-foreground bg-background w-fit rounded border-2 px-2 pt-[5px] pb-1 text-xs font-black tracking-wider shadow-[2px_2px_0px_var(--pixel-dark)]">
-                    {formatDateTime(selectedDeal.ts)}
-                  </div>
-                </div>
-
-                <h3 className="text-foreground text-2xl leading-tight font-black">
-                  {removeUrls(
-                    selectedDeal.product ||
-                      selectedDeal.description ||
-                      selectedDeal.text,
-                  )}
-                </h3>
-
-                {selectedDeal.description && selectedDeal.product && (
-                  <p className="text-sm leading-relaxed text-(--pixel-gray)">
-                    {selectedDeal.description}
-                  </p>
-                )}
-
-                {selectedDeal.price && (
-                  <div className="border-foreground flex items-center gap-4 rounded-lg border-3 bg-(--pixel-yellow) p-4 shadow-[4px_4px_0px_var(--pixel-dark)]">
-                    <DollarSign className="text-foreground h-12 w-12" />
-                    <div>
-                      <div className="text-foreground/60 text-xs font-bold uppercase">
-                        Preço
-                      </div>
-                      <div className="text-foreground text-3xl font-black">
-                        {formatPrice(selectedDeal.price)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedDeal.coupons && selectedDeal.coupons.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-foreground text-xs font-black tracking-wider uppercase">
-                      Cupons Disponíveis
-                    </h4>
-                    <div className="space-y-2">
-                      {selectedDeal.coupons.map((coupon) => (
-                        <CouponCopy key={coupon.code} code={coupon.code} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedDeal.links && selectedDeal.links.length > 0 && (
-                  <div className="space-y-3">
-                    {selectedDeal.links.map((link, idx) => (
-                      <a
-                        key={idx}
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="pixel-btn pixel-btn-pink block w-full rounded-lg text-center text-base"
-                      >
-                        {idx === 0 ? 'Ver promo' : `Opção ${idx + 1}`}{' '}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
+        <DealModal
+          deal={selectedDeal}
+          onClose={() => setSelectedDeal(null)}
+          imageLoadErrors={imageLoadErrors}
+          onImageError={handleImageError}
+        />
       )}
 
       {showScrollTop && (
