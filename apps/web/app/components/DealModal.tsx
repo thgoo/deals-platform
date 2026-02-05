@@ -13,7 +13,13 @@ import Image from 'next/image';
 import { useState } from 'react';
 import type { Item } from '../types';
 import { usePriceHistory } from '../hooks/usePriceHistory';
-import { formatPrice, removeUrls, formatDateTime } from '../utils';
+import {
+  formatPrice,
+  removeUrls,
+  formatDateTime,
+  formatRelativeTime,
+} from '../utils';
+import { getPriceIndicator } from '../utils/priceIndicator';
 import CouponCopy from './CouponCopy';
 import DefaultDealImage from './DefaultDealImage';
 
@@ -91,30 +97,38 @@ export default function DealModal({
     setActiveTab('history');
   };
 
-  const getPriceIndicator = () => {
+  const priceIndicator = (() => {
     if (!isHistoryEnabled) return null;
     if (!priceHistory || !deal.price) return null;
-    const { avgPrice } = priceHistory.stats;
-    const diff = ((deal.price - avgPrice) / avgPrice) * 100;
 
-    if (diff <= -10)
-      return {
-        color: 'text-green-600',
-        label: 'Ótimo preço!',
-        icon: TrendingDown,
-      };
-    if (diff <= 0)
-      return {
-        color: 'text-green-500',
-        label: 'Bom preço',
-        icon: TrendingDown,
-      };
-    if (diff <= 10)
-      return { color: 'text-yellow-600', label: 'Preço na média', icon: null };
-    return { color: 'text-red-500', label: 'Acima da média', icon: TrendingUp };
-  };
+    const result = getPriceIndicator(deal.price, priceHistory.stats);
+    if (!result) return null;
 
-  const priceIndicator = getPriceIndicator();
+    let icon = null;
+    if (result.trend === 'down') icon = TrendingDown;
+    else if (result.trend === 'up') icon = TrendingUp;
+
+    let color = 'text-red-600';
+    switch (result.level) {
+      case 'great':
+        color = 'text-green-600';
+        break;
+      case 'good':
+        color = 'text-green-500';
+        break;
+      case 'average':
+        color = 'text-yellow-600';
+        break;
+      case 'above':
+        color = 'text-red-500';
+        break;
+      case 'high':
+        color = 'text-red-600';
+        break;
+    }
+
+    return { color, label: result.label, icon };
+  })();
 
   const renderDetailsContent = () => (
     <div className="space-y-6">
@@ -261,6 +275,30 @@ export default function DealModal({
     }
 
     const { stats, history } = priceHistory;
+    const sparkHistory = [...history].reverse();
+    const sparkWidth = 280;
+    const sparkHeight = 64;
+    const sparkPadding = 6;
+    const sparkMin = stats.minPrice;
+    const sparkMax = stats.maxPrice;
+    const sparkRange = sparkMax - sparkMin;
+
+    let sparkPoints = '';
+    if (sparkHistory.length >= 2 && sparkRange > 0) {
+      sparkPoints = sparkHistory
+        .map((h, idx) => {
+          const x =
+            sparkPadding +
+            (idx * (sparkWidth - sparkPadding * 2)) / (sparkHistory.length - 1);
+          const t = (h.price - sparkMin) / sparkRange;
+          const y =
+            sparkPadding +
+            (1 - Math.min(1, Math.max(0, t))) *
+              (sparkHeight - sparkPadding * 2);
+          return `${x.toFixed(2)},${y.toFixed(2)}`;
+        })
+        .join(' ');
+    }
 
     return (
       <div className="space-y-6">
@@ -303,8 +341,8 @@ export default function DealModal({
           <h4 className="text-foreground text-xs font-black tracking-wider uppercase">
             Últimas ofertas
           </h4>
-          <div className="max-h-48 space-y-2 overflow-y-auto">
-            {history.slice(0, 10).map((item, idx) => (
+          <div className="space-y-2">
+            {history.slice(0, 6).map((item, idx) => (
               <div
                 key={idx}
                 className="border-foreground flex items-center justify-between rounded border-2 bg-white p-2 text-sm"
@@ -317,9 +355,44 @@ export default function DealModal({
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-(--pixel-gray)">{item.date}</span>
+                <span className="text-xs text-(--pixel-gray)" title={item.date}>
+                  {formatRelativeTime(item.date)}
+                </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="text-foreground text-xs font-black tracking-wider uppercase">
+            Evolução de preços
+          </h4>
+          <div className="border-foreground rounded-lg border-2 bg-white p-3 shadow-[2px_2px_0px_var(--pixel-dark)]">
+            <svg
+              width={sparkWidth}
+              height={sparkHeight}
+              viewBox={`0 0 ${sparkWidth} ${sparkHeight}`}
+              className="w-full"
+              role="img"
+              aria-label="Gráfico de preços"
+            >
+              <polyline
+                points={sparkPoints}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                className="text-(--pixel-blue)"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="mt-2 flex items-center justify-between text-xs text-(--pixel-gray)">
+              <span>
+                {formatPrice(stats.minPrice)} {'-'}{' '}
+                {formatPrice(stats.maxPrice)}
+              </span>
+              <span>{stats.totalDeals} ofertas</span>
+            </div>
           </div>
         </div>
       </div>
