@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import type { PriceHistoryResponse } from '../types';
 import type { Deal, NewDeal } from '~/db/schemas/deals';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
@@ -217,6 +218,55 @@ export class DealService {
       .from(dealsTable)
       .where(eq(dealsTable.id, id));
     return deal ? this.parseDeal(deal) : null;
+  }
+
+  /**
+   * Get price history for a product key
+   */
+  async getPriceHistory(productKey: string): Promise<PriceHistoryResponse | null> {
+    const deals = await db.select({
+      id: dealsTable.id,
+      price: dealsTable.price,
+      store: dealsTable.store,
+      ts: dealsTable.ts,
+      product: dealsTable.product,
+      category: dealsTable.category,
+    })
+      .from(dealsTable)
+      .where(
+        and(
+          eq(dealsTable.productKey, productKey),
+          isNotNull(dealsTable.price),
+        ),
+      )
+      .orderBy(desc(dealsTable.ts));
+
+    if (deals.length === 0) {
+      return null;
+    }
+
+    const prices = deals.map(d => d.price as number);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+
+    return {
+      productKey,
+      category: deals[0].category,
+      product: deals[0].product,
+      history: deals.map(d => ({
+        price: d.price as number,
+        store: d.store,
+        date: d.ts.toISOString().split('T')[0],
+        dealId: d.id,
+      })),
+      stats: {
+        minPrice,
+        maxPrice,
+        avgPrice,
+        totalDeals: deals.length,
+      },
+    };
   }
 
   /**

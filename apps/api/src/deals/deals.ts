@@ -156,6 +156,19 @@ app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c =
   return c.json({ ok: true, updated: false });
 });
 
+app.get('/price-history/:productKey', async c => {
+  const dealService = c.get('dealService');
+  const productKey = c.req.param('productKey');
+
+  const history = await dealService.getPriceHistory(productKey);
+
+  if (!history) {
+    return c.json({ error: 'No price history found for this product' }, 404);
+  }
+
+  return c.json(history);
+});
+
 app.get('/stores', async c => {
   const dealService = c.get('dealService');
   const { orderBy, sinceDays } = c.req.query();
