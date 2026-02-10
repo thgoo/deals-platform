@@ -257,7 +257,7 @@ export class DealService {
       history: deals.map(d => ({
         price: d.price as number,
         store: d.store,
-        date: d.ts.toISOString().split('T')[0],
+        ts: d.ts.toISOString(),
         dealId: d.id,
       })),
       stats: {

@@ -1,7 +1,7 @@
 export interface PriceHistoryItem {
   price: number;
   store: string | null;
-  date: string;
+  ts: string;
   dealId: number;
 }
 
