@@ -9,12 +9,12 @@ import {
 } from '@visx/xychart';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PriceHistoryItem } from '../types';
-import { formatPrice, formatRelativeTime } from '../utils';
+import { formatDateTime, formatPrice } from '../utils';
 
 type ChartPoint = {
-  x: Date;
+  x: number;
   y: number;
-  rawDate: string;
+  ts: string;
   store: string | null;
 };
 
@@ -53,33 +53,30 @@ export default function PriceHistoryChart({
 }) {
   const { ref, size } = useElementSize<HTMLDivElement>();
 
+  const axisNumberFmt = useMemo(
+    () =>
+      new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [],
+  );
+
   const data = useMemo<ChartPoint[]>(() => {
     const chronological = [...history].reverse();
-    return chronological
-      .map((item) => {
-        const d = new Date(`${item.date}T00:00:00`);
-        if (Number.isNaN(d.getTime())) return null;
-        return {
-          x: d,
-          y: item.price,
-          rawDate: item.date,
-          store: item.store,
-        };
-      })
-      .filter((v): v is ChartPoint => v !== null);
+    const points: ChartPoint[] = [];
+
+    chronological.forEach((item, idx) => {
+      const d = new Date(item.ts);
+      if (Number.isNaN(d.getTime())) return;
+      points.push({ x: idx, y: item.price, ts: item.ts, store: item.store });
+    });
+
+    return points;
   }, [history]);
 
   const width = Math.floor(size.width);
   const height = 120;
-
-  const dateFmt = useMemo(
-    () =>
-      new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-      }),
-    [],
-  );
 
   if (data.length < 2) {
     return (
@@ -97,8 +94,8 @@ export default function PriceHistoryChart({
         <XYChart
           width={width}
           height={height}
-          margin={{ top: 10, right: 12, bottom: 26, left: 44 }}
-          xScale={{ type: 'time' }}
+          margin={{ top: 10, right: 12, bottom: 10, left: 64 }}
+          xScale={{ type: 'band', paddingInner: 0.3, paddingOuter: 0.2 }}
           yScale={{ type: 'linear', nice: true, zero: false }}
         >
           <AnimatedGrid
@@ -108,33 +105,19 @@ export default function PriceHistoryChart({
           />
 
           <AnimatedAxis
-            orientation="bottom"
-            numTicks={4}
-            tickFormat={(v: Date | number | string) =>
-              v instanceof Date ? dateFmt.format(v) : String(v)
-            }
-            tickLabelProps={() => ({
-              fill: 'rgba(0,0,0,0.55)',
-              fontSize: 10,
-              fontWeight: 800,
-            })}
-            stroke="rgba(0,0,0,0.2)"
-          />
-
-          <AnimatedAxis
             orientation="left"
             numTicks={4}
             tickFormat={(v: Date | number | string) => {
               const n = typeof v === 'number' ? v : Number(v);
               if (!Number.isFinite(n)) return '';
-              return formatPrice(Math.round(n));
+              return axisNumberFmt.format(n / 100);
             }}
             tickLabelProps={() => ({
               fill: 'rgba(0,0,0,0.55)',
               fontSize: 10,
               fontWeight: 800,
               textAnchor: 'end',
-              dx: '-6px',
+              dx: '-8px',
             })}
             stroke="rgba(0,0,0,0.2)"
           />
@@ -150,9 +133,16 @@ export default function PriceHistoryChart({
 
           <Tooltip<ChartPoint>
             showVerticalCrosshair
+            showDatumGlyph
             snapTooltipToDatumX
             snapTooltipToDatumY
             zIndex={9999}
+            glyphStyle={{
+              radius: 5,
+              fill: 'var(--pixel-white)',
+              stroke: 'var(--pixel-blue)',
+              strokeWidth: 3,
+            }}
             style={{
               background: 'transparent',
               boxShadow: 'none',
@@ -169,7 +159,7 @@ export default function PriceHistoryChart({
                     {formatPrice(nearest.y)}
                   </div>
                   <div className="text-(--pixel-gray)">
-                    {formatRelativeTime(nearest.rawDate)}
+                    {formatDateTime(nearest.ts)}
                     {nearest.store ? ` • ${nearest.store}` : ''}
                   </div>
                 </div>

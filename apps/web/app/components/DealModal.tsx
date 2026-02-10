@@ -332,8 +332,11 @@ export default function DealModal({
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-(--pixel-gray)" title={item.date}>
-                  {formatRelativeTime(item.date)}
+                <span
+                  className="text-xs text-(--pixel-gray)"
+                  title={formatDateTime(item.ts)}
+                >
+                  {formatRelativeTime(item.ts)}
                 </span>
               </div>
             ))}
