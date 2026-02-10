@@ -95,7 +95,7 @@ export default function PriceHistoryChart({
           width={width}
           height={height}
           margin={{ top: 10, right: 12, bottom: 10, left: 64 }}
-          xScale={{ type: 'band', paddingInner: 0.3, paddingOuter: 0.2 }}
+          xScale={{ type: 'point', padding: 0.05 }}
           yScale={{ type: 'linear', nice: true, zero: false }}
         >
           <AnimatedGrid
