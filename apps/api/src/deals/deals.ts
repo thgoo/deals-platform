@@ -7,6 +7,7 @@ import { webhookAuth } from './middleware/webhook-auth';
 import {
   createDealSchema,
   listDealsQuerySchema,
+  updateExtractedSchema,
   updateImageSchema,
   updateLinksSchema,
   updateProductKeySchema,
@@ -63,13 +64,15 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
 
 app.get('/', zValidator('query', listDealsQuerySchema), async c => {
   const dealService = c.get('dealService');
-  const { limit, cursor, search, stores, hasCoupon } = c.req.valid('query');
+  const { limit, cursor, from, to, search, stores, hasCoupon } = c.req.valid('query');
 
   const cursorDate = cursor ? new Date(cursor) : undefined;
 
   const deals = await dealService.findWithFilters({
     limit: limit + 1,
     cursor: cursorDate,
+    from,
+    to,
     search,
     stores,
     hasCoupon,
@@ -234,6 +237,36 @@ app.patch('/:id/product-key', webhookAuth, zValidator('json', updateProductKeySc
   }
   logger.info('Deal product key updated', { dealId: id, productKey: product_key, category });
   return c.json({ ok: true, id: deal.id, productKey: deal.productKey, category: deal.category });
+});
+
+app.patch('/:id/extracted', webhookAuth, zValidator('json', updateExtractedSchema), async c => {
+  const dealService = c.get('dealService');
+  const logger = c.get('logger');
+  const id = parseInt(c.req.param('id'), 10);
+  const body = c.req.valid('json');
+
+  if (isNaN(id)) {
+    return c.json({ error: 'Invalid deal ID' }, 400);
+  }
+
+  const deal = await dealService.updateExtracted(id, {
+    text: body.text,
+    description: body.description,
+    product: body.product,
+    store: body.store,
+    price: body.price,
+    coupons: body.coupons,
+    productKey: body.product_key,
+    category: body.category,
+  });
+
+  if (!deal) {
+    return c.json({ error: 'Deal not found' }, 404);
+  }
+
+  logger.info('Deal reprocessed', { dealId: id, product: body.product, store: body.store });
+
+  return c.json({ ok: true, id: deal.id });
 });
 
 export default app;

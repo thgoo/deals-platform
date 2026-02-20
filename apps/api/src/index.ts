@@ -1,3 +1,5 @@
+process.title = 'bargah-api';
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';

@@ -205,8 +205,36 @@ export class DealService {
   }
 
   /**
- * Update deal product key and category
- */
+   * Update all extractor-produced fields at once (for reprocessing)
+   */
+  async updateExtracted(id: number, data: {
+    text: string;
+    description: string | null;
+    product: string | null;
+    store: string | null;
+    price: number | null;
+    coupons: Deal['coupons'];
+    productKey: string | null;
+    category: string | null;
+  }): Promise<Deal | null> {
+    const result = await db.update(dealsTable)
+      .set(data)
+      .where(eq(dealsTable.id, id));
+
+    if (result[0].affectedRows === 0) {
+      return null;
+    }
+
+    const [deal] = await db.select()
+      .from(dealsTable)
+      .where(eq(dealsTable.id, id));
+
+    return deal ? this.parseDeal(deal) : null;
+  }
+
+  /**
+   * Update deal product key and category
+   */
   async updateProductKey(id: number, productKey: string | null, category: string | null): Promise<Deal | null> {
     const result = await db.update(dealsTable)
       .set({ productKey, category })
@@ -275,6 +303,8 @@ export class DealService {
   async findWithFilters(params: {
     limit: number;
     cursor?: Date;
+    from?: Date;
+    to?: Date;
     search?: string;
     stores?: string[];
     hasCoupon?: boolean;
@@ -283,6 +313,14 @@ export class DealService {
 
     if (params.cursor) {
       conditions.push(lt(dealsTable.ts, params.cursor));
+    }
+
+    if (params.from) {
+      conditions.push(gte(dealsTable.ts, params.from));
+    }
+
+    if (params.to) {
+      conditions.push(lt(dealsTable.ts, params.to));
     }
 
     if (params.search) {
