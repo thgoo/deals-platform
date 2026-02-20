@@ -10,20 +10,19 @@
     "setup": "bun run src/setup.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "bun test",
     "type-check": "tsc --noEmit",
     "check:rewrite": "bun test-rewrite.ts",
     "deals:update-links": "bun reprocess-deals.ts",
     "deals:update-products": "bun backfill-product-keys.ts"
   },
   "dependencies": {
-    "axios": "^1.6.0",
-    "cheerio": "^1.1.2",
-    "cloudscraper.js": "^0.1.1",
-    "dotenv": "^16.3.1",
     "@mtcute/bun": "^0.27.5",
     "@mtcute/core": "^0.27.5",
     "@mtcute/dispatcher": "^0.27.5",
-    "telegram": "^2.26.22"
+    "axios": "^1.6.0",
+    "cheerio": "^1.1.2",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

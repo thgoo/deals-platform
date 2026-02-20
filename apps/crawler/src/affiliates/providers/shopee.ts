@@ -1,12 +1,8 @@
 import axios from 'axios';
 import crypto from 'crypto';
+import type { AffiliateConfig } from '../../config';
 import type { AffiliateProvider } from './base';
 import { logger } from '../../logger';
-
-interface ShopeeApiConfig {
-  appId: string;
-  secret: string;
-}
 
 interface ShopeeGraphQLResponse {
   data?: {
@@ -24,20 +20,23 @@ interface ShopeeGraphQLResponse {
 
 class ShopeeProvider implements AffiliateProvider {
   readonly name = 'shopee';
-  private config: ShopeeApiConfig | null = null;
+  private appId: string | null = null;
+  private secret: string | null = null;
 
-  configure(appId: string, secret: string): void {
-    this.config = { appId, secret };
+  configure(config: AffiliateConfig): void {
+    const shopeeConfig = config.shopee;
+    if (shopeeConfig?.appId && shopeeConfig?.secret) {
+      this.appId = shopeeConfig.appId;
+      this.secret = shopeeConfig.secret;
+    }
   }
 
   canHandle(url: string): boolean {
     return url.toLowerCase().includes('shopee.com.br');
   }
 
-  isConfigured(): boolean {
-    return this.config !== null &&
-           this.config.appId !== '' &&
-           this.config.secret !== '';
+  private isConfigured(): boolean {
+    return this.appId !== null && this.secret !== null;
   }
 
   /**
@@ -45,11 +44,7 @@ class ShopeeProvider implements AffiliateProvider {
    * Signature = SHA256(AppId + Timestamp + Payload + Secret)
    */
   private generateSignature(timestamp: number, payload: string): string {
-    if (!this.config) {
-      throw new Error('Shopee provider not configured');
-    }
-
-    const signString = `${this.config.appId}${timestamp}${payload}${this.config.secret}`;
+    const signString = `${this.appId}${timestamp}${payload}${this.secret}`;
     return crypto.createHash('sha256').update(signString, 'utf8').digest('hex');
   }
 
@@ -58,12 +53,8 @@ class ShopeeProvider implements AffiliateProvider {
    * Authorization: SHA256 Credential={AppId}, Timestamp={Timestamp}, Signature={Signature}
    */
   private generateAuthHeader(timestamp: number, payload: string): string {
-    if (!this.config) {
-      throw new Error('Shopee provider not configured');
-    }
-
     const signature = this.generateSignature(timestamp, payload);
-    return `SHA256 Credential=${this.config.appId}, Timestamp=${timestamp}, Signature=${signature}`;
+    return `SHA256 Credential=${this.appId}, Timestamp=${timestamp}, Signature=${signature}`;
   }
 
   async rewrite(url: string): Promise<string | null> {

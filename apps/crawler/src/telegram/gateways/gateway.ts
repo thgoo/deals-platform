@@ -31,6 +31,7 @@ export type TelegramMessageHandler = (message: TelegramIncomingMessage) => Promi
 
 export interface TelegramGateway {
   initialize(config: TelegramGatewayInit): Promise<void>;
+  disconnect(): Promise<void>;
   onMessage(handler: TelegramMessageHandler): void;
   resolveChatAlias(chatId: string): Promise<string>;
   downloadMessageMedia(chatId: string, messageId: number): Promise<Uint8Array | Buffer | null>;

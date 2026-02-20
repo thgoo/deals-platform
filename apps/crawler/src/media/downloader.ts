@@ -2,19 +2,35 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '../logger';
 import { getCurrentTelegramGateway } from '../telegram/runtime';
+import { downloadQueue } from './queue';
 
 class MediaDownloader {
-  async ensureMediaDir(mediaDir: string): Promise<void> {
+  enqueuePhotoDownload(
+    photoId: string,
+    messageId: number,
+    chatId: string,
+    mediaDir: string,
+    onDownloaded: (filePath: string) => Promise<void>,
+  ): void {
+    downloadQueue.enqueue(async () => {
+      const filePath = await this.downloadPhoto(photoId, messageId, chatId, mediaDir);
+      if (filePath) {
+        await onDownloaded(filePath);
+      }
+    });
+  }
+
+  private async ensureMediaDir(mediaDir: string): Promise<void> {
     try {
       await fs.mkdir(mediaDir, { recursive: true });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`Failed to create media directory ${mediaDir}`, { error: errorMsg });
+      logger.error('Failed to create media directory', { dir: mediaDir, error: errorMsg });
       throw error;
     }
   }
 
-  async downloadPhoto(
+  private async downloadPhoto(
     photoId: string,
     messageId: number,
     chatId: string,
@@ -26,7 +42,7 @@ class MediaDownloader {
 
       try {
         await fs.access(filePath);
-        logger.info(`Photo already exists: ${fileName}`);
+        logger.info('Photo already exists, skipping download', { fileName });
         return filePath;
       } catch {
         // File doesn't exist, proceed with download
@@ -37,7 +53,7 @@ class MediaDownloader {
       const downloaded = await getCurrentTelegramGateway().downloadMessageMedia(chatId, messageId);
       if (downloaded) {
         await fs.writeFile(filePath, downloaded);
-        logger.info(`Downloaded media to ${filePath}`);
+        logger.info('Media downloaded', { filePath });
         return filePath;
       }
 

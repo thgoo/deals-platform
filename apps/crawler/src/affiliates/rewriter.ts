@@ -43,17 +43,10 @@ export async function rewriteLinks(
     providersInitialized = true;
   }
 
-  const results = await Promise.all(
-    links.map(link => rewriteSingleLink(link, config)),
-  );
-
-  return results;
+  return Promise.all(links.map(link => rewriteSingleLink(link)));
 }
 
-async function rewriteSingleLink(
-  url: string,
-  config: AffiliateConfig,
-): Promise<RewriteResult> {
+async function rewriteSingleLink(url: string): Promise<RewriteResult> {
   try {
     const originalUrl = url;
     const allVersions: string[] = [originalUrl];
@@ -87,8 +80,7 @@ async function rewriteSingleLink(
       return { original: originalUrl, expanded: expandedUrl, final: finalUrl, allVersions };
     }
 
-    const providerConfig = config[provider.name as keyof AffiliateConfig];
-    const rewritten = await provider.rewrite(urlToProcess, providerConfig);
+    const rewritten = await provider.rewrite(urlToProcess);
     const finalUrl = rewritten ?? urlToProcess;
 
     if (finalUrl !== urlToProcess && finalUrl !== originalUrl) {

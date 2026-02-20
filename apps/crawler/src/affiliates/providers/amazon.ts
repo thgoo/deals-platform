@@ -1,15 +1,22 @@
+import type { AffiliateConfig } from '../../config';
 import type { AffiliateProvider } from './base';
+import { logger } from '../../logger';
 
 class AmazonProvider implements AffiliateProvider {
   readonly name = 'amazon';
+  private affiliateTag: string | null = null;
+
+  configure(config: AffiliateConfig): void {
+    this.affiliateTag = config.amazon ?? null;
+  }
 
   canHandle(url: string): boolean {
     const urlLower = url.toLowerCase();
     return urlLower.includes('amazon.com.br') || urlLower.includes('amzn.');
   }
 
-  async rewrite(url: string, config: unknown): Promise<string | null> {
-    if (typeof config !== 'string' || !config) return null;
+  async rewrite(url: string): Promise<string | null> {
+    if (!this.affiliateTag) return null;
 
     try {
       const urlObj = new URL(url);
@@ -21,10 +28,13 @@ class AmazonProvider implements AffiliateProvider {
 
       urlObj.hash = '';
       urlObj.search = '';
-      urlObj.searchParams.set('tag', config);
+      urlObj.searchParams.set('tag', this.affiliateTag);
 
-      return urlObj.toString();
+      const rewritten = urlObj.toString();
+      logger.debug('Amazon link rewritten', { asin: asin ?? 'unknown', url: rewritten });
+      return rewritten;
     } catch {
+      logger.debug('Failed to rewrite Amazon link', { url });
       return null;
     }
   }

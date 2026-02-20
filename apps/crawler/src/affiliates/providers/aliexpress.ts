@@ -1,14 +1,9 @@
 import axios from 'axios';
 import crypto from 'crypto';
+import type { AffiliateConfig } from '../../config';
 import type { AffiliateProvider } from './base';
 import { logger } from '../../logger';
 import { cleanUrl } from '../../processing/utils';
-
-interface AliExpressConfig {
-  appKey: string;
-  appSecret: string;
-  trackingId: string;
-}
 
 interface AliExpressApiResponse {
   aliexpress_affiliate_link_generate_response?: {
@@ -27,10 +22,17 @@ interface AliExpressApiResponse {
 
 class AliExpressProvider implements AffiliateProvider {
   readonly name = 'aliexpress';
-  private config: AliExpressConfig | null = null;
+  private appKey: string | null = null;
+  private appSecret: string | null = null;
+  private trackingId: string | null = null;
 
-  configure(appKey: string, appSecret: string, trackingId: string): void {
-    this.config = { appKey, appSecret, trackingId };
+  configure(config: AffiliateConfig): void {
+    const aliConfig = config.aliexpress;
+    if (aliConfig?.appKey && aliConfig?.appSecret && aliConfig?.trackingId) {
+      this.appKey = aliConfig.appKey;
+      this.appSecret = aliConfig.appSecret;
+      this.trackingId = aliConfig.trackingId;
+    }
   }
 
   canHandle(url: string): boolean {
@@ -38,11 +40,8 @@ class AliExpressProvider implements AffiliateProvider {
     return urlLower.includes('aliexpress.com') || urlLower.includes('s.click.aliexpress.com');
   }
 
-  isConfigured(): boolean {
-    return this.config !== null &&
-           this.config.appKey !== '' &&
-           this.config.appSecret !== '' &&
-           this.config.trackingId !== '';
+  private isConfigured(): boolean {
+    return this.appKey !== null && this.appSecret !== null && this.trackingId !== null;
   }
 
   async rewrite(url: string): Promise<string | null> {
@@ -53,7 +52,6 @@ class AliExpressProvider implements AffiliateProvider {
 
     try {
       const cleanedUrl = cleanUrl(url);
-
       const apiUrl = this.generateApiUrl(cleanedUrl);
 
       logger.info('Calling AliExpress API', { productUrl: cleanedUrl });
@@ -87,44 +85,39 @@ class AliExpressProvider implements AffiliateProvider {
    * Generates MD5 signature for API authentication
    * Formula: MD5(appSecret + sortedParams + appSecret).toUpperCase()
    */
-  private generateSign(params: Record<string, string>, appSecret: string): string {
+  private generateSign(params: Record<string, string>): string {
     const sortedKeys = Object.keys(params).sort();
 
-    let signString = appSecret;
+    let signString = this.appSecret!;
     for (const key of sortedKeys) {
       signString += key + params[key];
     }
-    signString += appSecret;
+    signString += this.appSecret!;
 
     return crypto.createHash('md5').update(signString, 'utf8').digest('hex').toUpperCase();
   }
 
-  private generateApiUrl(cleanUrl: string): string {
-    if (!this.config) {
-      throw new Error('AliExpress provider not configured');
-    }
-
+  private generateApiUrl(productUrl: string): string {
     const timestamp = Date.now().toString();
 
     const params: Record<string, string> = {
-      app_key: this.config.appKey,
+      app_key: this.appKey!,
       format: 'json',
       method: 'aliexpress.affiliate.link.generate',
       promotion_link_type: '0',
       ship_to_country: 'BR',
       sign_method: 'md5',
-      source_values: cleanUrl,
+      source_values: productUrl,
       timestamp,
-      tracking_id: this.config.trackingId,
+      tracking_id: this.trackingId!,
       v: '1',
     };
 
-    const sign = this.generateSign(params, this.config.appSecret);
+    const sign = this.generateSign(params);
     params.sign = sign;
 
-    const baseUrl = 'https://api-sg.aliexpress.com/sync';
     const queryString = new URLSearchParams(params).toString();
-    return `${baseUrl}?${queryString}`;
+    return `https://api-sg.aliexpress.com/sync?${queryString}`;
   }
 }
 

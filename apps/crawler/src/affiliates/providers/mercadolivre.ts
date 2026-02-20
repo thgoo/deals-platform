@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import type { AffiliateConfig } from '../../config';
 import type { AffiliateProvider } from './base';
 
 const HEADERS = {
@@ -12,13 +13,18 @@ const HEADERS = {
 
 class MercadoLivreProvider implements AffiliateProvider {
   readonly name = 'mercadolivre';
+  private affiliateId: string | null = null;
+
+  configure(config: AffiliateConfig): void {
+    this.affiliateId = config.mercadolivre ?? null;
+  }
 
   canHandle(url: string): boolean {
     const urlLower = url.toLowerCase();
     return urlLower.includes('mercadolivre.com.br') || urlLower.includes('mercadolibre.');
   }
 
-  async rewrite(url: string, config: unknown): Promise<string | null> {
+  async rewrite(url: string): Promise<string | null> {
     try {
       const resolved = await resolveMercadoLivreDestination(url);
 
@@ -26,8 +32,8 @@ class MercadoLivreProvider implements AffiliateProvider {
       urlObj.hash = '';
       urlObj.search = '';
 
-      if (typeof config === 'string' && config) {
-        urlObj.searchParams.set('pdp_source', config);
+      if (this.affiliateId) {
+        urlObj.searchParams.set('pdp_source', this.affiliateId);
       }
 
       return `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;

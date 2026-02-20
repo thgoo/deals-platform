@@ -1,6 +1,5 @@
 import { TelegramClient } from '@mtcute/bun';
 import type { FileDownloadLocation, MessageEntity } from '@mtcute/bun';
-import { MemoryStorage } from '@mtcute/core';
 import { Dispatcher } from '@mtcute/dispatcher';
 import type { MessageContext } from '@mtcute/dispatcher';
 import * as fs from 'fs/promises';
@@ -136,7 +135,7 @@ export class MtcuteGateway implements TelegramGateway {
     this.tg = new TelegramClient({
       apiId,
       apiHash,
-      storage: new MemoryStorage(),
+      storage: path.join(sessionDir, `${sessionName}.${backend}.db`),
       logLevel: getMtcuteLogLevel(),
     });
 
@@ -171,6 +170,12 @@ export class MtcuteGateway implements TelegramGateway {
     });
 
     logger.info('Connected to Telegram API (mtcute)');
+  }
+
+  async disconnect(): Promise<void> {
+    this.handler = null;
+    await this.tg?.destroy();
+    logger.info('Disconnected from Telegram');
   }
 
   onMessage(handler: TelegramMessageHandler): void {

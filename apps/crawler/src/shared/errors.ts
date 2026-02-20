@@ -1,3 +1,5 @@
+import { logger } from '../logger';
+
 export class AppError extends Error {
   constructor(message: string, public cause?: unknown) {
     super(message);
@@ -21,5 +23,5 @@ export class ProcessingError extends AppError {
 
 export function handleError(error: unknown): void {
   const errorMsg = error instanceof Error ? error.message : String(error);
-  console.error('[ERROR]', errorMsg);
+  logger.error('Unhandled error', { error: errorMsg });
 }

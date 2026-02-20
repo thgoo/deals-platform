@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AffiliateConfig } from '../../config';
 import type { AffiliateProvider } from './base';
 import { logger } from '../../logger';
 import { removeUrlParams } from '../../processing/utils';
@@ -11,24 +12,30 @@ const ADVERTISER_IDS: Record<string, number> = {
   'nike.com.br': 17652,
 };
 
-export interface AwinConfig {
-  publisherId: string;
-  token: string;
-}
-
 class AwinProvider implements AffiliateProvider {
   readonly name = 'awin';
+  private publisherId: string | null = null;
+  private token: string | null = null;
+
+  configure(config: AffiliateConfig): void {
+    const awinConfig = config.awin;
+    if (awinConfig?.publisherId && awinConfig?.token) {
+      this.publisherId = awinConfig.publisherId;
+      this.token = awinConfig.token;
+    }
+  }
 
   canHandle(url: string): boolean {
     const urlLower = url.toLowerCase();
     return Object.keys(ADVERTISER_IDS).some(domain => urlLower.includes(domain));
   }
 
-  async rewrite(url: string, config: unknown): Promise<string | null> {
-    const awinConfig = config as AwinConfig;
-    if (!awinConfig?.publisherId || !awinConfig?.token) {
-      return null;
-    }
+  private isConfigured(): boolean {
+    return this.publisherId !== null && this.token !== null;
+  }
+
+  async rewrite(url: string): Promise<string | null> {
+    if (!this.isConfigured()) return null;
 
     try {
       const urlObj = new URL(url);
@@ -48,7 +55,7 @@ class AwinProvider implements AffiliateProvider {
       logger.debug(`Generating Awin link for ${cleanUrl}`, { advertiserId });
 
       const response = await axios.post(
-        `${AWIN_API_URL}/${awinConfig.publisherId}/linkbuilder/generate`,
+        `${AWIN_API_URL}/${this.publisherId}/linkbuilder/generate`,
         {
           advertiserId,
           destinationUrl: cleanUrl,
@@ -56,7 +63,7 @@ class AwinProvider implements AffiliateProvider {
         },
         {
           headers: {
-            'Authorization': `Bearer ${awinConfig.token}`,
+            'Authorization': `Bearer ${this.token}`,
             'Content-Type': 'application/json',
           },
           timeout: 10000,

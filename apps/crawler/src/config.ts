@@ -20,7 +20,7 @@ export interface AffiliateConfig {
   amazon?: string;
   shopee?: ShopeeApiConfig;
   mercadolivre?: string;
-  aliexpress: AliExpressApiConfig;
+  aliexpress?: AliExpressApiConfig;
   magalu?: MagaluConfig;
   natura?: string;
   awin?: AwinApiConfig;
@@ -87,24 +87,19 @@ export const config: Config = {
     .filter(Boolean),
   affiliates: {
     amazon: process.env.AMAZON_AFFILIATE_TAG,
-    shopee: {
-      appId: process.env.SHOPEE_APP_ID || '',
-      secret: process.env.SHOPEE_SECRET || '',
-    },
+    shopee: process.env.SHOPEE_APP_ID && process.env.SHOPEE_SECRET
+      ? { appId: process.env.SHOPEE_APP_ID, secret: process.env.SHOPEE_SECRET }
+      : undefined,
     mercadolivre: process.env.MERCADOLIVRE_AFFILIATE_ID,
-    aliexpress: {
-      appKey: process.env.ALIEXPRESS_APP_KEY || '',
-      appSecret: process.env.ALIEXPRESS_APP_SECRET || '',
-      trackingId: process.env.ALIEXPRESS_TRACKING_ID || '',
-    },
-    awin: {
-      publisherId: process.env.AWIN_PUBLISHER_ID || '',
-      token: process.env.AWIN_TOKEN || '',
-    },
-    magalu: {
-      username: process.env.MAGALU_AFFILIATE_ID,
-      promoterId: process.env.MAGALU_PROMOTER_ID,
-    },
+    aliexpress: process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET && process.env.ALIEXPRESS_TRACKING_ID
+      ? { appKey: process.env.ALIEXPRESS_APP_KEY, appSecret: process.env.ALIEXPRESS_APP_SECRET, trackingId: process.env.ALIEXPRESS_TRACKING_ID }
+      : undefined,
+    awin: process.env.AWIN_PUBLISHER_ID && process.env.AWIN_TOKEN
+      ? { publisherId: process.env.AWIN_PUBLISHER_ID, token: process.env.AWIN_TOKEN }
+      : undefined,
+    magalu: process.env.MAGALU_AFFILIATE_ID || process.env.MAGALU_PROMOTER_ID
+      ? { username: process.env.MAGALU_AFFILIATE_ID, promoterId: process.env.MAGALU_PROMOTER_ID }
+      : undefined,
     natura: process.env.NATURA_AFFILIATE_ID,
   },
 };

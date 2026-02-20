@@ -20,27 +20,12 @@ export function initializeProviders(config: AffiliateConfig): void {
     awinProvider,
   ];
   for (const provider of providers) {
+    provider.configure(config);
     providerRegistry.register(provider);
   }
 
-  const aliConfig = config.aliexpress;
-  if (aliConfig && typeof aliConfig === 'object') {
-    const { appKey, appSecret, trackingId } = aliConfig;
-    if (appKey && appSecret && trackingId) {
-      aliExpressProvider.configure(appKey, appSecret, trackingId);
-    }
-  }
-
-  const shopeeConfig = config.shopee;
-  if (shopeeConfig && typeof shopeeConfig === 'object') {
-    const { appId, secret } = shopeeConfig;
-    if (appId && secret) {
-      shopeeProvider.configure(appId, secret);
-    }
-  }
-
   logger.info('Affiliate providers initialized', {
-    count: providerRegistry.getAll().length,
+    count: providers.length,
   });
 }
 

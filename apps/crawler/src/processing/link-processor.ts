@@ -33,29 +33,12 @@ class LinkProcessor {
     if (!links || links.length === 0) return [];
 
     return links.filter(link => {
+      // Reject channel self-promotion and navigation links
       if (link.includes('t.me/')) return false;
-
       if (link.includes('bit.ly/canal') ||
           link.includes('adrena.click/ofertas') ||
           link.includes('linkmc.click/ofertas')) return false;
-
       if (link.includes('mercadolivre.com.br/social/')) return false;
-
-      if (link.includes('amazon.com.br/dp/') ||
-          link.includes('mercadolivre.com.br/p/MLB')) return true;
-
-      if (link.includes('shopee.com.br') && link.includes('/product/')) return true;
-
-      if (link.includes('aliexpress.com/item/')) return true;
-
-      if (link.includes('mercadolivre.com.br/cupons') ||
-          link.includes('amazon.com.br/promotion')) return true;
-
-      if (link.includes('curt.link/') ||
-          link.includes('tidd.ly/') ||
-          link.includes('mercadolivre.com/sec/')) return true;
-
-      if (link.includes('natura.divulgador.link/')) return true;
 
       return true;
     });
@@ -75,7 +58,7 @@ class LinkProcessor {
       return { final: [], allVersions: [] };
     }
 
-    logger.info(`Processing ${filteredLinks.length} links from message #${message.id} (with history for extractor)`);
+    logger.info('Processing links from message', { count: filteredLinks.length, messageId: message.id });
 
     const results = await rewriteLinks(filteredLinks, affiliateConfig);
 

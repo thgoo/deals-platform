@@ -92,42 +92,30 @@ class MessageHandler {
         payload.media = message.media;
 
         if (message.media.type === 'photo' && message.media.photo_id) {
-          this.downloadAndNotifyMedia(message.media.photo_id, id, chatId);
+          const photoId = message.media.photo_id;
+          mediaDownloader.enqueuePhotoDownload(photoId, id, chatId, config.media.dir, async filePath => {
+            const filename = filePath.split('/').pop() || '';
+            const relativePath = `media/${filename}`;
+            await webhookClient.sendMediaNotification(photoId, relativePath);
+          });
         }
       }
 
-      await webhookClient.sendDeal(payload);
+      try {
+        await webhookClient.sendDeal(payload);
+      } catch (error) {
+        // Retries exhausted — log with full context and move on.
+        // The deal is lost but processing should continue for future messages.
+        logger.error('Failed to send deal after retries', {
+          chat: chatAlias,
+          messageId: id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Error processing message', { error: errorMsg });
       throw new ProcessingError('Failed to process message', error);
-    }
-  }
-
-  private async downloadAndNotifyMedia(
-    photoId: string,
-    messageId: number,
-    chatId: string,
-  ): Promise<void> {
-    try {
-      const filePath = await mediaDownloader.downloadPhoto(
-        photoId,
-        messageId,
-        chatId,
-        config.media.dir,
-      );
-
-      if (filePath) {
-        // Extract filename and create relative path
-        const filename = filePath.split('/').pop() || '';
-        const relativePath = `media/${filename}`;
-
-        await webhookClient.sendMediaNotification(photoId, relativePath);
-      }
-    } catch (error) {
-      logger.error('Error downloading/notifying media', {
-        error: error instanceof Error ? error.message : String(error),
-      });
     }
   }
 }

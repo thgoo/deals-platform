@@ -1,9 +1,49 @@
 import { config } from './config';
 import { logger } from './logger';
+import { downloadQueue } from './media/queue';
 import { messageHandler } from './processing/message-handler';
 import { handleError } from './shared/errors';
+import type { TelegramGateway } from './telegram';
 import { getTelegramGateway } from './telegram';
 import { setCurrentTelegramGateway } from './telegram/runtime';
+
+function registerShutdownHandlers(gateway: TelegramGateway): void {
+  let shuttingDown = false;
+
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    logger.info('Shutdown signal received, stopping...', { signal });
+
+    try {
+      await gateway.disconnect();
+    } catch (error) {
+      logger.error('Error during Telegram disconnect', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    try {
+      logger.info('Waiting for download queue to drain...', {
+        active: downloadQueue.active,
+        queued: downloadQueue.size,
+      });
+      await downloadQueue.drain();
+    } catch (error) {
+      // Timeout — log and exit anyway
+      logger.warn('Download queue drain timed out, forcing shutdown', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    logger.info('Shutdown complete');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
 
 async function main() {
   try {
@@ -40,6 +80,8 @@ async function main() {
         handleError(error);
       }
     });
+
+    registerShutdownHandlers(telegramGateway);
 
     logger.info('Crawler running. Press Ctrl+C to exit.');
   } catch (error) {
