@@ -40,6 +40,23 @@ function getMtcuteLogLevel(): number {
   return process.env.NODE_ENV === 'production' ? LOG_WARN : LOG_INFO;
 }
 
+function installMtcuteLogHandler(tg: TelegramClient): void {
+  // Redirect mtcute internal logs through our logger so the output is uniform.
+  // handler signature: (color, level, tag, fmt, ...args)
+  // levels: 0=OFF 1=ERROR 2=WARN 3=INFO 4=DEBUG 5=VERBOSE
+  tg.log.mgr.handler = (_color: number, level: number, tag: string, fmt: string, args: unknown[]) => {
+    let i = 0;
+    const interpolated = fmt.replace(/%[sdio]/g, () => String(args[i++] ?? ''));
+    const message = `[mtcute/${tag}] ${interpolated}`;
+    const remaining = args.slice(i);
+    const meta: Record<string, unknown> = { tag, ...(remaining.length > 0 ? { args: remaining } : {}) };
+    if (level <= 1) logger.error(message, meta);
+    else if (level === 2) logger.warn(message, meta);
+    else if (level === 3) logger.info(message, meta);
+    else logger.debug(message, meta);
+  };
+}
+
 function extractTextLinks(entities: readonly MessageEntity[] | undefined): string[] {
   if (!entities) return [];
   const out: string[] = [];
@@ -138,6 +155,8 @@ export class MtcuteGateway implements TelegramGateway {
       storage: path.join(sessionDir, `${sessionName}.${backend}.db`),
       logLevel: getMtcuteLogLevel(),
     });
+
+    installMtcuteLogHandler(this.tg);
 
     await this.tg.start({
       session: sessionString || undefined,
