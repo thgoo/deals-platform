@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
       {
         pathname: '/api/media/**',
       },
+      {
+        pathname: '/images/**',
+      },
     ],
   },
 };

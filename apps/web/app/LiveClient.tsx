@@ -51,7 +51,12 @@ export default function LiveClient({ initialData }: LiveClientProps) {
     item.mediaType && item.localPath && !imageLoadErrors.has(item.id);
 
   const getImageSrc = (item: Item) => {
-    return hasImage(item) ? `/api/media?file=${item.localPath}` : null;
+    if (!hasImage(item)) return null;
+    // Static app assets (e.g. coupon.png) live in public/ and are served directly.
+    // Dynamic images downloaded from Telegram go through the /api/media route.
+    return item.localPath!.startsWith('media/')
+      ? `/api/media?file=${item.localPath}`
+      : `/images/${item.localPath}`;
   };
 
   const handleLogoClick = () => {
