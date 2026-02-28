@@ -24,6 +24,7 @@ export interface MediaInfo {
   webpage_url?: string;
   webpage_title?: string;
   webpage_description?: string;
+  local_path?: string;
 }
 
 export interface ExtractionResult {

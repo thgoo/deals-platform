@@ -88,7 +88,10 @@ class MessageHandler {
         category: extraction.category ?? undefined,
       };
 
-      if (message.media) {
+      if (extraction.product === null) {
+        // Coupon-only deal: skip Telegram media download, use default coupon image
+        payload.media = { type: 'unknown', local_path: 'media/coupon.png' };
+      } else if (message.media) {
         payload.media = message.media;
 
         if (message.media.type === 'photo' && message.media.photo_id) {
