@@ -40,6 +40,12 @@ function getMtcuteLogLevel(): number {
   return process.env.NODE_ENV === 'production' ? LOG_WARN : LOG_INFO;
 }
 
+// Warn messages from mtcute that are expected/harmless and should not pollute logs.
+// Demoted to debug so they still appear with LOG_LEVEL=debug if needed.
+const MTCUTE_WARN_DEMOTE_PATTERNS = [
+  'internal issues', // -503:Timeout — Telegram DC temporary timeout, retried automatically
+];
+
 function installMtcuteLogHandler(tg: TelegramClient): void {
   // Redirect mtcute internal logs through our logger so the output is uniform.
   // handler signature: (color, level, tag, fmt, ...args)
@@ -50,9 +56,13 @@ function installMtcuteLogHandler(tg: TelegramClient): void {
     const message = `[mtcute/${tag}] ${interpolated}`;
     const remaining = args.slice(i);
     const meta: Record<string, unknown> = { tag, ...(remaining.length > 0 ? { args: remaining } : {}) };
-    if (level <= 1) logger.error(message, meta);
-    else if (level === 2) logger.warn(message, meta);
-    else if (level === 3) logger.info(message, meta);
+
+    const effectiveLevel =
+      level === 2 && MTCUTE_WARN_DEMOTE_PATTERNS.some(p => fmt.includes(p)) ? 4 : level;
+
+    if (effectiveLevel <= 1) logger.error(message, meta);
+    else if (effectiveLevel === 2) logger.warn(message, meta);
+    else if (effectiveLevel === 3) logger.info(message, meta);
     else logger.debug(message, meta);
   };
 }
