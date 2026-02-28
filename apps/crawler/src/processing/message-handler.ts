@@ -90,7 +90,7 @@ class MessageHandler {
 
       if (extraction.product === null) {
         // Coupon-only deal: skip Telegram media download, use default coupon image
-        payload.media = { type: 'unknown', local_path: 'media/coupon.png' };
+        payload.media = { type: 'unknown', local_path: 'coupon.png' };
       } else if (message.media) {
         payload.media = message.media;
 
