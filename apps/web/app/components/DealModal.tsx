@@ -18,6 +18,8 @@ import {
   removeUrls,
   formatDateTime,
   formatRelativeTime,
+  hasDealImage,
+  getDealImageSrc,
 } from '../utils';
 import { getPriceIndicator } from '../utils/priceIndicator';
 import CouponCopy from './CouponCopy';
@@ -42,9 +44,9 @@ export default function DealModal({
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
 
-  const hasImage =
-    deal.mediaType && deal.localPath && !imageLoadErrors.has(deal.id);
-  const imageSrc = hasImage ? `/api/media?file=${deal.localPath}` : null;
+  const imageSrc = hasDealImage(deal, imageLoadErrors)
+    ? getDealImageSrc(deal.localPath)
+    : null;
   const hasProductKey = !!deal.productKey;
 
   const {

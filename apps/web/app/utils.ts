@@ -69,3 +69,27 @@ export function formatRelativeTime(dateString: string): string {
 export function removeUrls(text: string): string {
   return text.replace(/https?:\/\/[^\s]+/g, '').trim();
 }
+
+/**
+ * Returns true if a deal has a displayable image.
+ * imageLoadErrors tracks IDs of images that failed to load at runtime.
+ */
+export function hasDealImage(
+  item: { id: number; mediaType?: string; localPath?: string },
+  imageLoadErrors: Set<number>,
+): boolean {
+  return !!(item.mediaType && item.localPath && !imageLoadErrors.has(item.id));
+}
+
+/**
+ * Returns the image src URL for a deal's localPath.
+ * - Paths starting with "media/" are dynamic images downloaded from Telegram,
+ *   served through the /api/media route.
+ * - Other paths are static app assets (e.g. coupon.png) served from /images/.
+ */
+export function getDealImageSrc(localPath: string | undefined | null): string | null {
+  if (!localPath) return null;
+  return localPath.startsWith('media/')
+    ? `/api/media?file=${localPath}`
+    : `/images/${localPath}`;
+}

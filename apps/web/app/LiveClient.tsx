@@ -15,6 +15,8 @@ import {
   removeUrls,
   formatRelativeTime,
   formatDateTime,
+  hasDealImage,
+  getDealImageSrc,
 } from './utils';
 
 interface LiveClientProps {
@@ -47,17 +49,10 @@ export default function LiveClient({ initialData }: LiveClientProps) {
     stores: selectedStores,
   });
 
-  const hasImage = (item: Item) =>
-    item.mediaType && item.localPath && !imageLoadErrors.has(item.id);
-
-  const getImageSrc = (item: Item) => {
-    if (!hasImage(item)) return null;
-    // Static app assets (e.g. coupon.png) live in public/ and are served directly.
-    // Dynamic images downloaded from Telegram go through the /api/media route.
-    return item.localPath!.startsWith('media/')
-      ? `/api/media?file=${item.localPath}`
-      : `/images/${item.localPath}`;
-  };
+  const getImageSrc = (item: Item) =>
+    hasDealImage(item, imageLoadErrors)
+      ? getDealImageSrc(item.localPath)
+      : null;
 
   const handleLogoClick = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
