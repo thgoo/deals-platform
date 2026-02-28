@@ -26,6 +26,7 @@ const SHORTENER_DOMAINS = [
   'cutt.ly',
   'divulgador.magalu.com',
   'eusoubarone.link',
+  'meli.la',
 ];
 
 let providersInitialized = false;
