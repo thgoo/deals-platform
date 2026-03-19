@@ -134,7 +134,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
           >
             <Image
               src="/images/barga-dark.svg"
-              alt="Barga"
+              alt="Bargah"
               fill
               sizes="100%"
               loading="eager"
@@ -275,7 +275,7 @@ export default function LiveClient({ initialData }: LiveClientProps) {
                 Disclosures
               </div>
               <div className="mt-3 space-y-2">
-                <a href="/amazon" className="font-bold underline">
+                <a href="/amzn" className="font-bold underline">
                   Amazon
                 </a>
               </div>

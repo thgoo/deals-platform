@@ -50,7 +50,7 @@ export default async function AmazonPage() {
           >
             <Image
               src="/images/barga-dark.svg"
-              alt="Barga"
+              alt="Bargah"
               fill
               sizes="100%"
               loading="eager"
