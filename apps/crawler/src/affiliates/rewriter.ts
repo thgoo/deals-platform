@@ -27,6 +27,7 @@ const SHORTENER_DOMAINS = [
   'divulgador.magalu.com',
   'eusoubarone.link',
   'meli.la',
+  'go.promozone.ai',
 ];
 
 let providersInitialized = false;
