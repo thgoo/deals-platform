@@ -1,6 +1,7 @@
 import type { AffiliateConfig } from '../config';
 import { logger } from '../logger';
 import { cleanUrl } from '../processing/utils';
+import { SHORTENER_DOMAINS } from './constants';
 import { initializeProviders, providerRegistry } from './providers';
 import { expandUrl } from './url-expander';
 
@@ -10,25 +11,6 @@ export interface RewriteResult {
   final: string;
   allVersions: string[];
 }
-
-const SHORTENER_DOMAINS = [
-  'amzn.to',
-  'amzn.divulgador.link',
-  's.shopee.com.br',
-  'mercadolivre.com/sec',
-  's.click.aliexpress.com',
-  'tidd.ly',
-  'tiddly.xyz',
-  'magalu.divulgador.link',
-  'natura.divulgador.link',
-  'tecno.click',
-  'curt.link',
-  'cutt.ly',
-  'divulgador.magalu.com',
-  'eusoubarone.link',
-  'meli.la',
-  'go.promozone.ai',
-];
 
 let providersInitialized = false;
 

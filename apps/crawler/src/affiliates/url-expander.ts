@@ -1,31 +1,45 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { logger } from '../logger';
+import { AFFILIATE_NETWORK_DOMAINS, HTTP_HEADERS, PROMOZONE_RESOLVE_API, SHORTENER_DOMAINS } from './constants';
 
-const AFFILIATE_NETWORK_DOMAINS = [
-  'awin1.com',
-  'awin.com',
-  'go2cloud.org',
-  'redirect.viglink.com',
-];
+async function expandPromozoneUrl(shortUrl: string): Promise<string> {
+  try {
+    const shortCode = new URL(shortUrl).pathname.split('/').filter(Boolean).pop();
+    if (!shortCode) return shortUrl;
 
-const HEADERS = {
-  // eslint-disable-next-line @stylistic/max-len
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-  'Accept-Encoding': 'gzip, deflate',
-  'Connection': 'keep-alive',
-  'Cache-Control': 'max-age=0',
-};
+    const response = await axios.get(`${PROMOZONE_RESOLVE_API}/${encodeURIComponent(shortCode)}`, {
+      headers: { Accept: 'application/json' },
+      timeout: 5000,
+    });
+
+    const destinationUrl = response.data?.destinationUrl;
+    if (destinationUrl && typeof destinationUrl === 'string') {
+      logger.debug('Promozone URL resolved', { from: shortUrl, to: destinationUrl });
+      return destinationUrl;
+    }
+  } catch (error) {
+    logger.error('Failed to resolve Promozone URL', {
+      url: shortUrl,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return shortUrl;
+}
 
 export async function expandUrl(shortUrl: string): Promise<string> {
+  if (shortUrl.includes('go.promozone.ai')) {
+    const resolved = await expandPromozoneUrl(shortUrl);
+    const needsExpansion = SHORTENER_DOMAINS.some(domain => resolved.includes(domain));
+    return needsExpansion ? expandUrl(resolved) : resolved;
+  }
+
   try {
     const response = await axios.get(shortUrl, {
       maxRedirects: 10,
       timeout: 10000,
       validateStatus: () => true,
-      headers: HEADERS,
+      headers: HTTP_HEADERS,
     });
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
@@ -84,7 +98,7 @@ async function followAffiliateNetwork(networkUrl: string): Promise<string | null
       maxRedirects: 5,
       timeout: 5000,
       validateStatus: () => true,
-      headers: HEADERS,
+      headers: HTTP_HEADERS,
     });
 
     const finalUrl = response.request.res?.responseUrl || response.config.url;
