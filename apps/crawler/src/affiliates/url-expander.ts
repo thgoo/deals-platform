@@ -49,6 +49,18 @@ export async function expandUrl(shortUrl: string): Promise<string> {
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
 
+    // Some shorteners (e.g. tecno.click) use a non-standard HTTP `refresh` header
+    // instead of `Location`, which axios doesn't follow automatically.
+    // Format: "3; URL=https://..."
+    const refreshHeader = response.headers['refresh'];
+    if (typeof refreshHeader === 'string') {
+      const match = refreshHeader.match(/URL=(.+)/i);
+      if (match?.[1]) {
+        finalUrl = match[1].trim();
+        logger.debug('URL resolved via refresh header', { from: shortUrl, to: finalUrl });
+      }
+    }
+
     if (isMagaluDivulgador && response.status >= 300 && response.status < 400) {
       const location = response.headers.location;
       if (location) {
