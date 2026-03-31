@@ -1,6 +1,6 @@
-import { rewriteLinks } from './src/affiliates/rewriter';
-import { expandUrl } from './src/affiliates/url-expander';
-import { config } from './src/config';
+import { rewriteLinks } from '../src/affiliates/rewriter';
+import { expandUrl } from '../src/affiliates/url-expander';
+import { config } from '../src/config';
 
 async function testSingleUrl(originalUrl: string): Promise<void> {
   console.log('\n' + '='.repeat(80));

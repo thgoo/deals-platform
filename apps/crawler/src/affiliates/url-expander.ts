@@ -35,8 +35,13 @@ export async function expandUrl(shortUrl: string): Promise<string> {
   }
 
   try {
+    // Magalu divulgador links: the product URL is in the first redirect (302).
+    // Following all redirects causes the AWS IP to hit a login wall on
+    // www.magazineluiza.com.br, so we stop after the first hop.
+    const isMagaluDivulgador = shortUrl.includes('divulgador.magalu.com') || shortUrl.includes('magalu.divulgador.link');
+
     const response = await axios.get(shortUrl, {
-      maxRedirects: 10,
+      maxRedirects: isMagaluDivulgador ? 0 : 10,
       timeout: 10000,
       validateStatus: () => true,
       headers: HTTP_HEADERS,
@@ -44,15 +49,19 @@ export async function expandUrl(shortUrl: string): Promise<string> {
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
 
-    // ShieldSquare/Radware bot protection intercepts requests and redirects to
-    // validate.perfdrive.com — the actual destination is in the `ssc` param
-    if (finalUrl.includes('validate.perfdrive.com')) {
-      const perfdriveUrl = new URL(finalUrl);
-      const ssc = perfdriveUrl.searchParams.get('ssc');
-      if (ssc) {
-        finalUrl = decodeURIComponent(ssc);
-        logger.debug('Bypassed perfdrive bot protection', { from: shortUrl, to: finalUrl });
+    if (isMagaluDivulgador && response.status >= 300 && response.status < 400) {
+      const location = response.headers.location;
+      if (location) {
+        logger.debug('Magalu divulgador resolved via first redirect', { from: shortUrl, to: location });
+        return location;
       }
+    }
+
+    // ShieldSquare/Radware bot protection: server IP was flagged and the real
+    // product URL was never reached. Keep the original short link instead.
+    if (finalUrl.includes('validate.perfdrive.com')) {
+      logger.debug('Bot protection detected, keeping original short URL', { from: shortUrl, blocked: finalUrl });
+      return shortUrl;
     }
 
     if (isAffiliateNetworkUrl(finalUrl)) {

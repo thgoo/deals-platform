@@ -12,9 +12,11 @@
     "start": "node dist/index.js",
     "test": "bun test",
     "type-check": "tsc --noEmit",
-    "check:rewrite": "bun test-rewrite.ts",
-    "deals:update-links": "bun reprocess-deals.ts",
-    "deals:update-products": "bun backfill-product-keys.ts"
+    "links:reprocess": "bun scripts/reprocess-links.ts",
+    "links:recreate": "bun scripts/recreate-links.ts",
+    "links:check": "bun scripts/check-link-rewrite.ts",
+    "deals:reextract": "bun scripts/reprocess-extracted.ts",
+    "deals:update-products": "bun scripts/backfill-product-keys.ts"
   },
   "dependencies": {
     "@mtcute/bun": "^0.27.5",

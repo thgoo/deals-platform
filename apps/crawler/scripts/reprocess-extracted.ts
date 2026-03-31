@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { config } from './src/config';
+import { config } from '../src/config';
 
 interface Deal {
   id: number;
@@ -251,17 +251,17 @@ function printUsage(): void {
 🔄 Reprocess Extracted - Re-run extractor and update all extracted fields
 
 Usage:
-  bun run reprocess-extracted.ts --last [N]
-  bun run reprocess-extracted.ts --ids <id1> [id2] [id3] ...
-  bun run reprocess-extracted.ts --from <date> [--to <date>]
+  bun run scripts/reprocess-extracted.ts --last [N]
+  bun run scripts/reprocess-extracted.ts --ids <id1> [id2] [id3] ...
+  bun run scripts/reprocess-extracted.ts --from <date> [--to <date>]
 
 Examples:
-  bun run reprocess-extracted.ts --last              # Last 10 deals (default)
-  bun run reprocess-extracted.ts --last 50           # Last 50 deals
-  bun run reprocess-extracted.ts --ids 123 456       # Specific deal IDs
-  bun run reprocess-extracted.ts --from 2026-01-10 --to 2026-01-20
-  bun run reprocess-extracted.ts --from 2026-01-10   # From date until now
-  bun run reprocess-extracted.ts --dry-run --from 2026-01-10 --to 2026-01-20
+  bun run scripts/reprocess-extracted.ts --last              # Last 10 deals (default)
+  bun run scripts/reprocess-extracted.ts --last 50           # Last 50 deals
+  bun run scripts/reprocess-extracted.ts --ids 123 456       # Specific deal IDs
+  bun run scripts/reprocess-extracted.ts --from 2026-01-10 --to 2026-01-20
+  bun run scripts/reprocess-extracted.ts --from 2026-01-10   # From date until now
+  bun run scripts/reprocess-extracted.ts --dry-run --from 2026-01-10 --to 2026-01-20
 
 Options:
   --last, -l       Process last N deals (default: 10)
