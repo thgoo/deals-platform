@@ -66,7 +66,7 @@ async function rewriteSingleLink(url: string): Promise<RewriteResult> {
       }
     }
 
-    const urlToProcess = expandedUrl ?? originalUrl;
+    const urlToProcess = expandedUrl ?? url;
     const provider = providerRegistry.findProvider(urlToProcess);
 
     if (!provider) {
