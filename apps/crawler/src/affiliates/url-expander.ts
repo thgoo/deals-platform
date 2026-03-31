@@ -44,6 +44,17 @@ export async function expandUrl(shortUrl: string): Promise<string> {
 
     let finalUrl = response.request.res?.responseUrl || response.config.url || shortUrl;
 
+    // ShieldSquare/Radware bot protection intercepts requests and redirects to
+    // validate.perfdrive.com — the actual destination is in the `ssc` param
+    if (finalUrl.includes('validate.perfdrive.com')) {
+      const perfdriveUrl = new URL(finalUrl);
+      const ssc = perfdriveUrl.searchParams.get('ssc');
+      if (ssc) {
+        finalUrl = decodeURIComponent(ssc);
+        logger.debug('Bypassed perfdrive bot protection', { from: shortUrl, to: finalUrl });
+      }
+    }
+
     if (isAffiliateNetworkUrl(finalUrl)) {
       const actualDestination = await followAffiliateNetwork(finalUrl);
       if (actualDestination) {

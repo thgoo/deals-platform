@@ -30,10 +30,28 @@ export async function rewriteLinks(
   return Promise.all(links.map(link => rewriteSingleLink(link)));
 }
 
+function extractFromPerfdrive(url: string): string | null {
+  if (!url.includes('validate.perfdrive.com')) return null;
+  try {
+    const ssc = new URL(url).searchParams.get('ssc');
+    return ssc ? decodeURIComponent(ssc) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function rewriteSingleLink(url: string): Promise<RewriteResult> {
   try {
     const originalUrl = url;
     const allVersions: string[] = [originalUrl];
+
+    // Links already saved as perfdrive bot-check URLs: extract destination directly
+    const perfdriveDestination = extractFromPerfdrive(url);
+    if (perfdriveDestination) {
+      logger.debug('Extracted URL from stored perfdrive link', { from: url, to: perfdriveDestination });
+      url = perfdriveDestination;
+      allVersions.push(url);
+    }
 
     const isShortened = SHORTENER_DOMAINS.some(domain => url.includes(domain));
 
