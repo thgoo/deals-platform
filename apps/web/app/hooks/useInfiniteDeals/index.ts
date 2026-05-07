@@ -22,23 +22,15 @@ const fetcher = (url: string): Promise<PaginatedResponse> =>
 export default function useInfiniteDeals({
   initialData,
   search = '',
-  hasCoupon = null,
   stores = [],
 }: UseInfiniteDealsProps = {}): UseInfiniteDealsReturn {
-  // Using RefObject<HTMLDivElement> to match the return type
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Memoize filter criteria for consistent reference across renders
   const filterCriteria = useMemo<FilterCriteria>(
-    () => ({
-      search,
-      hasCoupon,
-      stores,
-    }),
-    [search, hasCoupon, stores],
+    () => ({ search, stores }),
+    [search, stores],
   );
 
-  // Build query params with memoization
   const buildQueryParams = useCallback(
     (cursor?: string) => {
       const params = new URLSearchParams();
@@ -46,12 +38,11 @@ export default function useInfiniteDeals({
 
       if (cursor) params.set('cursor', cursor);
       if (search) params.set('search', search);
-      if (hasCoupon !== null) params.set('hasCoupon', String(hasCoupon));
       if (stores.length > 0) params.set('stores', stores.join(','));
 
       return params.toString();
     },
-    [search, hasCoupon, stores],
+    [search, stores],
   );
 
   // SWR Infinite for pagination
@@ -70,46 +61,24 @@ export default function useInfiniteDeals({
     );
   };
 
-  // Previous filter state to detect changes
-  const prevFiltersRef = useRef({
-    search,
-    hasCoupon,
-    stores: [...(stores || [])],
-  });
+  const revalidationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const filtersKey = [search, [...(stores ?? [])].sort().join('|')].join('::');
+  const initialFiltersKeyRef = useRef(filtersKey);
 
   const { data, size, setSize, isLoading, isValidating, mutate } =
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
       revalidateFirstPage: false,
       revalidateOnFocus: false,
       revalidateOnMount: true,
-      fallbackData:
-        initialData && !search && hasCoupon === null && stores.length === 0
-          ? [initialData]
-          : undefined,
-      keepPreviousData: true, // Keep data during transitions
-      dedupingInterval: 5000, // Reduce duplicate requests during filter changes
+      fallbackData: initialData ? [initialData] : undefined,
+      keepPreviousData: true,
+      dedupingInterval: 5000,
     });
 
-  // Reset to first page when filters change
   useEffect(() => {
-    const prevFilters = prevFiltersRef.current;
-    const filtersChanged =
-      prevFilters.search !== search ||
-      prevFilters.hasCoupon !== hasCoupon ||
-      prevFilters.stores.length !== stores.length ||
-      (stores.length > 0 &&
-        prevFilters.stores.some((s) => !stores.includes(s))) ||
-      (prevFilters.stores.length > 0 &&
-        stores.some((s) => !prevFilters.stores.includes(s)));
-
-    if (filtersChanged && size > 1) {
-      // Reset to first page when filters change
-      setSize(1);
-    }
-
-    // Update the previous filters reference
-    prevFiltersRef.current = { search, hasCoupon, stores: [...(stores || [])] };
-  }, [search, hasCoupon, stores, size, setSize]);
+    setSize(1);
+  }, [filtersKey, setSize]);
 
   // Flatten all pages into single items array
   const items = data ? data.flatMap((page) => page.items) : [];
@@ -124,9 +93,6 @@ export default function useInfiniteDeals({
 
   // Handle new deal events with proper error handling
   useEffect(() => {
-    // Track active timeouts for cleanup
-    const timeoutIds: NodeJS.Timeout[] = [];
-
     const handleNewDeal = (event: MessageEvent) => {
       try {
         if (!event.data) {
@@ -136,17 +102,12 @@ export default function useInfiniteDeals({
 
         const newDeal = JSON.parse(event.data);
 
-        // Validate required deal fields
         if (!newDeal || !newDeal.id) {
           console.warn('Received invalid deal data:', newDeal);
           return;
         }
 
-        // Check if the new deal matches the current filters
-        const matchesFilters = matchesDealFilters(newDeal, filterCriteria);
-
-        // If it doesn't match filters, don't add it
-        if (!matchesFilters) {
+        if (!matchesDealFilters(newDeal, filterCriteria)) {
           return;
         }
 
@@ -158,23 +119,11 @@ export default function useInfiniteDeals({
                 hasMore: true,
                 nextCursor: null,
               };
-              return [
-                {
-                  ...firstPage,
-                  items: [newDeal, ...firstPage.items],
-                },
-              ];
+              return [{ ...firstPage, items: [newDeal, ...firstPage.items] }];
             }
 
-            // Check if the deal already exists in the first page to avoid duplicates
-            const firstPageItems = pages[0].items;
-            const dealExists = firstPageItems.some(
-              (item) => item.id === newDeal.id,
-            );
-
-            if (dealExists) {
-              return pages; // Don't add duplicates
-            }
+            const dealExists = pages[0].items.some((item) => item.id === newDeal.id);
+            if (dealExists) return pages;
 
             const newPages = [...pages];
             newPages[0] = {
@@ -183,32 +132,29 @@ export default function useInfiniteDeals({
             };
             return newPages;
           },
-          { revalidate: false }, // Don't revalidate immediately
+          { revalidate: false },
         );
 
-        // Schedule a cache revalidation after a delay
-        // This ensures data stays in sync with the server
-        const timeoutId = setTimeout(() => {
-          // Only invalidate the first page
-          const firstPageKey = getApiUrl(`/api/deals?${buildQueryParams()}`);
-          globalMutate(firstPageKey);
-        }, 10000); // 10 seconds delay to avoid overloading
-
-        timeoutIds.push(timeoutId);
+        // Debounced revalidation: resets on every new deal, fires once after the burst settles
+        if (revalidationTimerRef.current) {
+          clearTimeout(revalidationTimerRef.current);
+        }
+        revalidationTimerRef.current = setTimeout(() => {
+          globalMutate(getApiUrl(`/api/deals?${buildQueryParams()}`));
+          revalidationTimerRef.current = null;
+        }, 10000);
       } catch (error) {
         console.error('❌ Error processing new-deal event:', error);
       }
     };
 
-    // Register event listeners
     dealEvents.addEventListener('new-deal', handleNewDeal);
 
     return () => {
-      // Clean up event listeners
       dealEvents.removeEventListener('new-deal', handleNewDeal);
-
-      // Clear any pending timeouts
-      timeoutIds.forEach((id) => clearTimeout(id));
+      if (revalidationTimerRef.current) {
+        clearTimeout(revalidationTimerRef.current);
+      }
     };
   }, [mutate, filterCriteria, initialData, buildQueryParams, dealEvents]);
 
@@ -295,7 +241,10 @@ export default function useInfiniteDeals({
   }, [hasMore, isLoadingMore, size, setSize]);
 
   const isFilteringInProgress: boolean = Boolean(
-    isValidating && data && data.length > 0 && !initialData,
+    isValidating &&
+      data &&
+      data.length > 0 &&
+      filtersKey !== initialFiltersKeyRef.current,
   );
 
   return {

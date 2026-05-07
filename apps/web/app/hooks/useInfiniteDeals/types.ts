@@ -16,11 +16,6 @@ export interface UseInfiniteDealsProps {
   search?: string;
 
   /**
-   * Filter by deals with coupons
-   */
-  hasCoupon?: boolean | null;
-
-  /**
    * Filter by specific stores
    */
   stores?: string[];
@@ -74,11 +69,6 @@ export interface FilterCriteria {
    * Search text to match against deal content
    */
   search?: string;
-
-  /**
-   * Filter by deals with coupons
-   */
-  hasCoupon?: boolean | null;
 
   /**
    * Filter by specific stores

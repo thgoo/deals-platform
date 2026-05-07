@@ -1,15 +1,10 @@
 'use client';
 
 import { Search, Store, X } from 'lucide-react';
+import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 import { useState } from 'react';
 
 interface SearchFiltersProps {
-  search: string;
-  onSearchChange: (value: string) => void;
-  hasCoupon: boolean | null;
-  onHasCouponChange: (value: boolean | null) => void;
-  selectedStores: string[];
-  onStoresChange: (stores: string[]) => void;
   availableStores?: string[];
 }
 
@@ -24,65 +19,66 @@ const AVAILABLE_STORES = [
   'Extra',
 ];
 
-export default function SearchFilters({
-  search,
-  onSearchChange,
-  hasCoupon,
-  onHasCouponChange,
-  selectedStores,
-  onStoresChange,
-  availableStores,
-}: SearchFiltersProps) {
+export default function SearchFilters({ availableStores }: SearchFiltersProps) {
+  const [search, setSearch] = useQueryState(
+    'search',
+    parseAsString
+      .withDefault('')
+      .withOptions({
+        throttleMs: 500,
+        history: 'replace',
+        clearOnDefault: true,
+      }),
+  );
+  const [stores, setStores] = useQueryState(
+    'stores',
+    parseAsArrayOf(parseAsString)
+      .withDefault([])
+      .withOptions({ history: 'replace' }),
+  );
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
 
   const toggleStore = (store: string) => {
-    if (selectedStores.includes(store)) {
-      onStoresChange(selectedStores.filter((s) => s !== store));
-    } else {
-      onStoresChange([...selectedStores, store]);
-    }
+    const next = stores.includes(store)
+      ? stores.filter((s) => s !== store)
+      : [...stores, store];
+    setStores(next.length > 0 ? next : null);
   };
 
   const clearAllFilters = () => {
-    onSearchChange('');
-    onHasCouponChange(null);
-    onStoresChange([]);
+    setSearch(null);
+    setStores(null); // nuqs batches both into a single URL push
   };
 
-  const hasActiveFilters =
-    search || hasCoupon !== null || selectedStores.length > 0;
+  const hasActiveFilters = !!search || stores.length > 0;
 
   return (
     <div className="space-y-4">
-      {/* Search Input */}
       <div className="group relative">
         <Search className="absolute top-3.5 left-4 z-10 h-5 w-5 text-(--pixel-gray) group-focus-within:translate-px" />
         <input
           type="text"
           value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={(e) => setSearch(e.target.value || null)}
           placeholder="Ex: tv, iphone, lençol, etc..."
           className="border-foreground text-foreground relative w-full rounded-lg border-3 bg-white py-3 pr-4 pl-12 text-sm font-bold shadow-[3px_3px_0px_var(--pixel-dark)] placeholder:text-(--pixel-gray)/50 focus:translate-px focus:shadow-[2px_2px_0px_var(--pixel-dark)] focus:outline-none"
         />
       </div>
 
-      {/* Filters Row */}
       <div className="flex flex-wrap gap-3">
-        {/* Store Filter */}
         <div className="relative">
           <button
             onClick={() => setShowStoreDropdown(!showStoreDropdown)}
             className="pixel-btn rounded-lg bg-white py-1.5! text-xs text-(--pixel-gray)"
           >
             <Store className="inline h-4 w-4" /> Lojas
-            {selectedStores.length > 0 && (
+            {stores.length > 0 && (
               <span className="bg-foreground ml-1 rounded-full px-2 py-0.5 text-xs text-white">
-                {selectedStores.length}
+                {stores.length}
               </span>
             )}
           </button>
 
-          {/* Store Dropdown */}
           {showStoreDropdown && (
             <>
               <div
@@ -94,9 +90,9 @@ export default function SearchFilters({
                   <span className="text-foreground text-xs font-black uppercase">
                     Selecione as lojas
                   </span>
-                  {selectedStores.length > 0 && (
+                  {stores.length > 0 && (
                     <button
-                      onClick={() => onStoresChange([])}
+                      onClick={() => setStores(null)}
                       className="cursor-pointer text-xs font-bold text-(--pixel-pink) hover:underline"
                     >
                       Limpar
@@ -111,7 +107,7 @@ export default function SearchFilters({
                     >
                       <input
                         type="checkbox"
-                        checked={selectedStores.includes(store)}
+                        checked={stores.includes(store)}
                         onChange={() => toggleStore(store)}
                         className="h-4 w-4 cursor-pointer accent-(--pixel-blue)"
                       />
@@ -126,7 +122,6 @@ export default function SearchFilters({
           )}
         </div>
 
-        {/* Clear All */}
         {hasActiveFilters && (
           <button
             onClick={clearAllFilters}
@@ -137,15 +132,14 @@ export default function SearchFilters({
         )}
       </div>
 
-      {/* Active Filters Display */}
       {hasActiveFilters && (
-        <div className="animate-fadeIn relative z-10 flex flex-wrap gap-2">
+        <div className="animate-fadeIn flex flex-wrap gap-2">
           {search && (
             <div className="border-foreground group flex items-center gap-2 rounded border-2 bg-(--pixel-orange) px-3 py-1 text-xs font-bold transition-all">
               <Search className="h-3 w-3" />
               {search}
               <button
-                onClick={() => onSearchChange('')}
+                onClick={() => setSearch(null)}
                 className="ml-1 cursor-pointer rounded-full p-0.5 opacity-70 transition-opacity group-hover:opacity-100 hover:bg-black/10 hover:opacity-100"
                 title="Remover filtro"
               >
@@ -153,20 +147,7 @@ export default function SearchFilters({
               </button>
             </div>
           )}
-          {/* {hasCoupon !== null && (
-            <div className="border-foreground group flex items-center gap-2 rounded border-2 bg-(--pixel-green) px-3 py-1 text-xs font-bold transition-all">
-              <Tag className="h-3 w-3" />
-              {hasCoupon ? 'Com Cupom' : 'Sem Cupom'}
-              <button
-                onClick={() => onHasCouponChange(null)}
-                className="ml-1 cursor-pointer rounded-full p-0.5 opacity-70 transition-opacity group-hover:opacity-100 hover:bg-black/10 hover:opacity-100"
-                title="Remover filtro"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )} */}
-          {selectedStores.map((store) => (
+          {stores.map((store) => (
             <div
               key={store}
               className="border-foreground group flex items-center gap-2 rounded border-2 bg-(--pixel-blue) px-3 py-1 text-xs font-bold transition-all"
@@ -174,9 +155,7 @@ export default function SearchFilters({
               <Store className="h-3 w-3" />
               {store}
               <button
-                onClick={() =>
-                  onStoresChange(selectedStores.filter((s) => s !== store))
-                }
+                onClick={() => setStores(stores.filter((s) => s !== store))}
                 className="ml-1 cursor-pointer rounded-full p-0.5 opacity-70 transition-opacity group-hover:opacity-100 hover:bg-black/10 hover:opacity-100"
                 title="Remover filtro"
               >

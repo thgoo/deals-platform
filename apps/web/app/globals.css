@@ -71,7 +71,6 @@ body {
   letter-spacing: 0.05em;
   cursor: pointer;
   padding: 0.5rem 1rem;
-  z-index: 10;
 }
 
 .pixel-btn:hover {
@@ -150,21 +149,13 @@ body {
   animation: pixel-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.pixel-dots::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.pixel-dots {
   background-image: radial-gradient(
     circle,
     rgba(45, 53, 97, 0.08) 1px,
     transparent 1px
   );
   background-size: 8px 8px;
-  animation: pixel-scroll 10s linear infinite;
-  z-index: 0;
 }
 
 /* Custom Scrollbar - 8-bit style */

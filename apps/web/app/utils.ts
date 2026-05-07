@@ -1,15 +1,4 @@
 /**
- * Utility functions for the Live page
- */
-
-/**
- * Combines multiple class names, filtering out falsy values
- */
-export function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
-
-/**
  * Format price in BRL currency
  */
 export function formatPrice(priceInCents: number): string {
@@ -68,17 +57,6 @@ export function formatRelativeTime(dateString: string): string {
  */
 export function removeUrls(text: string): string {
   return text.replace(/https?:\/\/[^\s]+/g, '').trim();
-}
-
-/**
- * Returns true if a deal has a displayable image.
- * imageLoadErrors tracks IDs of images that failed to load at runtime.
- */
-export function hasDealImage(
-  item: { id: number; mediaType?: string; localPath?: string },
-  imageLoadErrors: Set<number>,
-): boolean {
-  return !!(item.mediaType && item.localPath && !imageLoadErrors.has(item.id));
 }
 
 /**

@@ -1,5 +1,6 @@
-import { promises as fs } from 'fs';
+import { createReadStream, promises as fs } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
+import { Readable } from 'stream';
 import path from 'path';
 
 export async function GET(req: NextRequest) {
@@ -19,11 +20,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
 
-    // Usar o symlink em public/media
     const filePath = path.join(process.cwd(), 'public', filename);
-    const data = await fs.readFile(filePath);
 
-    // Detectar tipo MIME
+    await fs.access(filePath);
+
     const ext = path.extname(filename).toLowerCase();
     const mimeTypes: Record<string, string> = {
       '.jpg': 'image/jpeg',
@@ -32,10 +32,11 @@ export async function GET(req: NextRequest) {
       '.gif': 'image/gif',
       '.webp': 'image/webp',
     };
-
     const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-    return new NextResponse(data, {
+    const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
+
+    return new NextResponse(stream, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',

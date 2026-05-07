@@ -14,7 +14,7 @@ export function matchesDealFilters(
   deal: Item,
   filters: FilterCriteria,
 ): boolean {
-  const { search = '', hasCoupon = null, stores = [] } = filters;
+  const { search = '', stores = [] } = filters;
 
   // Check search filter
   if (search) {
@@ -25,14 +25,6 @@ export function matchesDealFilters(
       .toLowerCase();
 
     if (!textToSearch.includes(searchLower)) {
-      return false;
-    }
-  }
-
-  // Check coupon filter
-  if (hasCoupon !== null) {
-    const hasCoupons = deal.coupons && deal.coupons.length > 0;
-    if ((hasCoupon && !hasCoupons) || (!hasCoupon && hasCoupons)) {
       return false;
     }
   }

@@ -1,5 +1,6 @@
 import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import './globals.css';
 import { Geist, Geist_Mono, Inter } from 'next/font/google';
 
@@ -36,7 +37,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
       >
-        {children}
+        <NuqsAdapter>{children}</NuqsAdapter>
       </body>
     </html>
   );

@@ -32,12 +32,6 @@ export interface PaginatedResponse {
   availableStores?: string[];
 }
 
-export const ANIMATION_TIMING = {
-  OPEN: 0.3,
-  CLOSE: 0.3,
-  OPACITY: 0,
-} as const;
-
 export interface PriceHistoryItem {
   price: number;
   store: string | null;
