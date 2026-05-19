@@ -2,12 +2,8 @@ import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import './globals.css';
-import { Geist, Geist_Mono, Inter } from 'next/font/google';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
+import ServiceWorkerRegistrar from './components/ServiceWorkerRegistrar';
+import { Geist_Mono, Inter } from 'next/font/google';
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
@@ -35,8 +31,9 @@ export default function RootLayout({
       <GoogleTagManager gtmId="GTM-KWSXXTV4" />
       <GoogleAnalytics gaId="G-5CE7FZ2TYX" />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
+        className={`${geistMono.variable} ${inter.variable}`}
       >
+        <ServiceWorkerRegistrar />
         <NuqsAdapter>{children}</NuqsAdapter>
       </body>
     </html>

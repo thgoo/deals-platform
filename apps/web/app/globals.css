@@ -26,8 +26,8 @@
 }
 
 * {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
 }
 
 body {
@@ -58,6 +58,27 @@ body {
   border: 3px solid var(--pixel-dark);
   box-shadow: var(--shadow-pixel);
   position: relative;
+}
+
+.pixel-shadow {
+  box-shadow: 4px 4px 0px #2d3561;
+}
+
+.pixel-shadow-sm {
+  box-shadow: 2px 2px 0px #2d3561;
+}
+
+.pixel-input {
+  /* !important needed to override Tailwind preflight's border-width: 0 reset on form elements */
+  border: 3px solid #2d3561;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 4px 4px 0px #2d3561;
+
+  &:focus {
+    box-shadow: 3px 3px 0px #2d3561;
+    transform: translate(1px, 1px);
+  }
 }
 
 /* Pixel Button - Bouncy and fun */

@@ -5,10 +5,12 @@ import { Zap, SearchX, ArrowUp } from 'lucide-react';
 import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 import { useEffect, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
+import AlertBell from './components/AlertBell';
 import AppHeader from './components/AppHeader';
 import DealList from './components/DealList';
 import DealModal from './components/DealModal';
 import SearchFilters from './components/SearchFilters';
+import { useAlerts } from './hooks/useAlerts';
 import { useDebounce } from './hooks/useDebounce';
 import useInfiniteDeals from './hooks/useInfiniteDeals';
 
@@ -22,6 +24,8 @@ export default function LiveClient({ initialData }: LiveClientProps) {
     'stores',
     parseAsArrayOf(parseAsString).withDefault([]),
   );
+
+  const { alerts, isLoading: alertsLoading, isSupported, createAlert, deleteAlert } = useAlerts();
 
   const [selectedDeal, setSelectedDeal] = useState<Item | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -95,10 +99,21 @@ export default function LiveClient({ initialData }: LiveClientProps) {
   return (
     <div className="bg-background pixel-dots relative min-h-screen">
       <div inert={!!selectedDeal}>
-      <AppHeader />
+      <AppHeader>
+        <AlertBell
+          alerts={alerts}
+          isLoading={alertsLoading}
+          isSupported={isSupported}
+          createAlert={createAlert}
+          deleteAlert={deleteAlert}
+        />
+      </AppHeader>
 
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-        <SearchFilters availableStores={initialData?.availableStores} />
+        <SearchFilters
+          availableStores={initialData?.availableStores}
+          onCreateAlert={createAlert}
+        />
 
         {isFilteringInProgress && (
           <div className="border-foreground mt-4 flex items-center justify-center gap-3 rounded-lg border-2 bg-white px-6 py-3 shadow-[3px_3px_0px_var(--pixel-dark)]">

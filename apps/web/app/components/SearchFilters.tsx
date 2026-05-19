@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 interface SearchFiltersProps {
   availableStores?: string[];
+  onCreateAlert?: (keyword: string) => void;
 }
 
 const AVAILABLE_STORES = [
@@ -19,7 +20,7 @@ const AVAILABLE_STORES = [
   'Extra',
 ];
 
-export default function SearchFilters({ availableStores }: SearchFiltersProps) {
+export default function SearchFilters({ availableStores, onCreateAlert }: SearchFiltersProps) {
   const [search, setSearch] = useQueryState(
     'search',
     parseAsString
@@ -121,6 +122,16 @@ export default function SearchFilters({ availableStores }: SearchFiltersProps) {
             </>
           )}
         </div>
+
+        {search && onCreateAlert && (
+          <button
+            onClick={() => onCreateAlert(search)}
+            className="pixel-btn rounded-lg py-1.5! text-xs"
+            title={`Create alert for "${search}"`}
+          >
+            🔔 Alert
+          </button>
+        )}
 
         {hasActiveFilters && (
           <button
