@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   title: '#bargah.com.br',
   description:
     'Ao invés de ficar de olho em várias redes sociais, veja as principais promoções em tempo real!',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Bargah',
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +34,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth">
+      <head>
+        <link rel="icon" href="/icons/favicon-96x96.png" sizes="96x96" type="image/png" />
+        <link rel="icon" href="/icons/favicon.ico" sizes="32x32 16x16" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#2d3561" />
+      </head>
       <GoogleTagManager gtmId="GTM-KWSXXTV4" />
       <GoogleAnalytics gaId="G-5CE7FZ2TYX" />
       <body
