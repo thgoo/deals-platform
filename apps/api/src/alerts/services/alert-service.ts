@@ -110,7 +110,7 @@ export class AlertService {
       body: JSON.stringify({
         recipient: { type: 'web-push', subscription: alert.subscription },
         message: {
-          title: `🔔 ${title}`,
+          title,
           body,
           url: `/?search=${encodeURIComponent(alert.keyword)}`,
           tag: `bargah-alert-${alert.keyword}`,
