@@ -69,11 +69,11 @@ export default function useInfiniteDeals({
   const { data, size, setSize, isLoading, isValidating, mutate } =
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
       revalidateFirstPage: false,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       revalidateOnMount: true,
       fallbackData: initialData ? [initialData] : undefined,
       keepPreviousData: true,
-      dedupingInterval: 5000,
+      dedupingInterval: 0,
     });
 
   useEffect(() => {

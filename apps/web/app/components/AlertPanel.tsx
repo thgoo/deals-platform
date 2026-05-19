@@ -61,9 +61,9 @@ export default function AlertPanel({
   );
 
   return (
-    <div className="pixel-shadow absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border-3 border-(--pixel-dark) bg-white p-4">
-      <h3 className="mb-3 text-sm font-[var(--font-weight-ui)] text-foreground uppercase tracking-wider">
-        Alertas de promoção
+    <div className="pixel-shadow border-foreground absolute top-full right-0 z-50 mt-2 w-80 rounded-lg border-3 bg-white p-4">
+      <h3 className="text-foreground mb-3 text-sm font-black tracking-wider uppercase">
+        Alertas
       </h3>
 
       <IOSInstallBanner />
@@ -89,17 +89,15 @@ export default function AlertPanel({
         </div>
       )}
 
-      {error && (
-        <p className="mt-2 text-xs text-red-500">{error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-5 space-y-2">
         {isLoading ? (
           <p className="text-xs text-(--color-text-muted)">Carregando...</p>
         ) : alerts.length === 0 ? (
           <p className="flex items-center gap-2 text-xs text-(--color-text-muted)">
             <Bell className="h-3 w-3" />
-            Nenhum alerta ativo.
+            Nenhum alerta criado.
           </p>
         ) : (
           alerts.map((alert) => (
