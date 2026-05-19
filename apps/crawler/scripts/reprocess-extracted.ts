@@ -188,6 +188,7 @@ function parseArgs(): ParsedArgs {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue;
     if (arg === '--dry-run' || arg === '-d') {
       dryRun = true;
     } else if (arg === '--last' || arg === '-l') {

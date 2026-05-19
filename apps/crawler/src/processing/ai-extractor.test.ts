@@ -47,7 +47,7 @@ function makeFetch(status: number, body: unknown): typeof fetch {
   ) as unknown as typeof fetch;
 }
 
-const CALL_ARGS = ['Tênis Nike em oferta!', 'canal-promo', 1, ['https://amzn.to/abc']] as const;
+const CALL_ARGS: [string, string, number, string[]] = ['Tênis Nike em oferta!', 'canal-promo', 1, ['https://amzn.to/abc']];
 
 let originalFetch: typeof fetch;
 
