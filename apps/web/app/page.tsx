@@ -1,15 +1,10 @@
 import { Suspense } from 'react';
-import type { PaginatedResponse } from './types';
+import type { DealFilters, PaginatedResponse } from './types';
 import { getApiUrl } from '@/lib/config';
 import { getStores } from './api/stores';
-import LiveClient from './LiveClient';
+import DealsPage from './DealsPage';
 
-interface Filters {
-  search: string;
-  stores: string[];
-}
-
-async function getInitialDeals(filters: Filters): Promise<PaginatedResponse | null> {
+async function getInitialDeals(filters: DealFilters): Promise<PaginatedResponse | null> {
   try {
     const params = new URLSearchParams();
     params.set('limit', '16');
@@ -44,7 +39,7 @@ export default async function Home({
 }) {
   const params = await searchParams;
 
-  const filters: Filters = {
+  const filters: DealFilters = {
     search: typeof params.search === 'string' ? params.search : '',
     stores: Array.isArray(params.stores)
       ? params.stores
@@ -57,7 +52,7 @@ export default async function Home({
 
   return (
     <Suspense>
-      <LiveClient initialData={initialData} />
+      <DealsPage initialData={initialData} />
     </Suspense>
   );
 }

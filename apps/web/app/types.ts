@@ -1,3 +1,8 @@
+export interface DealFilters {
+  search: string;
+  stores: string[];
+}
+
 export interface Coupon {
   code: string;
   discount?: string;

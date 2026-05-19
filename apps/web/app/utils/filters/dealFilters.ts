@@ -1,41 +1,18 @@
-'use client';
+import type { DealFilters, Item } from '../../types';
 
-import { FilterCriteria } from '../../hooks/useInfiniteDeals/types';
-import { Item } from '../../types';
-
-/**
- * Checks if a deal matches the specified filter criteria
- *
- * @param deal - The deal to check
- * @param filters - Filter criteria to match against
- * @returns boolean indicating if the deal matches all filters
- */
-export function matchesDealFilters(
-  deal: Item,
-  filters: FilterCriteria,
-): boolean {
-  const { search = '', stores = [] } = filters;
-
-  // Check search filter
+export function matchesDealFilters(deal: Item, { search, stores }: DealFilters): boolean {
   if (search) {
     const searchLower = search.toLowerCase();
-    const textToSearch = [deal.product, deal.description, deal.text, deal.store]
+    const text = [deal.product, deal.description, deal.text, deal.store]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
-
-    if (!textToSearch.includes(searchLower)) {
-      return false;
-    }
+    if (!text.includes(searchLower)) return false;
   }
 
-  // Check store filter
-  if (stores.length > 0 && deal.store) {
-    if (!stores.includes(deal.store)) {
-      return false;
-    }
+  if (stores.length > 0 && deal.store && !stores.includes(deal.store)) {
+    return false;
   }
 
-  // Deal matches all filters
   return true;
 }

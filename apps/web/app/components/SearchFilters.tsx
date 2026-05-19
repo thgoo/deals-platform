@@ -1,11 +1,14 @@
 'use client';
 
 import { Search, Store, X } from 'lucide-react';
-import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 import { useState } from 'react';
 
 interface SearchFiltersProps {
+  search: string;
+  stores: string[];
   availableStores?: string[];
+  onSearchChange: (value: string | null) => void;
+  onStoresChange: (value: string[] | null) => void;
   onCreateAlert?: (keyword: string) => void;
 }
 
@@ -20,35 +23,26 @@ const AVAILABLE_STORES = [
   'Extra',
 ];
 
-export default function SearchFilters({ availableStores, onCreateAlert }: SearchFiltersProps) {
-  const [search, setSearch] = useQueryState(
-    'search',
-    parseAsString
-      .withDefault('')
-      .withOptions({
-        throttleMs: 500,
-        history: 'replace',
-        clearOnDefault: true,
-      }),
-  );
-  const [stores, setStores] = useQueryState(
-    'stores',
-    parseAsArrayOf(parseAsString)
-      .withDefault([])
-      .withOptions({ history: 'replace' }),
-  );
+export default function SearchFilters({
+  search,
+  stores,
+  availableStores,
+  onSearchChange,
+  onStoresChange,
+  onCreateAlert,
+}: SearchFiltersProps) {
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
 
   const toggleStore = (store: string) => {
     const next = stores.includes(store)
       ? stores.filter((s) => s !== store)
       : [...stores, store];
-    setStores(next.length > 0 ? next : null);
+    onStoresChange(next.length > 0 ? next : null);
   };
 
   const clearAllFilters = () => {
-    setSearch(null);
-    setStores(null); // nuqs batches both into a single URL push
+    onSearchChange(null);
+    onStoresChange(null);
   };
 
   const hasActiveFilters = !!search || stores.length > 0;
@@ -60,7 +54,7 @@ export default function SearchFilters({ availableStores, onCreateAlert }: Search
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value || null)}
+          onChange={(e) => onSearchChange(e.target.value || null)}
           placeholder="Ex: tv, iphone, lençol, etc..."
           className="border-foreground text-foreground relative w-full rounded-lg border-3 bg-white py-3 pr-4 pl-12 text-sm font-bold shadow-[3px_3px_0px_var(--pixel-dark)] placeholder:text-(--pixel-gray)/50 focus:translate-px focus:shadow-[2px_2px_0px_var(--pixel-dark)] focus:outline-none"
         />
@@ -93,7 +87,7 @@ export default function SearchFilters({ availableStores, onCreateAlert }: Search
                   </span>
                   {stores.length > 0 && (
                     <button
-                      onClick={() => setStores(null)}
+                      onClick={() => onStoresChange(null)}
                       className="cursor-pointer text-xs font-bold text-(--pixel-pink) hover:underline"
                     >
                       Limpar
@@ -150,7 +144,7 @@ export default function SearchFilters({ availableStores, onCreateAlert }: Search
               <Search className="h-3 w-3" />
               {search}
               <button
-                onClick={() => setSearch(null)}
+                onClick={() => onSearchChange(null)}
                 className="ml-1 cursor-pointer rounded-full p-0.5 opacity-70 transition-opacity group-hover:opacity-100 hover:bg-black/10 hover:opacity-100"
                 title="Remover filtro"
               >
@@ -166,7 +160,9 @@ export default function SearchFilters({ availableStores, onCreateAlert }: Search
               <Store className="h-3 w-3" />
               {store}
               <button
-                onClick={() => setStores(stores.filter((s) => s !== store))}
+                onClick={() =>
+                  onStoresChange(stores.filter((s) => s !== store))
+                }
                 className="ml-1 cursor-pointer rounded-full p-0.5 opacity-70 transition-opacity group-hover:opacity-100 hover:bg-black/10 hover:opacity-100"
                 title="Remover filtro"
               >
