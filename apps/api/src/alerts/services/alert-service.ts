@@ -74,13 +74,15 @@ export class AlertService {
       .where(gt(alertsTable.expiresAt, now));
     const alerts = rows.map(a => this.parseAlert(a));
 
-    const searchText = [deal.product, deal.description, deal.text]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
+    const normalize = (str: string) =>
+      str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+    const searchText = normalize(
+      [deal.product, deal.description, deal.text].filter(Boolean).join(' '),
+    );
 
     for (const alert of alerts) {
-      if (!searchText.includes(alert.keyword.toLowerCase())) continue;
+      if (!searchText.includes(normalize(alert.keyword))) continue;
 
       // Skip if new price is same or higher than last notified price
       if (
