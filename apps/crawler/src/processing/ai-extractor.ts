@@ -60,7 +60,7 @@ class AIExtractor {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(10000), // 10s timeout
+            signal: AbortSignal.timeout(30000), // 30s timeout
           });
 
           if (!response.ok) {
