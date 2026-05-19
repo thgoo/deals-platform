@@ -12,22 +12,29 @@ class WebhookClient {
       'X-Webhook-Secret': config.backend.secret,
     };
 
-    await withRetry(
-      async () => {
-        const response = await axios.post(url, payload, { headers, timeout: 5000 });
-        logger.info('Deal sent to backend', { chat: payload.chat, messageId: payload.message_id });
-        return response;
-      },
-      RETRY_PRESETS.STANDARD,
-      error => {
-        if (axios.isAxiosError(error)) {
-          const status = error.response?.status;
-          if (status === undefined) return true; // network/timeout error
-          return status >= 500;
-        }
-        return true;
-      },
-    );
+    try {
+      await withRetry(
+        async () => {
+          const response = await axios.post(url, payload, { headers, timeout: 5000 });
+          logger.info('Deal sent to backend', { chat: payload.chat, messageId: payload.message_id });
+          return response;
+        },
+        RETRY_PRESETS.STANDARD,
+        error => {
+          if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            if (status === undefined) return true; // network/timeout error
+            return status >= 500;
+          }
+          return true;
+        },
+      );
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(`HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+      }
+      throw error;
+    }
   }
 
   async sendMediaNotification(photoId: string, localPath: string): Promise<void> {
