@@ -4,6 +4,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
+import alerts from '~/alerts/alerts';
+import AlertService from '~/alerts/services/alert-service';
 import auth from '~/auth';
 import PasswordService from '~/auth/services/password-service';
 import SessionService from '~/auth/services/session-service';
@@ -17,6 +19,7 @@ import { HttpError } from '~/utils/errors';
 import { HTTP_STATUS_CODE } from './constants/http';
 
 export function createApp({
+  alertService = new AlertService(),
   userService = new UserService(),
   sessionService = new SessionService(),
   passwordService = new PasswordService(),
@@ -35,6 +38,7 @@ export function createApp({
   if (enableLogger) app.use(requestLogger());
 
   app.use('*', async (c, next) => {
+    c.set('alertService', alertService);
     c.set('userService', userService);
     c.set('sessionService', sessionService);
     c.set('passwordService', passwordService);
@@ -43,6 +47,7 @@ export function createApp({
     await next();
   });
 
+  app.route('/api/alerts', alerts);
   app.route('/api/auth', auth);
   app.route('/api/deals', deals);
 

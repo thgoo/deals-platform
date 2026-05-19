@@ -59,6 +59,11 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
 
   dealEvents.emit('new-deal', deal);
 
+  const alertService = c.get('alertService');
+  alertService.matchAndNotify(deal, logger).catch(err =>
+    logger.error('Alert matching failed', { dealId: deal.id, error: err.message })
+  );
+
   return c.json({ ok: true, id: deal.id });
 });
 
