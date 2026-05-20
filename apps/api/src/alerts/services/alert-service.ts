@@ -15,6 +15,16 @@ export class AlertService {
     subscription: PushSubscription;
     expiresAt: Date;
   }): Promise<Alert> {
+    const rows = await db.select().from(alertsTable);
+    const existing = rows
+      .map((a) => this.parseAlert(a))
+      .find(
+        (a) =>
+          a.subscription.endpoint === data.subscription.endpoint &&
+          a.keyword.toLowerCase() === data.keyword.toLowerCase(),
+      );
+    if (existing) return existing;
+
     const newAlert: NewAlert = {
       id: randomUUID(),
       keyword: data.keyword,

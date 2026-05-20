@@ -34,7 +34,9 @@ export function createApp({
     credentials: true,
   }));
 
-  if (process.env.NODE_ENV === 'production') app.use(csrf());
+  if (process.env.NODE_ENV === 'production') {
+    app.use(csrf({ origin: config.CORS_ORIGINS.split(',').map((o) => o.trim()) }));
+  }
   if (enableLogger) app.use(requestLogger());
 
   app.use('*', async (c, next) => {
