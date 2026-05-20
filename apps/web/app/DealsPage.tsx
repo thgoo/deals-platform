@@ -42,7 +42,7 @@ export default function DealsPage({ initialData }: DealsPageProps) {
     [debouncedSearch, stores],
   );
 
-  const { items, hasMore, isInitialLoading, isLoadingMore, isValidating, mutate, loadMore } =
+  const { items, hasMore, isInitialLoading, isLoadingMore, mutate, loadMore } =
     usePaginatedDeals({ filters, initialData });
 
   useDealsRealtime({ filters, mutate });
@@ -54,8 +54,6 @@ export default function DealsPage({ initialData }: DealsPageProps) {
   const [selectedDeal, setSelectedDeal] = useState<Item | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  const isFilteringInProgress =
-    isValidating && (!!debouncedSearch || stores.length > 0);
 
   const handleSearchChange = (value: string | null) => {
     setSearch(value);
@@ -132,16 +130,7 @@ export default function DealsPage({ initialData }: DealsPageProps) {
             onStoresChange={handleStoresChange}
           />
 
-          {isFilteringInProgress && (
-            <div className="border-foreground mt-4 flex items-center justify-center gap-3 rounded-lg border-2 bg-white px-6 py-3 shadow-[3px_3px_0px_var(--pixel-dark)]">
-              <div className="pixel-spinner h-5 w-5" />
-              <span className="text-foreground text-sm font-black">
-                Aplicando filtros...
-              </span>
-            </div>
-          )}
-
-          {!isFilteringInProgress && items.length === 0 && (
+          {items.length === 0 && (
             <div className="mt-8 flex flex-col items-center justify-center py-12 text-center">
               <div className="border-foreground mb-4 rounded-full border-3 bg-(--pixel-yellow) p-6 shadow-[3px_3px_0px_var(--pixel-dark)]">
                 <SearchX className="h-12 w-12" />

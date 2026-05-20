@@ -16,7 +16,6 @@ export interface UsePaginatedDealsReturn {
   hasMore: boolean;
   isInitialLoading: boolean;
   isLoadingMore: boolean;
-  isValidating: boolean;
   mutate: SWRInfiniteKeyedMutator<PaginatedResponse[]>;
   loadMore: () => void;
 }
@@ -53,7 +52,7 @@ export function usePaginatedDeals({
     );
   };
 
-  const { data, size, setSize, isLoading, isValidating, mutate } =
+  const { data, size, setSize, isLoading, mutate } =
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
       revalidateFirstPage: true,
       revalidateOnFocus: true,
@@ -89,7 +88,6 @@ export function usePaginatedDeals({
     hasMore: Boolean(hasMore),
     isLoadingMore: Boolean(isLoadingMore),
     isInitialLoading: Boolean(isInitialLoading),
-    isValidating,
     mutate,
     loadMore,
   };
