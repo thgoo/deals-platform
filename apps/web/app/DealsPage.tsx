@@ -130,7 +130,6 @@ export default function DealsPage({ initialData }: DealsPageProps) {
             availableStores={initialData?.availableStores}
             onSearchChange={handleSearchChange}
             onStoresChange={handleStoresChange}
-            onCreateAlert={search ? createAlert : undefined}
           />
 
           {isFilteringInProgress && (

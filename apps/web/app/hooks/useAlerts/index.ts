@@ -12,7 +12,7 @@ export interface Alert {
 
 export type CreateAlertResult =
   | { ok: true }
-  | { ok: false; reason: 'permission_denied' | 'not_supported' | 'error'; message?: string };
+  | { ok: false; reason: 'permission_denied' | 'not_supported' | 'duplicate' | 'error'; message?: string };
 
 const STORAGE_KEY = 'bargah-alerts';
 
@@ -68,6 +68,13 @@ export function useAlerts() {
       return { ok: false, reason: 'not_supported' };
     }
 
+    const normalize = (str: string) =>
+      str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+    if (alerts.some((a) => normalize(a.keyword) === normalize(keyword.trim()))) {
+      return { ok: false, reason: 'duplicate' };
+    }
+
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       return { ok: false, reason: 'permission_denied' };
@@ -96,7 +103,7 @@ export function useAlerts() {
     } catch (err) {
       return { ok: false, reason: 'error', message: String(err) };
     }
-  }, [isSupported]);
+  }, [isSupported, alerts]);
 
   const deleteAlert = useCallback(async (id: string): Promise<void> => {
     await fetch(getApiUrl(`/api/alerts/${id}`), { method: 'DELETE' }).catch(() => {});

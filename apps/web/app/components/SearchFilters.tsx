@@ -9,7 +9,6 @@ interface SearchFiltersProps {
   availableStores?: string[];
   onSearchChange: (value: string | null) => void;
   onStoresChange: (value: string[] | null) => void;
-  onCreateAlert?: (keyword: string) => void;
 }
 
 const AVAILABLE_STORES = [
@@ -29,7 +28,6 @@ export default function SearchFilters({
   availableStores,
   onSearchChange,
   onStoresChange,
-  onCreateAlert,
 }: SearchFiltersProps) {
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
 
@@ -116,16 +114,6 @@ export default function SearchFilters({
             </>
           )}
         </div>
-
-        {search && onCreateAlert && (
-          <button
-            onClick={() => onCreateAlert(search)}
-            className="pixel-btn rounded-lg py-1.5! text-xs"
-            title={`Create alert for "${search}"`}
-          >
-            🔔 Alert
-          </button>
-        )}
 
         {hasActiveFilters && (
           <button

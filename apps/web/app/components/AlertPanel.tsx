@@ -42,6 +42,7 @@ export default function AlertPanel({
       const messages: Record<string, string> = {
         permission_denied: 'Permissão de notificação negada.',
         not_supported: 'Notificações push não suportadas neste navegador.',
+        duplicate: 'Você já tem um alerta para este termo.',
         error: 'Não foi possível criar o alerta. Tente novamente.',
       };
       if (result.reason === 'error' && 'message' in result) {
