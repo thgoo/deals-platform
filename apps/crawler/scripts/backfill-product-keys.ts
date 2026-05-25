@@ -147,6 +147,7 @@ async function backfillDeals(deals: Deal[], dryRun: boolean, skipExisting: boole
 
 interface ParsedArgs {
   ids: number[] | null;
+  range: [number, number] | null;
   count: number;
   dryRun: boolean;
   skipExisting: boolean;
@@ -157,7 +158,7 @@ function parseArgs(): ParsedArgs {
   const args = process.argv.slice(2);
   let dryRun = false;
   let skipExisting = true;
-  let mode: 'last' | 'ids' | null = null;
+  let mode: 'last' | 'ids' | 'range' | null = null;
   const values: string[] = [];
 
   for (const arg of args) {
@@ -169,6 +170,8 @@ function parseArgs(): ParsedArgs {
       mode = 'last';
     } else if (arg === '--ids' || arg === '-i') {
       mode = 'ids';
+    } else if (arg === '--range' || arg === '-r') {
+      mode = 'range';
     } else if (arg === '--help' || arg === '-h') {
       continue;
     } else if (!arg.startsWith('-')) {
@@ -177,24 +180,35 @@ function parseArgs(): ParsedArgs {
   }
 
   if (!mode) {
-    return { ids: null, count: 0, dryRun, skipExisting, error: 'missing_mode' };
+    return { ids: null, range: null, count: 0, dryRun, skipExisting, error: 'missing_mode' };
   }
 
   const numbers = values.map(v => parseInt(v, 10)).filter(n => !isNaN(n));
 
   if (mode === 'last') {
     const count = numbers[0] ?? 10;
-    return { ids: null, count, dryRun, skipExisting };
+    return { ids: null, range: null, count, dryRun, skipExisting };
   }
 
   if (mode === 'ids') {
     if (numbers.length === 0) {
-      return { ids: null, count: 0, dryRun, skipExisting, error: 'no_ids' };
+      return { ids: null, range: null, count: 0, dryRun, skipExisting, error: 'no_ids' };
     }
-    return { ids: numbers, count: 0, dryRun, skipExisting };
+    return { ids: numbers, range: null, count: 0, dryRun, skipExisting };
   }
 
-  return { ids: null, count: 10, dryRun, skipExisting };
+  if (mode === 'range') {
+    if (numbers.length < 2) {
+      return { ids: null, range: null, count: 0, dryRun, skipExisting, error: 'invalid_range' };
+    }
+    const [start, end] = numbers as [number, number];
+    if (start > end) {
+      return { ids: null, range: null, count: 0, dryRun, skipExisting, error: 'invalid_range' };
+    }
+    return { ids: null, range: [start, end], count: 0, dryRun, skipExisting };
+  }
+
+  return { ids: null, range: null, count: 10, dryRun, skipExisting };
 }
 
 function printUsage(): void {
@@ -204,6 +218,7 @@ function printUsage(): void {
 Usage:
   bun run backfill-product-keys.ts --last [N]
   bun run backfill-product-keys.ts --ids <id1> [id2] [id3] ...
+  bun run backfill-product-keys.ts --range <start> <end>
 
 Examples:
   bun run backfill-product-keys.ts --last           # Last 10 deals (default)
@@ -211,12 +226,15 @@ Examples:
   bun run backfill-product-keys.ts -l 5             # Last 5 deals (short flag)
   bun run backfill-product-keys.ts --ids 123 456    # Specific deal IDs
   bun run backfill-product-keys.ts -i 789           # Single deal ID (short flag)
+  bun run backfill-product-keys.ts --range 100 200  # Deals from ID 100 to 200
+  bun run backfill-product-keys.ts -r 100 200       # Same (short flag)
   bun run backfill-product-keys.ts --dry-run --last 10  # Preview without saving
   bun run backfill-product-keys.ts --force --last 10    # Re-process even if productKey exists
 
 Options:
   --last, -l     Process last N deals (default: 10)
   --ids, -i      Process specific deal IDs
+  --range, -r    Process deals from ID <start> to <end> (inclusive)
   --dry-run, -d  Preview changes without saving to database
   --force, -f    Re-process deals even if they already have a productKey
   --help, -h     Show this help message
@@ -229,16 +247,22 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { ids, count, dryRun, skipExisting, error } = parseArgs();
+  const { ids, range, count, dryRun, skipExisting, error } = parseArgs();
 
   if (error === 'missing_mode') {
-    console.log('❌ Please specify --last or --ids\n');
+    console.log('❌ Please specify --last, --ids, or --range\n');
     printUsage();
     return;
   }
 
   if (error === 'no_ids') {
     console.log('❌ Please provide at least one deal ID with --ids\n');
+    printUsage();
+    return;
+  }
+
+  if (error === 'invalid_range') {
+    console.log('❌ Please provide two valid IDs with --range <start> <end> (start must be <= end)\n');
     printUsage();
     return;
   }
@@ -256,6 +280,11 @@ async function main(): Promise<void> {
   if (ids) {
     console.log(`🔄 Fetching deals by IDs: ${ids.join(', ')}\n`);
     deals = await fetchDealsByIds(ids);
+  } else if (range) {
+    const [start, end] = range;
+    const rangeIds = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    console.log(`🔄 Fetching deals in range #${start} to #${end} (${rangeIds.length} IDs)...\n`);
+    deals = await fetchDealsByIds(rangeIds);
   } else {
     console.log(`🔄 Fetching last ${count} deals...\n`);
     deals = await fetchLastDeals(count);
