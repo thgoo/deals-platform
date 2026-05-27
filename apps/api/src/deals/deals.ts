@@ -86,6 +86,23 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     return c.json({ ok: true, skipped: 'extraction_failed' });
   }
 
+  // Second-level filter: even when the AI returned a result, if it found no
+  // product, no price, AND no coupon, the message is not a deal — channel
+  // chatter, off-topic, links to neutral sites. Persisting these would pollute
+  // the feed and risk firing alert notifications against irrelevant text.
+  const hasCommercialSignal
+    = extraction.product !== null
+    || extraction.price !== null
+    || extraction.coupons.length > 0;
+
+  if (!hasCommercialSignal) {
+    logger.info('AI returned no product, price, or coupon — skipping (not a deal)', {
+      chat: body.chat,
+      messageId: body.message_id,
+    });
+    return c.json({ ok: true, skipped: 'not-a-deal' });
+  }
+
   const deal = await dealService.create({
     messageId: body.message_id,
     chat: body.chat,
