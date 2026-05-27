@@ -34,6 +34,21 @@ export default function DecisionsCard({ decisions }: DecisionsCardProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="space-y-1 text-[11px] text-zinc-500">
+        <p>
+          <span className="font-medium text-zinc-700">score</span> = embedding
+          similarity between the AI-extracted product and the best candidate in
+          the catalog (0–100).{' '}
+          <span className="text-zinc-400">&quot;—&quot;</span> means no
+          embedding was computed for this path.
+        </p>
+        <p>
+          <span className="mono text-zinc-700">&lt;80</span> → create new (no
+          LLM call) · <span className="mono text-zinc-700">80–95</span> → LLM
+          judge decides · <span className="mono text-zinc-700">≥95</span> →
+          auto-match (unless specs disagree, then falls to judge)
+        </p>
+      </div>
       <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
         <button
           type="button"

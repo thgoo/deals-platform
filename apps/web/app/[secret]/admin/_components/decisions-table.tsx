@@ -40,9 +40,11 @@ export default function DecisionsTable({ decisions }: DecisionsTableProps) {
                 {d.dealProduct ?? <span className="text-zinc-400">—</span>}
               </td>
               <td className="max-w-[28ch] truncate py-2 pr-4 text-zinc-500">
-                {d.method === 'created_new'
-                  ? <span className="text-zinc-400">— new</span>
-                  : d.productName ?? <span className="text-zinc-400">—</span>}
+                {d.method === 'created_new' ? (
+                  <span className="text-zinc-400">— new</span>
+                ) : (
+                  (d.productName ?? <span className="text-zinc-400">—</span>)
+                )}
               </td>
               <td className="py-2 pr-4">
                 <span
