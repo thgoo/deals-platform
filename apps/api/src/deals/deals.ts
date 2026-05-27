@@ -39,10 +39,22 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
 
   const cleanedText = cleanPromoText(body.text);
 
-  // Heuristic: a message with no links and no R$ mention is almost never a deal.
-  // Skipping it here avoids paying for link-pipeline + AI extraction on noise.
-  if (body.links.length === 0 && !/r\$/i.test(cleanedText)) {
-    logger.info('Message has no links and no price mention, skipping', {
+  // Heuristic: a message with no link (either in body.links or inline in the text)
+  // AND no money-like number is almost never a deal. Skipping it here avoids paying
+  // for link-pipeline + AI extraction on noise.
+  //
+  // Reason for checking the text directly:
+  //   - body.links carries Telegram's MessageEntity-parsed URLs only. Channels that
+  //     paste a bare URL after an emoji (e.g. "🔗 https://...") often don't get the
+  //     entity, so body.links is empty even though the text has a real link.
+  //   - The price check used to require "R$" but many channels write Brazilian
+  //     prices without the prefix ("DE 207,04 | POR 55,90"). Detect any decimal-2
+  //     pattern instead, which covers all common cases without false positives.
+  const hasLink = body.links.length > 0 || /https?:\/\//i.test(cleanedText);
+  const hasMoneyLike = /\b\d+[,.]\d{2}\b/.test(cleanedText);
+
+  if (!hasLink && !hasMoneyLike) {
+    logger.info('Message has no link and no money-like pattern, skipping', {
       chat: body.chat,
       messageId: body.message_id,
     });
