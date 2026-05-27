@@ -2,7 +2,11 @@ import type { Coupon } from '~/db/schemas/deals';
 import { config } from '~/config';
 import { logger } from '~/logger';
 
-const REQUEST_TIMEOUT_MS = 30_000;
+// Long enough to cover the ai-service's internal retry budget (STANDARD preset:
+// up to 3 attempts × ~30s each + delays ≈ 93s worst case). If we time out before
+// ai-service finishes its retries, we'd drop the deal on a transient blip the
+// retries would otherwise heal.
+const REQUEST_TIMEOUT_MS = 120_000;
 
 export interface EmbedResponse {
   embeddings: number[][];

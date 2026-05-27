@@ -54,9 +54,10 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     knownLinks: body.links,
   });
 
-  // AI extraction. On failure we still persist the deal with raw text so it isn't lost —
-  // the PATCH /:id/extracted endpoint can re-run extraction later.
-  let extraction: Awaited<ReturnType<typeof aiService.extract>> | null = null;
+  // AI extraction. After ai-service exhausts its internal retries, this still throws
+  // — at that point we drop the deal: a row with no product / price / category is
+  // useless for the feed and the catalog, and would just pollute the table.
+  let extraction: Awaited<ReturnType<typeof aiService.extract>>;
   try {
     extraction = await aiService.extract({
       text: cleanedText,
@@ -65,11 +66,12 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
       links: linkResult.allVersions,
     });
   } catch (err) {
-    logger.error('AI extraction failed; persisting deal without enrichment', {
+    logger.error('AI extraction failed after retries; skipping deal', {
       chat: body.chat,
       messageId: body.message_id,
       error: err instanceof Error ? err.message : String(err),
     });
+    return c.json({ ok: true, skipped: 'extraction_failed' });
   }
 
   const deal = await dealService.create({
@@ -79,13 +81,13 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     ts: new Date(body.ts),
     text: cleanedText,
     links: linkResult.finalLinks,
-    price: extraction?.price ?? null,
-    coupons: extraction?.coupons ?? undefined,
-    store: extraction?.store ?? null,
-    description: extraction?.description ?? null,
-    product: extraction?.product ?? null,
-    productKey: extraction?.productKey ?? null,
-    category: extraction?.category ?? null,
+    price: extraction.price,
+    coupons: extraction.coupons,
+    store: extraction.store,
+    description: extraction.description,
+    product: extraction.product,
+    productKey: extraction.productKey,
+    category: extraction.category,
     mediaType: body.media?.type,
     photoId: body.media?.photo_id ? String(body.media.photo_id) : undefined,
     localPath: body.media?.local_path,
@@ -95,7 +97,6 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     dealId: deal.id,
     chat: body.chat,
     messageId: body.message_id,
-    enriched: extraction !== null,
   });
 
   dealEvents.emit('new-deal', deal);
