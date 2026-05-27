@@ -85,9 +85,16 @@ export default class CandidateSearchService {
   /**
    * Pairs of distinct products whose embeddings cosine-similarity-match above
    * `threshold` — likely duplicates that should have been merged. O(N²) pairwise
-   * scan; acceptable for admin tooling at N up to a few thousand.
+   * scan over the in-memory embedding cache.
+   *
+   * Yields back to the event loop every {@link YIELD_EVERY_N_ROWS} outer
+   * iterations. Without yielding, a 5k-product scan blocks the single-threaded
+   * Bun event loop for ~30 seconds — every HTTP request piles up behind it and
+   * the dashboard appears completely frozen. Chunked yielding keeps the server
+   * responsive while the scan runs in the background; total compute time is
+   * effectively unchanged.
    */
-  findDuplicatePairs(options: { threshold: number; limit: number }): DuplicatePair[] {
+  async findDuplicatePairs(options: { threshold: number; limit: number }): Promise<DuplicatePair[]> {
     const cache = this.cache;
     const pairs: DuplicatePair[] = [];
 
@@ -106,11 +113,22 @@ export default class CandidateSearchService {
           });
         }
       }
+
+      // Yield to the event loop so concurrent HTTP requests don't starve.
+      if (i % YIELD_EVERY_N_ROWS === 0) {
+        await yieldToEventLoop();
+      }
     }
 
     pairs.sort((a, b) => b.similarity - a.similarity);
     return pairs.slice(0, options.limit);
   }
+}
+
+const YIELD_EVERY_N_ROWS = 25;
+
+function yieldToEventLoop(): Promise<void> {
+  return new Promise(resolve => setImmediate(resolve));
 }
 
 function toCached(product: Product): CachedProduct {

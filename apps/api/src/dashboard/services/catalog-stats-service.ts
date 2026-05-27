@@ -63,12 +63,17 @@ export interface SourceStat {
 
 // TTLs picked per "how fast does this number change in practice".
 // Heartbeat / decisions favor freshness; expensive aggregates lean on cache
-// to keep the dashboard responsive while the backfill saturates MySQL.
-const OVERVIEW_TTL_MS = 30_000;
-const MATCH_METHODS_TTL_MS = 60_000;
-const DUPLICATES_TTL_MS = 120_000;
-const RECENT_DECISIONS_TTL_MS = 5_000;
-const SOURCES_TTL_MS = 60_000;
+// to keep the dashboard responsive. SWR pattern means stale is served
+// immediately while background recompute runs, so longer TTLs don't make the
+// UI feel old — they just reduce how often we hit MySQL with the same query.
+const OVERVIEW_TTL_MS = 60_000;
+const MATCH_METHODS_TTL_MS = 5 * 60_000;
+// Duplicates is driven by the background cron (every 12h, see index.ts);
+// long TTL prevents the dashboard from ever triggering an on-demand recompute
+// of the expensive O(N²) scan.
+const DUPLICATES_TTL_MS = 24 * 60 * 60_000;
+const RECENT_DECISIONS_TTL_MS = 10_000;
+const SOURCES_TTL_MS = 5 * 60_000;
 
 export default class CatalogStatsService {
   private overviewCache = createTtlCache<CatalogOverview>(OVERVIEW_TTL_MS);
@@ -169,7 +174,7 @@ export default class CatalogStatsService {
    * products of 1536-dim vectors → ~1s in Bun. Acceptable for an admin tool.
    */
   findDuplicateSuspects(threshold: number, limit: number): Promise<DuplicateSuspect[]> {
-    return this.duplicatesCache.get(async () =>
+    return this.duplicatesCache.get(() =>
       this.candidateSearch.findDuplicatePairs({ threshold, limit }),
     );
   }
@@ -180,7 +185,17 @@ export default class CatalogStatsService {
    * Uses the same defaults the dashboard page passes (threshold=0.85, limit=12).
    */
   async warmDuplicatesCache(): Promise<void> {
-    await this.duplicatesCache.warm(async () =>
+    await this.duplicatesCache.warm(() =>
+      this.candidateSearch.findDuplicatePairs({ threshold: 0.85, limit: 12 }),
+    );
+  }
+
+  /**
+   * Recompute the duplicate-suspects cache on a schedule. Called by the boot
+   * cron in index.ts so the data stays fresh without ever blocking a request.
+   */
+  async refreshDuplicatesCache(): Promise<void> {
+    await this.duplicatesCache.refresh(() =>
       this.candidateSearch.findDuplicatePairs({ threshold: 0.85, limit: 12 }),
     );
   }

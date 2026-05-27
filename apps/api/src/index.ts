@@ -48,6 +48,22 @@ void catalogStatsService.warmDuplicatesCache()
     error: err instanceof Error ? err.message : String(err),
   }));
 
+// Periodic refresh — the duplicate scan is expensive but the data only changes
+// when new products are added. 12h is a good cadence: catches new duplicates
+// the same day, far cheaper than running on every dashboard hit. The compute
+// itself yields to the event loop so it never blocks request handling.
+const DUPLICATES_REFRESH_MS = 12 * 60 * 60 * 1000;
+setInterval(() => {
+  const start = Date.now();
+  void catalogStatsService.refreshDuplicatesCache()
+    .then(() => logger.info('Dashboard duplicates cache refreshed', {
+      durationMs: Date.now() - start,
+    }))
+    .catch(err => logger.warn('Dashboard duplicates refresh failed', {
+      error: err instanceof Error ? err.message : String(err),
+    }));
+}, DUPLICATES_REFRESH_MS);
+
 const app = createApp({ aiServiceClient, productResolverService, catalogStatsService });
 
 export default {

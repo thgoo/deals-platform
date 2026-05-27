@@ -13,8 +13,10 @@ export interface DailyCount {
   count: number;
 }
 
-// Business aggregates change slowly relative to a 60s refresh; cache freely.
-const BUSINESS_TTL_MS = 60_000;
+// Business aggregates change slowly. Long TTL keeps the dashboard snappy and
+// avoids running the same group-by every minute when nothing meaningful
+// changed. SWR keeps the displayed value fresh enough for daily operator use.
+const BUSINESS_TTL_MS = 5 * 60_000;
 
 /**
  * Aggregations for the "business" lens of the dashboard — top stores,

@@ -21,6 +21,11 @@ export interface TtlCache<T> {
   get(compute: () => Promise<T>): Promise<T>;
   /** Eagerly warm the cache. Returns a promise that resolves when ready. */
   warm(compute: () => Promise<T>): Promise<T>;
+  /**
+   * Force a recompute even if the cache is fresh. Used by scheduled background
+   * jobs that want to refresh on a fixed cadence regardless of TTL.
+   */
+  refresh(compute: () => Promise<T>): Promise<T>;
   /** Clear the cached value — next `get` triggers a fresh compute and blocks. */
   invalidate(): void;
 }
@@ -75,6 +80,13 @@ export function createTtlCache<T>(ttlMs: number): TtlCache<T> {
       // Same as get() on a cold cache — but called explicitly at boot so the
       // first HTTP request finds the cache already populated.
       if (cached) return cached.value;
+      if (pending) return pending;
+      return startRecompute(compute);
+    },
+
+    async refresh(compute) {
+      // Always start a fresh compute. If one is already in flight, attach
+      // to it instead of stacking parallel scans.
       if (pending) return pending;
       return startRecompute(compute);
     },
