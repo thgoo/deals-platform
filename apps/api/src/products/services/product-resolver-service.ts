@@ -79,7 +79,6 @@ export default class ProductResolverService {
 
     const candidates = this.candidateSearch.findSimilar(queryEmbedding, {
       topK: CANDIDATE_TOP_K,
-      category: input.category ?? undefined,
     });
 
     const best = candidates[0];

@@ -201,7 +201,6 @@ class Backfill {
       const externalIds = extractExternalIds(parseLinks(deal.links), this.identifierRegistry);
       const candidates = this.candidateSearch.findSimilar(embedding, {
         topK: CANDIDATE_TOP_K,
-        category: deal.category ?? undefined,
       });
       await this.decide(deal, embedding, externalIds, candidates);
     }
@@ -359,10 +358,16 @@ async function main(): Promise<void> {
   await backfill.run(limit);
 }
 
-main().catch(err => {
-  logger.error('Backfill aborted with unhandled error', {
-    error: err instanceof Error ? err.message : String(err),
-    stack: err instanceof Error ? err.stack : undefined,
+// Explicit exit on success — the mysql2 pool keeps TCP sockets warm, which
+// holds the Bun event loop alive even after work is done. For a one-shot CLI
+// script there's nothing to gracefully shut down, so force-exit is the right
+// call: in-flight writes are already awaited before main() returns.
+main()
+  .then(() => process.exit(0))
+  .catch(err => {
+    logger.error('Backfill aborted with unhandled error', {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    process.exit(1);
   });
-  process.exit(1);
-});

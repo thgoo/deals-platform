@@ -13,7 +13,6 @@ interface CachedProduct {
 
 interface SearchOptions {
   topK: number;
-  category?: string;
 }
 
 export interface DuplicatePair {
@@ -62,17 +61,24 @@ export default class CandidateSearchService {
     return this.cache.length;
   }
 
+  /**
+   * Find the top-K products in the catalog most similar to `query`.
+   *
+   * Intentionally scans the FULL cache — no category filter. We tried filtering
+   * by deal.category at one point but the AI extraction isn't deterministic on
+   * categories: the same product, in two different deals, often receives two
+   * different category labels. Filtering by category would then hide the
+   * existing product from the second deal's candidate search and the resolver
+   * would create a duplicate. The AUTO_MATCH threshold (0.95) is conservative
+   * enough on its own to keep cross-category false positives out of the result.
+   */
   findSimilar(query: number[], options: SearchOptions): Candidate[] {
     if (this.cache.length === 0) return [];
 
     const queryVec = normalize(Float32Array.from(query));
     if (!queryVec) return [];
 
-    const filtered = options.category
-      ? this.cache.filter(p => p.category === options.category)
-      : this.cache;
-
-    const scored = filtered.map(p => ({
+    const scored = this.cache.map(p => ({
       productId: p.id,
       canonicalName: p.canonicalName,
       score: dot(queryVec, p.embedding),

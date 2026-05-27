@@ -120,21 +120,20 @@ describe('CandidateSearchService', () => {
     expect(result).toHaveLength(2);
   });
 
-  test('filters by category', async () => {
+  test('scans the whole catalog regardless of stored product category', async () => {
+    // Category filter was removed because the AI extraction often labels the
+    // same product with different categories across deals — filtering hid
+    // existing products and produced duplicates. Now findSimilar always
+    // returns the global top-K and lets the AUTO_MATCH threshold (0.95)
+    // guard against cross-product false positives.
     stub.rows = [
       makeProduct('a', 'A', [1, 0, 0], 'games'),
       makeProduct('b', 'B', [0.95, 0.05, 0], 'notebooks'),
-      makeProduct('c', 'C', [0.9, 0.1, 0], 'games'),
+      makeProduct('c', 'C', [0.9, 0.1, 0], 'kitchen'),
     ];
     await service.loadAll();
-    const result = service.findSimilar([1, 0, 0], { topK: 5, category: 'games' });
-    expect(result.map(r => r.productId).sort()).toEqual(['a', 'c']);
-  });
-
-  test('returns empty when category filter matches nothing', async () => {
-    stub.rows = [makeProduct('a', 'A', [1, 0, 0], 'games')];
-    await service.loadAll();
-    expect(service.findSimilar([1, 0, 0], { topK: 5, category: 'notebooks' })).toEqual([]);
+    const result = service.findSimilar([1, 0, 0], { topK: 3 });
+    expect(result.map(r => r.productId)).toEqual(['a', 'b', 'c']);
   });
 
   test('normalizes vectors of different magnitudes — same direction yields score 1.0', async () => {
