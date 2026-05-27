@@ -103,6 +103,15 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     return c.json({ ok: true, skipped: 'not-a-deal' });
   }
 
+  // Coupon-only deals (no product extracted, only coupons) use a branded image
+  // instead of whatever photo the Telegram channel attached — the channel's
+  // photo is usually generic chatter or off-topic. The image lives at
+  // `media/coupon.png` and is served by the same media route as real deal photos.
+  // The late-arriving Telegram photo notification is ignored by `updateImage`
+  // because the local_path is already set (see deal-service.updateImage).
+  const isCouponOnly = extraction.product === null && extraction.coupons.length > 0;
+  const localPath = isCouponOnly ? 'coupon.png' : body.media?.local_path;
+
   const deal = await dealService.create({
     messageId: body.message_id,
     chat: body.chat,
@@ -119,7 +128,7 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     category: extraction.category,
     mediaType: body.media?.type,
     photoId: body.media?.photo_id ? String(body.media.photo_id) : undefined,
-    localPath: body.media?.local_path,
+    localPath,
   });
 
   logger.info('Deal created', {

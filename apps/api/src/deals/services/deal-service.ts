@@ -110,12 +110,19 @@ export class DealService {
   }
 
   /**
-   * Update local image path when download completes
+   * Update local image path when download completes.
+   *
+   * Idempotent: only updates rows whose `local_path` is still null. This
+   * protects coupon-only deals (which are created with `local_path = 'coupon.png'`)
+   * from being overwritten by the late-arriving Telegram photo notification.
    */
   async updateImage(photoId: string, localPath: string): Promise<Deal | null> {
     const result = await db.update(dealsTable)
       .set({ localPath })
-      .where(eq(dealsTable.photoId, photoId));
+      .where(and(
+        eq(dealsTable.photoId, photoId),
+        isNull(dealsTable.localPath),
+      ));
 
     if (result[0].affectedRows === 0) {
       return null;
