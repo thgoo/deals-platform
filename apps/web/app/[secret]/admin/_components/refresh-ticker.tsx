@@ -9,16 +9,11 @@ interface RefreshTickerProps {
   renderedAt: string;
   /** Polling backstop interval (ms). Defaults to 60s. */
   refreshIntervalMs?: number;
+  /** Public backend URL used for the SSE connection. */
+  sseUrl: string;
 }
 
 const REFRESH_DEBOUNCE_MS = 2000;
-
-// NEXT_PUBLIC_* env vars are inlined into the client bundle at build time, so
-// this resolves correctly in prod without depending on the pm2 runtime env.
-// (We previously passed sseUrl as a prop from the server component, which
-// broke in prod because pm2 didn't load NEXT_PUBLIC_BACKEND_URL into the
-// Next.js server process — Next then fell back to localhost:8000.)
-const SSE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'}/api/deals/stream`;
 
 /**
  * Three responsibilities in one client component:
@@ -39,6 +34,7 @@ const SSE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000
 export default function RefreshTicker({
   renderedAt,
   refreshIntervalMs = 60_000,
+  sseUrl,
 }: RefreshTickerProps) {
   const router = useRouter();
   // Bumping `tick` forces a re-render so `formatRelativeTime(renderedAt)`
@@ -72,7 +68,8 @@ export default function RefreshTicker({
 
   // SSE — instant refresh when a new deal lands.
   useEffect(() => {
-    const es = new EventSource(SSE_URL);
+    if (!sseUrl) return;
+    const es = new EventSource(sseUrl);
     const onNewDeal = () => debouncedRefresh.current();
     es.addEventListener('new-deal', onNewDeal);
     // image-updated lands ~seconds after new-deal; refresh too so the latest
@@ -83,7 +80,7 @@ export default function RefreshTicker({
       es.removeEventListener('image-updated', onNewDeal);
       es.close();
     };
-  }, []);
+  }, [sseUrl]);
 
   // Polling backstop — covers backfill / SSE silent failures.
   useEffect(() => {

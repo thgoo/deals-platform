@@ -97,7 +97,10 @@ export default async function IntelligencePage() {
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <HealthIndicator lastDealAt={heartbeat.lastDealAt} />
-          <RefreshTicker renderedAt={renderedAt} />
+          <RefreshTicker
+            renderedAt={renderedAt}
+            sseUrl={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'}/api/deals/stream`}
+          />
         </div>
       </header>
 

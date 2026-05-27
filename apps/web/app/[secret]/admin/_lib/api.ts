@@ -18,11 +18,11 @@ import type {
 const BACKEND = process.env.INTERNAL_BACKEND_URL ?? 'http://localhost:8000';
 const SECRET = process.env.DASHBOARD_SECRET ?? '';
 
-// Per-call timeout. The backend has its own SWR cache (so warm hits are
-// instant), but if something unexpected goes slow we don't want to block the
-// whole page render — let it fail fast, the catch in page.tsx falls back to
-// empty data, and the next 60s polling refresh recovers.
-const FETCH_TIMEOUT_MS = 8_000;
+// Per-call timeout. Generous on purpose: the backend has its own SWR cache so
+// warm hits are sub-100ms — anything taking longer means the backend is doing
+// real work (cold-start compute, GC pause, MySQL hiccup). Failing fast at 8s
+// caused sections to blank intermittently; 20s only fails on genuine hangs.
+const FETCH_TIMEOUT_MS = 20_000;
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BACKEND}/api/dashboard${path}`, {
