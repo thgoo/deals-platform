@@ -30,9 +30,9 @@ app.get('/catalog/match-methods', zValidator('query', daysQuerySchema), async c 
   return c.json(stats);
 });
 
-app.get('/catalog/duplicate-suspects', zValidator('query', duplicatesQuerySchema), c => {
+app.get('/catalog/duplicate-suspects', zValidator('query', duplicatesQuerySchema), async c => {
   const { threshold, limit } = c.req.valid('query');
-  const suspects = c.get('catalogStatsService').findDuplicateSuspects(threshold, limit);
+  const suspects = await c.get('catalogStatsService').findDuplicateSuspects(threshold, limit);
   return c.json(suspects);
 });
 

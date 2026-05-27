@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
+import { createTtlCache } from '../cache';
 
 export interface HeartbeatStats {
   totalDeals: number;
@@ -25,8 +26,17 @@ export interface HeartbeatStats {
  * One-shot heartbeat: "is the pipeline alive and how busy has it been?".
  * Cheap: one indexed scan over `deals.ts`. All counters in a single round-trip.
  */
+// 5s — operator wants near-realtime feedback on "is the pipeline producing".
+const HEARTBEAT_TTL_MS = 5_000;
+
 export default class HeartbeatService {
+  private cache = createTtlCache<HeartbeatStats>(HEARTBEAT_TTL_MS);
+
   async getStats(): Promise<HeartbeatStats> {
+    return this.cache.get(() => this.computeStats());
+  }
+
+  private async computeStats(): Promise<HeartbeatStats> {
     const [row] = await db
       .select({
         total: sql<string>`COUNT(*)`,

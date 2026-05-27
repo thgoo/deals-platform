@@ -5,6 +5,7 @@ import { dealsTable } from '~/db/schemas/deals';
 import { productMatchDecisionsTable } from '~/db/schemas/product-match-decisions';
 import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
+import { createTtlCache } from '../cache';
 
 // Identifier modules that ship a store-specific URL parser (not the host
 // fallback). MUST stay in sync with `src/link-pipeline/identifiers/providers/`.
@@ -60,7 +61,22 @@ export interface SourceStat {
   identifierType: 'specific' | 'fallback';
 }
 
+// TTLs picked per "how fast does this number change in practice".
+// Heartbeat / decisions favor freshness; expensive aggregates lean on cache
+// to keep the dashboard responsive while the backfill saturates MySQL.
+const OVERVIEW_TTL_MS = 30_000;
+const MATCH_METHODS_TTL_MS = 60_000;
+const DUPLICATES_TTL_MS = 120_000;
+const RECENT_DECISIONS_TTL_MS = 5_000;
+const SOURCES_TTL_MS = 60_000;
+
 export default class CatalogStatsService {
+  private overviewCache = createTtlCache<CatalogOverview>(OVERVIEW_TTL_MS);
+  private matchMethodsCache = createTtlCache<MatchMethodStat[]>(MATCH_METHODS_TTL_MS);
+  private duplicatesCache = createTtlCache<DuplicateSuspect[]>(DUPLICATES_TTL_MS);
+  private recentDecisionsCache = createTtlCache<RecentDecision[]>(RECENT_DECISIONS_TTL_MS);
+  private sourcesCache = createTtlCache<SourceStat[]>(SOURCES_TTL_MS);
+
   constructor(private readonly candidateSearch: CandidateSearchService) {}
 
   /**
@@ -68,6 +84,10 @@ export default class CatalogStatsService {
    * deduplicating products and connecting cross-store deals?".
    */
   async getOverview(): Promise<CatalogOverview> {
+    return this.overviewCache.get(() => this.computeOverview());
+  }
+
+  private async computeOverview(): Promise<CatalogOverview> {
     const [
       [productsRow],
       [mappingsRow],
@@ -118,6 +138,10 @@ export default class CatalogStatsService {
    * work or if too many decisions are falling to llm_judge / created_new.
    */
   async getMatchMethodStats(days: number): Promise<MatchMethodStat[]> {
+    return this.matchMethodsCache.get(() => this.computeMatchMethodStats(days));
+  }
+
+  private async computeMatchMethodStats(days: number): Promise<MatchMethodStat[]> {
     const rows = await db.execute<{ method: string; count: number | string }>(sql`
       SELECT method, COUNT(*) AS count
       FROM product_match_decisions
@@ -144,8 +168,21 @@ export default class CatalogStatsService {
    * Cost: O(N²) over the in-memory embedding cache. For N=5k → ~12M dot
    * products of 1536-dim vectors → ~1s in Bun. Acceptable for an admin tool.
    */
-  findDuplicateSuspects(threshold: number, limit: number): DuplicateSuspect[] {
-    return this.candidateSearch.findDuplicatePairs({ threshold, limit });
+  findDuplicateSuspects(threshold: number, limit: number): Promise<DuplicateSuspect[]> {
+    return this.duplicatesCache.get(async () =>
+      this.candidateSearch.findDuplicatePairs({ threshold, limit }),
+    );
+  }
+
+  /**
+   * Eagerly populate the duplicate-suspects cache. Called at boot so the first
+   * dashboard request doesn't have to wait for the O(N²) embedding scan.
+   * Uses the same defaults the dashboard page passes (threshold=0.85, limit=12).
+   */
+  async warmDuplicatesCache(): Promise<void> {
+    await this.duplicatesCache.warm(async () =>
+      this.candidateSearch.findDuplicatePairs({ threshold: 0.85, limit: 12 }),
+    );
   }
 
   /**
@@ -153,6 +190,10 @@ export default class CatalogStatsService {
    * Joins the deal so spot-check is "what AI extracted" vs "what we matched to".
    */
   async getRecentDecisions(limit: number): Promise<RecentDecision[]> {
+    return this.recentDecisionsCache.get(() => this.computeRecentDecisions(limit));
+  }
+
+  private async computeRecentDecisions(limit: number): Promise<RecentDecision[]> {
     const rows = await db
       .select({
         id: productMatchDecisionsTable.id,
@@ -189,6 +230,10 @@ export default class CatalogStatsService {
    * to zero mappings, the specific identifier likely broke.
    */
   async getSourceDistribution(): Promise<SourceStat[]> {
+    return this.sourcesCache.get(() => this.computeSourceDistribution());
+  }
+
+  private async computeSourceDistribution(): Promise<SourceStat[]> {
     const rows = await db
       .select({
         source: productUrlMappingsTable.source,

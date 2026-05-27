@@ -1,6 +1,7 @@
 import { and, desc, gte, isNotNull, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
+import { createTtlCache } from '../cache';
 
 export interface NamedCount {
   name: string;
@@ -12,12 +13,23 @@ export interface DailyCount {
   count: number;
 }
 
+// Business aggregates change slowly relative to a 60s refresh; cache freely.
+const BUSINESS_TTL_MS = 60_000;
+
 /**
  * Aggregations for the "business" lens of the dashboard — top stores,
  * categories, and the deal-volume time series. Read-only.
  */
 export default class BusinessStatsService {
+  private storesCache = createTtlCache<NamedCount[]>(BUSINESS_TTL_MS);
+  private categoriesCache = createTtlCache<NamedCount[]>(BUSINESS_TTL_MS);
+  private timeSeriesCache = createTtlCache<DailyCount[]>(BUSINESS_TTL_MS);
+
   async getTopStores(days: number, limit: number): Promise<NamedCount[]> {
+    return this.storesCache.get(() => this.computeTopStores(days, limit));
+  }
+
+  private async computeTopStores(days: number, limit: number): Promise<NamedCount[]> {
     const since = daysAgo(days);
     const rows = await db
       .select({
@@ -36,6 +48,10 @@ export default class BusinessStatsService {
   }
 
   async getTopCategories(days: number, limit: number): Promise<NamedCount[]> {
+    return this.categoriesCache.get(() => this.computeTopCategories(days, limit));
+  }
+
+  private async computeTopCategories(days: number, limit: number): Promise<NamedCount[]> {
     const since = daysAgo(days);
     const rows = await db
       .select({
@@ -54,6 +70,10 @@ export default class BusinessStatsService {
   }
 
   async getDealsTimeSeries(days: number): Promise<DailyCount[]> {
+    return this.timeSeriesCache.get(() => this.computeDealsTimeSeries(days));
+  }
+
+  private async computeDealsTimeSeries(days: number): Promise<DailyCount[]> {
     const rows = await db.execute<{ day: string; count: number | string }>(sql`
       SELECT DATE(ts) AS day, COUNT(*) AS count
       FROM deals

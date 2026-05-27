@@ -34,6 +34,20 @@ const productResolverService = new ProductResolverService(
 // O(N²) scan over the same embeddings without paying for a second load.
 const catalogStatsService = new CatalogStatsService(candidateSearchService);
 
+// Warm the expensive duplicate-suspects cache at boot — the O(N²) scan over
+// thousands of product embeddings can take 10s+ on the first hit. Warming
+// here means the first dashboard HTTP request finds the result already cached.
+// Fire-and-forget so it doesn't block accepting traffic; the cache's
+// stale-while-revalidate handles late readers gracefully.
+const warmStart = Date.now();
+void catalogStatsService.warmDuplicatesCache()
+  .then(() => logger.info('Dashboard duplicates cache warmed', {
+    durationMs: Date.now() - warmStart,
+  }))
+  .catch(err => logger.warn('Dashboard duplicates warmup failed', {
+    error: err instanceof Error ? err.message : String(err),
+  }));
+
 const app = createApp({ aiServiceClient, productResolverService, catalogStatsService });
 
 export default {
