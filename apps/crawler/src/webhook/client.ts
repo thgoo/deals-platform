@@ -4,8 +4,10 @@ import { logger } from '../logger';
 import { RETRY_PRESETS, withRetry } from '../shared/retry';
 
 // Long timeout: core-api now runs link expansion + AI extraction synchronously
-// when ingesting a deal, so this request blocks for the full enrichment pipeline.
-const SEND_TIMEOUT_MS = 60_000;
+// when ingesting a deal, and the AI extraction call itself can wait up to ~120s
+// for ai-service to finish its internal retry budget. 180s gives the full
+// pipeline room to breathe before we treat the request as lost.
+const SEND_TIMEOUT_MS = 180_000;
 
 class WebhookClient {
   async sendDeal(payload: DealPayload): Promise<void> {
