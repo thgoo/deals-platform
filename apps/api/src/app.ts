@@ -11,6 +11,10 @@ import SessionService from '~/auth/services/session-service';
 import UserService from '~/auth/services/user-service';
 import { config } from '~/config';
 import { HTTP_STATUS_CODE } from '~/constants/http';
+import dashboard from '~/dashboard/dashboard';
+import BusinessStatsService from '~/dashboard/services/business-stats-service';
+import CatalogStatsService from '~/dashboard/services/catalog-stats-service';
+import HeartbeatService from '~/dashboard/services/heartbeat-service';
 import deals from '~/deals/deals';
 import DealService from '~/deals/services/deal-service';
 import { getAffiliateConfig } from '~/link-pipeline/config';
@@ -46,6 +50,12 @@ function buildDefaultProductResolver(aiClient: AiServiceClient): ProductResolver
   );
 }
 
+function buildDefaultCatalogStats(): CatalogStatsService {
+  const products = new ProductService();
+  const candidateSearch = new CandidateSearchService(products, logger);
+  return new CatalogStatsService(candidateSearch);
+}
+
 function buildDefaultLinkPipeline(): LinkPipelineService {
   const rewriters = buildRewriterRegistry(getAffiliateConfig());
   const identifiers = buildIdentifierRegistry();
@@ -61,6 +71,9 @@ export function createApp({
   aiServiceClient = new AiServiceClient(),
   linkPipelineService = buildDefaultLinkPipeline(),
   productResolverService = buildDefaultProductResolver(aiServiceClient),
+  heartbeatService = new HeartbeatService(),
+  catalogStatsService = buildDefaultCatalogStats(),
+  businessStatsService = new BusinessStatsService(),
   appLogger = new ConsoleLogger(),
   enableLogger = true,
 } = {}) {
@@ -85,12 +98,16 @@ export function createApp({
     c.set('aiServiceClient', aiServiceClient);
     c.set('linkPipelineService', linkPipelineService);
     c.set('productResolverService', productResolverService);
+    c.set('heartbeatService', heartbeatService);
+    c.set('catalogStatsService', catalogStatsService);
+    c.set('businessStatsService', businessStatsService);
     c.set('logger', appLogger);
     await next();
   });
 
   app.route('/api/alerts', alerts);
   app.route('/api/auth', auth);
+  app.route('/api/dashboard', dashboard);
   app.route('/api/deals', deals);
 
   app.onError(async (err, c) => {

@@ -16,6 +16,12 @@ interface SearchOptions {
   category?: string;
 }
 
+export interface DuplicatePair {
+  productA: { id: string; canonicalName: string };
+  productB: { id: string; canonicalName: string };
+  similarity: number;
+}
+
 /**
  * In-memory cosine-similarity search over the product catalog.
  *
@@ -74,6 +80,36 @@ export default class CandidateSearchService {
 
     scored.sort((a, b) => b.score - a.score);
     return scored.slice(0, options.topK);
+  }
+
+  /**
+   * Pairs of distinct products whose embeddings cosine-similarity-match above
+   * `threshold` — likely duplicates that should have been merged. O(N²) pairwise
+   * scan; acceptable for admin tooling at N up to a few thousand.
+   */
+  findDuplicatePairs(options: { threshold: number; limit: number }): DuplicatePair[] {
+    const cache = this.cache;
+    const pairs: DuplicatePair[] = [];
+
+    for (let i = 0; i < cache.length; i++) {
+      const a = cache[i];
+      if (!a) continue;
+      for (let j = i + 1; j < cache.length; j++) {
+        const b = cache[j];
+        if (!b) continue;
+        const sim = dot(a.embedding, b.embedding);
+        if (sim >= options.threshold) {
+          pairs.push({
+            productA: { id: a.id, canonicalName: a.canonicalName },
+            productB: { id: b.id, canonicalName: b.canonicalName },
+            similarity: sim,
+          });
+        }
+      }
+    }
+
+    pairs.sort((a, b) => b.similarity - a.similarity);
+    return pairs.slice(0, options.limit);
   }
 }
 

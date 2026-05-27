@@ -143,4 +143,63 @@ describe('CandidateSearchService', () => {
     const result = service.findSimilar([10, 0, 0], { topK: 1 });
     expect(result[0]?.score).toBeCloseTo(1.0, 5);
   });
+
+  describe('findDuplicatePairs', () => {
+    test('returns empty when cache is empty', () => {
+      expect(service.findDuplicatePairs({ threshold: 0.8, limit: 10 })).toEqual([]);
+    });
+
+    test('returns empty when there is a single product', async () => {
+      stub.rows = [makeProduct('a', 'A', [1, 0, 0])];
+      await service.loadAll();
+      expect(service.findDuplicatePairs({ threshold: 0.8, limit: 10 })).toEqual([]);
+    });
+
+    test('finds the pair above threshold and reports it once', async () => {
+      stub.rows = [
+        makeProduct('a', 'Notebook X', [1, 0, 0]),
+        makeProduct('b', 'Notebook X 32gb', [0.99, 0.01, 0]),
+        makeProduct('c', 'Sofa', [0, 1, 0]),
+      ];
+      await service.loadAll();
+      const pairs = service.findDuplicatePairs({ threshold: 0.95, limit: 10 });
+      expect(pairs).toHaveLength(1);
+      const ids = [pairs[0]?.productA.id, pairs[0]?.productB.id].sort();
+      expect(ids).toEqual(['a', 'b']);
+      expect(pairs[0]?.similarity).toBeGreaterThan(0.95);
+    });
+
+    test('orders pairs by descending similarity', async () => {
+      stub.rows = [
+        makeProduct('a', 'A', [1, 0, 0]),
+        makeProduct('b', 'B', [0.99, 0.14, 0]),    // ~0.99 with a
+        makeProduct('c', 'C', [0.95, 0.31, 0]),    // ~0.95 with a
+      ];
+      await service.loadAll();
+      const pairs = service.findDuplicatePairs({ threshold: 0.9, limit: 10 });
+      expect(pairs.length).toBeGreaterThanOrEqual(2);
+      expect(pairs[0]?.similarity).toBeGreaterThanOrEqual(pairs[1]?.similarity ?? 0);
+    });
+
+    test('respects limit', async () => {
+      stub.rows = [
+        makeProduct('a', 'A', [1, 0, 0]),
+        makeProduct('b', 'B', [0.99, 0.01, 0]),
+        makeProduct('c', 'C', [0.98, 0.02, 0]),
+        makeProduct('d', 'D', [0.97, 0.03, 0]),
+      ];
+      await service.loadAll();
+      const pairs = service.findDuplicatePairs({ threshold: 0.9, limit: 2 });
+      expect(pairs).toHaveLength(2);
+    });
+
+    test('does not return pairs below threshold', async () => {
+      stub.rows = [
+        makeProduct('a', 'A', [1, 0, 0]),
+        makeProduct('b', 'B', [0, 1, 0]),
+      ];
+      await service.loadAll();
+      expect(service.findDuplicatePairs({ threshold: 0.5, limit: 10 })).toEqual([]);
+    });
+  });
 });

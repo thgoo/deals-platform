@@ -3,6 +3,7 @@ process.title = 'bargah-api';
 import AiServiceClient from '~/ai-service-client';
 import { createApp } from '~/app';
 import { config } from '~/config';
+import CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import { logger } from '~/logger';
 import CandidateSearchService from '~/products/services/candidate-search-service';
 import DecisionService from '~/products/services/decision-service';
@@ -29,7 +30,11 @@ const productResolverService = new ProductResolverService(
   logger,
 );
 
-const app = createApp({ aiServiceClient, productResolverService });
+// Dashboard's duplicate-suspects feature reuses the resolver's loaded cache —
+// O(N²) scan over the same embeddings without paying for a second load.
+const catalogStatsService = new CatalogStatsService(candidateSearchService);
+
+const app = createApp({ aiServiceClient, productResolverService, catalogStatsService });
 
 export default {
   port: config.PORT,

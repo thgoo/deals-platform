@@ -7,6 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters long'),
   WEBHOOK_SECRET: z.string().min(8, 'WEBHOOK_SECRET must be at least 8 characters long'),
+  DASHBOARD_SECRET: z.string().min(16, 'DASHBOARD_SECRET must be at least 16 characters long'),
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
   MESSAGING_SERVICE_URL: z.string().url().default('http://localhost:3002'),
   AI_SERVICE_URL: z.string().url().default('http://localhost:3003'),
