@@ -6,8 +6,8 @@ export class ConsoleLogger implements Logger {
   private readonly levels = ['debug', 'info', 'warn', 'error'];
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
-    this.logLevel = process.env.LOG_LEVEL || (this.isDevelopment ? 'debug' : 'info');
+    this.isDevelopment = process.env['NODE_ENV'] !== 'production';
+    this.logLevel = process.env['LOG_LEVEL'] || (this.isDevelopment ? 'debug' : 'info');
   }
 
   private shouldLogLevel(level: string): boolean {

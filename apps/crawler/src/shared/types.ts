@@ -5,13 +5,6 @@ export interface DealPayload {
   ts: string;
   text: string;
   links: string[];
-  price?: number;
-  coupons?: string[];
-  store?: string;
-  description?: string;
-  product?: string;
-  product_key?: string;
-  category?: string;
   media?: MediaInfo;
 }
 
@@ -25,14 +18,4 @@ export interface MediaInfo {
   webpage_title?: string;
   webpage_description?: string;
   local_path?: string;
-}
-
-export interface ExtractionResult {
-  price: number | null;
-  coupons: string[];
-  product: string | null;
-  store: string | null;
-  description: string | null;
-  productKey: string | null;
-  category: string | null;
 }

@@ -53,7 +53,6 @@ async function main() {
       sessionDir: config.telegram.sessionDir,
       telegramBackend: config.telegram.backend,
       backend: config.backend.baseUrl,
-      extractor: config.extractor.baseUrl,
       targetChats: config.targetChats.join(', '),
     });
 

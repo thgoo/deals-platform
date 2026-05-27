@@ -1,36 +1,5 @@
 import 'dotenv/config';
 
-export interface AliExpressApiConfig {
-  appKey: string;
-  appSecret: string;
-  trackingId: string;
-}
-
-export interface AwinApiConfig {
-  publisherId: string;
-  token: string;
-}
-
-export interface ShopeeApiConfig {
-  appId: string;
-  secret: string;
-}
-
-export interface AffiliateConfig {
-  amazon?: string;
-  shopee?: ShopeeApiConfig;
-  mercadolivre?: string;
-  aliexpress?: AliExpressApiConfig;
-  magalu?: MagaluConfig;
-  natura?: string;
-  awin?: AwinApiConfig;
-}
-
-export interface MagaluConfig {
-  username?: string;
-  promoterId?: string;
-}
-
 export interface Config {
   telegram: {
     apiId: number;
@@ -50,12 +19,7 @@ export interface Config {
   media: {
     dir: string;
   };
-  extractor: {
-    baseUrl: string;
-    endpoint: string;
-  };
   targetChats: string[];
-  affiliates: AffiliateConfig;
 }
 
 export const config: Config = {
@@ -77,29 +41,8 @@ export const config: Config = {
   media: {
     dir: process.env.MEDIA_DIR || './media',
   },
-  extractor: {
-    baseUrl: process.env.EXTRACTOR_BASE_URL || 'http://localhost:3001',
-    endpoint: '/api/extractors/extract',
-  },
   targetChats: (process.env.TARGET_CHATS || '')
     .split(',')
     .map(c => c.trim())
     .filter(Boolean),
-  affiliates: {
-    amazon: process.env.AMAZON_AFFILIATE_TAG,
-    shopee: process.env.SHOPEE_APP_ID && process.env.SHOPEE_SECRET
-      ? { appId: process.env.SHOPEE_APP_ID, secret: process.env.SHOPEE_SECRET }
-      : undefined,
-    mercadolivre: process.env.MERCADOLIVRE_AFFILIATE_ID,
-    aliexpress: process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET && process.env.ALIEXPRESS_TRACKING_ID
-      ? { appKey: process.env.ALIEXPRESS_APP_KEY, appSecret: process.env.ALIEXPRESS_APP_SECRET, trackingId: process.env.ALIEXPRESS_TRACKING_ID }
-      : undefined,
-    awin: process.env.AWIN_PUBLISHER_ID && process.env.AWIN_TOKEN
-      ? { publisherId: process.env.AWIN_PUBLISHER_ID, token: process.env.AWIN_TOKEN }
-      : undefined,
-    magalu: process.env.MAGALU_AFFILIATE_ID || process.env.MAGALU_PROMOTER_ID
-      ? { username: process.env.MAGALU_AFFILIATE_ID, promoterId: process.env.MAGALU_PROMOTER_ID }
-      : undefined,
-    natura: process.env.NATURA_AFFILIATE_ID,
-  },
 };
