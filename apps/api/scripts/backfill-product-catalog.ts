@@ -27,6 +27,7 @@ import { extractExternalIds } from '~/link-pipeline/identifiers/identifier-extra
 import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
 import { logger } from '~/logger';
 import { AUTO_MATCH_THRESHOLD, CANDIDATE_TOP_K, LLM_JUDGE_THRESHOLD } from '~/products/matching-config';
+import { specsConflict } from '~/products/utils/spec-conflict';
 import CandidateSearchService from '~/products/services/candidate-search-service';
 import DecisionService from '~/products/services/decision-service';
 import ProductService from '~/products/services/product-service';
@@ -232,7 +233,10 @@ class Backfill {
       return;
     }
 
-    if (best.score >= AUTO_MATCH_THRESHOLD) {
+    if (
+      best.score >= AUTO_MATCH_THRESHOLD
+      && !specsConflict(deal.product ?? '', best.canonicalName)
+    ) {
       await this.urlMappings.saveAll(externalIds, best.productId, 'llm_high');
       await this.applyResolution(deal, best.productId, 'embedding_only', candidates, best.score);
       this.stats.embedding_only++;

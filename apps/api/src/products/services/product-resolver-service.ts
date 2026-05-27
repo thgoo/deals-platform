@@ -7,6 +7,7 @@ import type { Logger } from '~/logger';
 import type { Candidate, ResolveInput, ResolveResult } from '~/products/types';
 import { EMBEDDING_MODEL_VERSIONS } from '~/db/schemas/products';
 import { AUTO_MATCH_THRESHOLD, CANDIDATE_TOP_K, LLM_JUDGE_THRESHOLD } from '~/products/matching-config';
+import { specsConflict } from '~/products/utils/spec-conflict';
 
 const SKIPPED_RESULT: ResolveResult = { productId: null, method: 'skipped' };
 
@@ -87,7 +88,7 @@ export default class ProductResolverService {
       return this.createNewProduct(input, productName, queryEmbedding, candidates, best?.score);
     }
 
-    if (best.score >= AUTO_MATCH_THRESHOLD) {
+    if (best.score >= AUTO_MATCH_THRESHOLD && !specsConflict(productName, best.canonicalName)) {
       await this.urlMappings.saveAll(input.externalIds, best.productId, 'llm_high');
       await this.decisions.record({
         dealId: input.dealId,
@@ -99,6 +100,8 @@ export default class ProductResolverService {
       return { productId: best.productId, method: 'embedding_only', similarityScore: best.score };
     }
 
+    // Either similarity in the ambiguous zone OR auto-match blocked by spec
+    // conflict — let the LLM judge make the call.
     return this.askJudgeAndDecide(input, productName, queryEmbedding, candidates);
   }
 
