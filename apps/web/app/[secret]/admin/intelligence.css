@@ -136,3 +136,40 @@
     rgba(8, 145, 178, 0.04) 3px 4px
   );
 }
+
+/*
+ * Scrollbar override — the public site's globals.css ships a chunky
+ * pixel-yellow scrollbar that looks out of place inside the dashboard.
+ * Scoped at the html level via `:has()` so it covers both the document
+ * scrollbar AND any nested overflow container (decisions card, tables, etc.)
+ * but only while the dashboard route is mounted. Browser support: Chrome
+ * 105+, Safari 15.4+, Firefox 121+ — fine for an internal admin tool.
+ */
+html:has([data-intelligence]) {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+html:has([data-intelligence]) ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html:has([data-intelligence]) ::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+
+html:has([data-intelligence]) ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border: none;
+  border-radius: 0;
+}
+
+html:has([data-intelligence]) ::-webkit-scrollbar-thumb:hover {
+  background: #0891b2;
+}
+
+html:has([data-intelligence]) ::-webkit-scrollbar-corner {
+  background: transparent;
+}

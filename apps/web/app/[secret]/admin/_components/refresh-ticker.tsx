@@ -1,53 +1,97 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatRelativeTime } from './format';
 
 interface RefreshTickerProps {
   /** ISO timestamp from the server — when this render was produced. */
   renderedAt: string;
-  /** Interval to re-fetch the page (ms). Defaults to 30s. */
+  /** Polling backstop interval (ms). Defaults to 60s. */
   refreshIntervalMs?: number;
 }
 
+const REFRESH_DEBOUNCE_MS = 2000;
+
+// NEXT_PUBLIC_* env vars are inlined into the client bundle at build time, so
+// this resolves correctly in prod without depending on the pm2 runtime env.
+// (We previously passed sseUrl as a prop from the server component, which
+// broke in prod because pm2 didn't load NEXT_PUBLIC_BACKEND_URL into the
+// Next.js server process — Next then fell back to localhost:8000.)
+const SSE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'}/api/deals/stream`;
+
 /**
- * Two responsibilities in one client component:
+ * Three responsibilities in one client component:
  *
  *   1. Tick the "refreshed Xs ago" label every second so it stays honest.
  *      No fetch — just recomputes the relative time from `renderedAt`.
  *
- *   2. Call `router.refresh()` on a schedule (default 30s). Next.js re-runs
- *      the server component and streams the new RSC payload — every widget
- *      on the dashboard updates without a hard reload.
+ *   2. Listen to /api/deals/stream (SSE) and trigger router.refresh() when
+ *      a new-deal event arrives. This is the "real-time" path — instant
+ *      updates whenever a deal lands. Debounced 2s to group bursts.
  *
- * When the tab is hidden, the refresh interval pauses (visibility API) so we
- * don't burn quota / DB on a window the operator isn't looking at.
+ *   3. Polling backstop (default 60s) for cases SSE doesn't cover:
+ *      backfill resolutions (no SSE event), silent SSE drops, etc.
+ *
+ * When the tab is hidden, polling pauses (visibility API). SSE stays open —
+ * the browser handles backgrounded connections natively.
  */
 export default function RefreshTicker({
   renderedAt,
-  refreshIntervalMs = 30_000,
+  refreshIntervalMs = 60_000,
 }: RefreshTickerProps) {
   const router = useRouter();
   // Bumping `tick` forces a re-render so `formatRelativeTime(renderedAt)`
   // (which reads `Date.now()` internally) stays current. Cheaper than holding
   // the formatted string in state — and dodges the no-set-state-in-effect rule.
   const [, setTick] = useState(0);
+  const lastRefreshRef = useRef(0);
 
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const label = formatRelativeTime(renderedAt);
+  // Debounced refresh — both SSE bursts and polling go through here.
+  const debouncedRefresh = useRef(() => {
+    const now = Date.now();
+    if (now - lastRefreshRef.current < REFRESH_DEBOUNCE_MS) return;
+    lastRefreshRef.current = now;
+    router.refresh();
+  });
+  // Keep the ref's closure pointing at the current `router` (it's stable but
+  // best practice to refresh anyway since we declare router in deps elsewhere).
+  useEffect(() => {
+    debouncedRefresh.current = () => {
+      const now = Date.now();
+      if (now - lastRefreshRef.current < REFRESH_DEBOUNCE_MS) return;
+      lastRefreshRef.current = now;
+      router.refresh();
+    };
+  }, [router]);
 
-  // Auto-refresh: trigger router.refresh() periodically while the tab is visible.
+  // SSE — instant refresh when a new deal lands.
+  useEffect(() => {
+    const es = new EventSource(SSE_URL);
+    const onNewDeal = () => debouncedRefresh.current();
+    es.addEventListener('new-deal', onNewDeal);
+    // image-updated lands ~seconds after new-deal; refresh too so the latest
+    // decision row's product picture (if shown later) doesn't lag.
+    es.addEventListener('image-updated', onNewDeal);
+    return () => {
+      es.removeEventListener('new-deal', onNewDeal);
+      es.removeEventListener('image-updated', onNewDeal);
+      es.close();
+    };
+  }, []);
+
+  // Polling backstop — covers backfill / SSE silent failures.
   useEffect(() => {
     let id: ReturnType<typeof setInterval> | null = null;
 
     const start = () => {
       if (id !== null) return;
-      id = setInterval(() => router.refresh(), refreshIntervalMs);
+      id = setInterval(() => debouncedRefresh.current(), refreshIntervalMs);
     };
 
     const stop = () => {
@@ -58,7 +102,7 @@ export default function RefreshTicker({
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
-        router.refresh(); // catch up immediately on focus
+        debouncedRefresh.current(); // catch up immediately on focus
         start();
       } else {
         stop();
@@ -72,7 +116,9 @@ export default function RefreshTicker({
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [router, refreshIntervalMs]);
+  }, [refreshIntervalMs]);
+
+  const label = formatRelativeTime(renderedAt);
 
   return (
     <span className="mono text-[10px] tracking-widest text-zinc-400 uppercase">

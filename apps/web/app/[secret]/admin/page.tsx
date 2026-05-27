@@ -1,5 +1,5 @@
 import BracketCard from './_components/bracket-card';
-import DecisionsTable from './_components/decisions-table';
+import DecisionsCard from './_components/decisions-card';
 import DuplicatesList from './_components/duplicates-list';
 import {
   formatCompact,
@@ -14,6 +14,7 @@ import SourcesTable from './_components/sources-table';
 import StatCard from './_components/stat-card';
 import TimeSeriesChart from './_components/time-series-chart';
 import { dashboardApi } from './_lib/api';
+import { EMPTY_HEARTBEAT, EMPTY_OVERVIEW } from './_lib/fallbacks';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,13 @@ export const dynamic = 'force-dynamic';
  * health, business volume, audit) stacked vertically.
  */
 export default async function IntelligencePage() {
+  // Per-endpoint fallback: a single timeout (e.g., backfill saturating MySQL)
+  // would otherwise reject Promise.all and kill the whole page. Each fetch
+  // now degrades to a typed empty value, the failed section shows zeros, and
+  // the next polling refresh recovers without operator action.
+  const reportFail = (name: string) => (err: unknown) => {
+    console.warn(`[intelligence] ${name} failed:`, err);
+  };
   const [
     heartbeat,
     overview,
@@ -37,15 +45,42 @@ export default async function IntelligencePage() {
     timeSeries,
     sources,
   ] = await Promise.all([
-    dashboardApi.heartbeat(),
-    dashboardApi.catalogOverview(),
-    dashboardApi.matchMethods(7),
-    dashboardApi.duplicateSuspects(0.85, 12),
-    dashboardApi.recentDecisions(20),
-    dashboardApi.topStores(7, 8),
-    dashboardApi.topCategories(7, 8),
-    dashboardApi.dealsTimeSeries(30),
-    dashboardApi.sources(),
+    dashboardApi.heartbeat().catch((e) => {
+      reportFail('heartbeat')(e);
+      return EMPTY_HEARTBEAT;
+    }),
+    dashboardApi.catalogOverview().catch((e) => {
+      reportFail('overview')(e);
+      return EMPTY_OVERVIEW;
+    }),
+    dashboardApi.matchMethods(7).catch((e) => {
+      reportFail('matchMethods')(e);
+      return [];
+    }),
+    dashboardApi.duplicateSuspects(0.85, 12).catch((e) => {
+      reportFail('duplicates')(e);
+      return [];
+    }),
+    dashboardApi.recentDecisions(100).catch((e) => {
+      reportFail('decisions')(e);
+      return [];
+    }),
+    dashboardApi.topStores(7, 8).catch((e) => {
+      reportFail('topStores')(e);
+      return [];
+    }),
+    dashboardApi.topCategories(7, 8).catch((e) => {
+      reportFail('topCategories')(e);
+      return [];
+    }),
+    dashboardApi.dealsTimeSeries(30).catch((e) => {
+      reportFail('timeSeries')(e);
+      return [];
+    }),
+    dashboardApi.sources().catch((e) => {
+      reportFail('sources')(e);
+      return [];
+    }),
   ]);
 
   const renderedAt = new Date().toISOString();
@@ -200,10 +235,10 @@ export default async function IntelligencePage() {
       {/* ── Audit · recent decisions ──────────────────────────────── */}
       <Section
         title="audit · recent decisions"
-        subtitle="latest 20 resolutions"
+        subtitle={`latest ${decisions.length} resolutions · filter by method`}
       >
         <BracketCard>
-          <DecisionsTable decisions={decisions} />
+          <DecisionsCard decisions={decisions} />
         </BracketCard>
       </Section>
 

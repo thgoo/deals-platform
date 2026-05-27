@@ -18,10 +18,17 @@ import type {
 const BACKEND = process.env.INTERNAL_BACKEND_URL ?? 'http://localhost:8000';
 const SECRET = process.env.DASHBOARD_SECRET ?? '';
 
+// Per-call timeout. The backend has its own SWR cache (so warm hits are
+// instant), but if something unexpected goes slow we don't want to block the
+// whole page render — let it fail fast, the catch in page.tsx falls back to
+// empty data, and the next 60s polling refresh recovers.
+const FETCH_TIMEOUT_MS = 8_000;
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BACKEND}/api/dashboard${path}`, {
     headers: { 'X-Dashboard-Secret': SECRET },
     cache: 'no-store',
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`Dashboard API ${path} returned ${res.status}`);
