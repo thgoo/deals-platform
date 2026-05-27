@@ -1,0 +1,123 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { csrf } from 'hono/csrf';
+import { HTTPException } from 'hono/http-exception';
+import AiServiceClient from '~/ai-service-client';
+import alerts from '~/alerts/alerts';
+import AlertService from '~/alerts/services/alert-service';
+import auth from '~/auth';
+import PasswordService from '~/auth/services/password-service';
+import SessionService from '~/auth/services/session-service';
+import UserService from '~/auth/services/user-service';
+import { config } from '~/config';
+import { HTTP_STATUS_CODE } from '~/constants/http';
+import deals from '~/deals/deals';
+import DealService from '~/deals/services/deal-service';
+import { getAffiliateConfig } from '~/link-pipeline/config';
+import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
+import { buildRewriterRegistry } from '~/link-pipeline/rewriters/registry';
+import LinkPipelineService from '~/link-pipeline/services/link-pipeline-service';
+import { ConsoleLogger, logger } from '~/logger';
+import { requestLogger } from '~/middleware/request-logger';
+import CandidateSearchService from '~/products/services/candidate-search-service';
+import DecisionService from '~/products/services/decision-service';
+import ProductResolverService from '~/products/services/product-resolver-service';
+import ProductService from '~/products/services/product-service';
+import UrlMappingService from '~/products/services/url-mapping-service';
+import { HttpError } from '~/utils/errors';
+
+/**
+ * Builds a ProductResolverService wired with default in-memory dependencies.
+ *
+ * NOTE: the returned resolver is usable but its candidate cache is empty —
+ * production code in `index.ts` calls `loadAll()` explicitly before serving traffic.
+ * This default exists so that tests (which inject mocks) and ad-hoc usage compile cleanly.
+ */
+function buildDefaultProductResolver(aiClient: AiServiceClient): ProductResolverService {
+  const products = new ProductService();
+  const candidateSearch = new CandidateSearchService(products, logger);
+  return new ProductResolverService(
+    products,
+    new UrlMappingService(),
+    new DecisionService(),
+    candidateSearch,
+    aiClient,
+    logger,
+  );
+}
+
+function buildDefaultLinkPipeline(): LinkPipelineService {
+  const rewriters = buildRewriterRegistry(getAffiliateConfig());
+  const identifiers = buildIdentifierRegistry();
+  return new LinkPipelineService(rewriters, identifiers, logger);
+}
+
+export function createApp({
+  alertService = new AlertService(),
+  userService = new UserService(),
+  sessionService = new SessionService(),
+  passwordService = new PasswordService(),
+  dealService = new DealService(),
+  aiServiceClient = new AiServiceClient(),
+  linkPipelineService = buildDefaultLinkPipeline(),
+  productResolverService = buildDefaultProductResolver(aiServiceClient),
+  appLogger = new ConsoleLogger(),
+  enableLogger = true,
+} = {}) {
+  const app = new Hono({ strict: true });
+
+  app.use('*', cors({
+    origin: config.CORS_ORIGINS.split(',').map(o => o.trim()),
+    credentials: true,
+  }));
+
+  if (process.env['NODE_ENV'] === 'production') {
+    app.use(csrf({ origin: config.CORS_ORIGINS.split(',').map(o => o.trim()) }));
+  }
+  if (enableLogger) app.use(requestLogger());
+
+  app.use('*', async (c, next) => {
+    c.set('alertService', alertService);
+    c.set('userService', userService);
+    c.set('sessionService', sessionService);
+    c.set('passwordService', passwordService);
+    c.set('dealService', dealService);
+    c.set('aiServiceClient', aiServiceClient);
+    c.set('linkPipelineService', linkPipelineService);
+    c.set('productResolverService', productResolverService);
+    c.set('logger', appLogger);
+    await next();
+  });
+
+  app.route('/api/alerts', alerts);
+  app.route('/api/auth', auth);
+  app.route('/api/deals', deals);
+
+  app.onError(async (err, c) => {
+    const appErr = c.get('logger');
+
+    if (err instanceof HttpError) {
+      return c.json({ message: err.message }, { status: err.statusCode });
+    }
+
+    if (err instanceof HTTPException) {
+      const errMessage = await err.getResponse().text();
+      return c.json({ message: errMessage }, { status: err.status });
+    }
+
+    appErr.error('Unhandled error', {
+      error: err.message,
+      stack: err.stack,
+      path: c.req.path,
+      method: c.req.method,
+    });
+
+    const message = config.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : err.message;
+
+    return c.json({ message }, { status: HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR });
+  });
+
+  return app;
+}

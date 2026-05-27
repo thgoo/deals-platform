@@ -1,5 +1,5 @@
-import { index, int, json, mysqlTable, timestamp, varchar } from 'drizzle-orm/mysql-core';
 import type { InferSelectModel } from 'drizzle-orm';
+import { index, int, json, mysqlTable, timestamp, varchar } from 'drizzle-orm/mysql-core';
 
 export interface PushSubscription {
   endpoint: string;

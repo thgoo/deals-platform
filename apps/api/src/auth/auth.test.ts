@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, mock, type Mock } from 'bun:test';
 import { Hono } from 'hono';
 import type { SessionValidationResult } from './types';
 import type { Session } from '~/db/schemas/sessions';
+import { createApp } from '~/app';
 import { HTTP_STATUS_CODE } from '~/constants/http';
-import { createApp } from '~/index';
 
 describe('Auth Routes', () => {
   let app: Hono;

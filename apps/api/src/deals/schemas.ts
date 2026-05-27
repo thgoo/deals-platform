@@ -20,6 +20,11 @@ export const couponSchema = z.object({
   url: z.string().optional(),
 });
 
+/**
+ * Payload sent by the crawler. Everything that requires processing or AI work
+ * (link expansion, affiliate rewriting, deal extraction) is performed in core-api
+ * — the crawler only ships the raw Telegram message.
+ */
 export const createDealSchema = z.object({
   message_id: z.number(),
   chat: z.string().min(1),
@@ -27,14 +32,7 @@ export const createDealSchema = z.object({
   ts: z.string().datetime(),
   text: z.string(),
   links: z.array(z.string().url()).max(5).default([]),
-  price: z.number().nullable().optional(),
-  coupons: z.array(couponSchema).optional(),
   media: mediaSchema,
-  store: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  product: z.string().nullable().optional(),
-  product_key: z.string().nullable().optional(),
-  category: z.string().nullable().optional(),
 });
 
 export const updateImageSchema = z.object({

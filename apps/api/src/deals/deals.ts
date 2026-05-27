@@ -12,6 +12,7 @@ import {
   updateLinksSchema,
   updateProductKeySchema,
 } from './schemas';
+import { cleanPromoText } from './text-cleaner';
 
 const app = new Hono();
 
@@ -20,6 +21,10 @@ dealEvents.setMaxListeners(10000);
 
 app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
   const dealService = c.get('dealService');
+  const linkPipeline = c.get('linkPipelineService');
+  const aiService = c.get('aiServiceClient');
+  const productResolver = c.get('productResolverService');
+  const alertService = c.get('alertService');
   const logger = c.get('logger');
   const body = c.req.valid('json');
 
@@ -32,20 +37,55 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     return c.json({ ok: true, deduped: true });
   }
 
+  const cleanedText = cleanPromoText(body.text);
+
+  // Heuristic: a message with no links and no R$ mention is almost never a deal.
+  // Skipping it here avoids paying for link-pipeline + AI extraction on noise.
+  if (body.links.length === 0 && !/r\$/i.test(cleanedText)) {
+    logger.info('Message has no links and no price mention, skipping', {
+      chat: body.chat,
+      messageId: body.message_id,
+    });
+    return c.json({ ok: true, skipped: 'no-links-no-price' });
+  }
+
+  const linkResult = await linkPipeline.process({
+    text: cleanedText,
+    knownLinks: body.links,
+  });
+
+  // AI extraction. On failure we still persist the deal with raw text so it isn't lost —
+  // the PATCH /:id/extracted endpoint can re-run extraction later.
+  let extraction: Awaited<ReturnType<typeof aiService.extract>> | null = null;
+  try {
+    extraction = await aiService.extract({
+      text: cleanedText,
+      chat: body.chat,
+      messageId: body.message_id,
+      links: linkResult.allVersions,
+    });
+  } catch (err) {
+    logger.error('AI extraction failed; persisting deal without enrichment', {
+      chat: body.chat,
+      messageId: body.message_id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   const deal = await dealService.create({
     messageId: body.message_id,
     chat: body.chat,
     chatId: body.chat_id,
     ts: new Date(body.ts),
-    text: body.text,
-    links: body.links,
-    price: body.price || null,
-    coupons: body.coupons,
-    store: body.store || null,
-    description: body.description || null,
-    product: body.product || null,
-    productKey: body.product_key || null,
-    category: body.category || null,
+    text: cleanedText,
+    links: linkResult.finalLinks,
+    price: extraction?.price ?? null,
+    coupons: extraction?.coupons ?? undefined,
+    store: extraction?.store ?? null,
+    description: extraction?.description ?? null,
+    product: extraction?.product ?? null,
+    productKey: extraction?.productKey ?? null,
+    category: extraction?.category ?? null,
     mediaType: body.media?.type,
     photoId: body.media?.photo_id ? String(body.media.photo_id) : undefined,
     localPath: body.media?.local_path,
@@ -55,14 +95,31 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     dealId: deal.id,
     chat: body.chat,
     messageId: body.message_id,
+    enriched: extraction !== null,
   });
 
   dealEvents.emit('new-deal', deal);
 
-  const alertService = c.get('alertService');
   alertService.matchAndNotify(deal, logger).catch(err =>
-    logger.error('Alert matching failed', { dealId: deal.id, error: err.message })
+    logger.error('Alert matching failed', { dealId: deal.id, error: err.message }),
   );
+
+  // Async product resolution — fire-and-forget. Does not block the response.
+  // The resolver writes back deal.product_id when (and if) a product is matched.
+  productResolver.resolve({
+    dealId: deal.id,
+    product: deal.product,
+    category: deal.category,
+    externalIds: linkResult.externalIds,
+  })
+    .then(async result => {
+      if (result.productId) {
+        await dealService.updateProductId(deal.id, result.productId);
+      }
+    })
+    .catch(err =>
+      logger.error('Product resolution failed', { dealId: deal.id, error: err.message }),
+    );
 
   return c.json({ ok: true, id: deal.id });
 });

@@ -2,13 +2,16 @@ import type { Logger } from './types';
 
 export class ConsoleLogger implements Logger {
   private readonly isDevelopment: boolean;
+  private readonly logLevel: string;
+  private readonly levels = ['debug', 'info', 'warn', 'error'];
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
+    this.isDevelopment = process.env['NODE_ENV'] !== 'production';
+    this.logLevel = process.env['LOG_LEVEL'] || (this.isDevelopment ? 'debug' : 'info');
   }
 
-  private shouldLog(): boolean {
-    return process.env.NODE_ENV !== 'test';
+  private shouldLogLevel(level: string): boolean {
+    return this.levels.indexOf(level) >= this.levels.indexOf(this.logLevel);
   }
 
   private getLogIcon(level: string): string {
@@ -47,7 +50,7 @@ export class ConsoleLogger implements Logger {
   }
 
   private log(level: string, message: string, meta?: Record<string, unknown>) {
-    if (!this.shouldLog()) return;
+    if (!this.shouldLogLevel(level)) return;
 
     const now = new Date();
     const timestamp = now.toISOString();
@@ -59,7 +62,7 @@ export class ConsoleLogger implements Logger {
         timestamp,
         ...meta,
       };
-      // eslint-disable-next-line no-console
+
       const output = level === 'error' ? console.error : console.log;
       output(JSON.stringify(logData));
       return;
@@ -81,7 +84,6 @@ export class ConsoleLogger implements Logger {
 
     const prettyLog = `${gray}${time}${reset} ${color}${icon} ${message}${reset}${metaStr}`;
 
-    // eslint-disable-next-line no-console
     const output = level === 'error' ? console.error : console.log;
     output(prettyLog);
   }

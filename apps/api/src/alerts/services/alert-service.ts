@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
 import { eq, gt, inArray } from 'drizzle-orm';
-import { config } from '~/config';
-import db from '~/db';
-import { alertsTable } from '~/db/schemas/alerts';
 import type { Alert, NewAlert, PushSubscription } from '~/db/schemas/alerts';
 import type { Deal } from '~/db/schemas/deals';
 import type { Logger } from '~/logger';
+import { config } from '~/config';
+import db from '~/db';
+import { alertsTable } from '~/db/schemas/alerts';
 
 const ALERT_EXPIRY_DAYS = 90;
 
@@ -17,9 +17,9 @@ export class AlertService {
   }): Promise<Alert> {
     const rows = await db.select().from(alertsTable);
     const existing = rows
-      .map((a) => this.parseAlert(a))
+      .map(a => this.parseAlert(a))
       .find(
-        (a) =>
+        a =>
           a.subscription.endpoint === data.subscription.endpoint &&
           a.keyword.toLowerCase() === data.keyword.toLowerCase(),
       );
@@ -102,7 +102,7 @@ export class AlertService {
       ) continue;
 
       this.sendNotification(alert, deal, logger).catch(err =>
-        logger.error('Failed to send notification', { alertId: alert.id, error: err.message })
+        logger.error('Failed to send notification', { alertId: alert.id, error: err.message }),
       );
     }
   }

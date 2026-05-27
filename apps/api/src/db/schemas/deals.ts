@@ -1,5 +1,6 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import { bigint, index, int, json, mysqlTable, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { productsTable } from './products';
 
 export interface Coupon {
   code: string;
@@ -29,6 +30,8 @@ export const dealsTable = mysqlTable('deals', {
   mediaType: varchar('media_type', { length: 50 }),
   photoId: varchar('photo_id', { length: 255 }),
   localPath: varchar('local_path', { length: 500 }),
+  productId: varchar('product_id', { length: 36 })
+    .references(() => productsTable.id),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, table => ({
@@ -39,6 +42,7 @@ export const dealsTable = mysqlTable('deals', {
   storeIdx: index('store_idx').on(table.store),
   productKeyIdx: index('product_key_idx').on(table.productKey),
   categoryIdx: index('category_idx').on(table.category),
+  productIdx: index('product_id_idx').on(table.productId),
 }));
 
 export type Deal = InferSelectModel<typeof dealsTable>;

@@ -233,6 +233,15 @@ export class DealService {
   }
 
   /**
+   * Update deal's productId — written by the async product resolver after a deal is created.
+   */
+  async updateProductId(id: number, productId: string): Promise<void> {
+    await db.update(dealsTable)
+      .set({ productId })
+      .where(eq(dealsTable.id, id));
+  }
+
+  /**
    * Update deal product key and category
    */
   async updateProductKey(id: number, productKey: string | null, category: string | null): Promise<Deal | null> {

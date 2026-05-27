@@ -1,88 +1,35 @@
 process.title = 'bargah-api';
 
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { csrf } from 'hono/csrf';
-import { HTTPException } from 'hono/http-exception';
-import alerts from '~/alerts/alerts';
-import AlertService from '~/alerts/services/alert-service';
-import auth from '~/auth';
-import PasswordService from '~/auth/services/password-service';
-import SessionService from '~/auth/services/session-service';
-import UserService from '~/auth/services/user-service';
+import AiServiceClient from '~/ai-service-client';
+import { createApp } from '~/app';
 import { config } from '~/config';
-import deals from '~/deals/deals';
-import DealService from '~/deals/services/deal-service';
-import { ConsoleLogger } from '~/logger';
-import { requestLogger } from '~/middleware/request-logger';
-import { HttpError } from '~/utils/errors';
-import { HTTP_STATUS_CODE } from './constants/http';
+import { logger } from '~/logger';
+import CandidateSearchService from '~/products/services/candidate-search-service';
+import DecisionService from '~/products/services/decision-service';
+import ProductResolverService from '~/products/services/product-resolver-service';
+import ProductService from '~/products/services/product-service';
+import UrlMappingService from '~/products/services/url-mapping-service';
 
-export function createApp({
-  alertService = new AlertService(),
-  userService = new UserService(),
-  sessionService = new SessionService(),
-  passwordService = new PasswordService(),
-  dealService = new DealService(),
-  appLogger = new ConsoleLogger(),
-  enableLogger = true,
-} = {}) {
-  const app = new Hono({ strict: true });
+// Bootstrap: build the product resolver once, pre-warm the in-memory candidate
+// cache before accepting traffic, then hand control over to Hono. Keeping this
+// bootstrap separate from `createApp` (in app.ts) lets tests import the factory
+// without paying for `loadAll()` against a real database.
 
-  app.use('*', cors({
-    origin: config.CORS_ORIGINS.split(',').map(o => o.trim()),
-    credentials: true,
-  }));
+const aiServiceClient = new AiServiceClient();
+const productService = new ProductService();
+const candidateSearchService = new CandidateSearchService(productService, logger);
+await candidateSearchService.loadAll();
 
-  if (process.env.NODE_ENV === 'production') {
-    app.use(csrf({ origin: config.CORS_ORIGINS.split(',').map((o) => o.trim()) }));
-  }
-  if (enableLogger) app.use(requestLogger());
+const productResolverService = new ProductResolverService(
+  productService,
+  new UrlMappingService(),
+  new DecisionService(),
+  candidateSearchService,
+  aiServiceClient,
+  logger,
+);
 
-  app.use('*', async (c, next) => {
-    c.set('alertService', alertService);
-    c.set('userService', userService);
-    c.set('sessionService', sessionService);
-    c.set('passwordService', passwordService);
-    c.set('dealService', dealService);
-    c.set('logger', appLogger);
-    await next();
-  });
-
-  app.route('/api/alerts', alerts);
-  app.route('/api/auth', auth);
-  app.route('/api/deals', deals);
-
-  app.onError(async (err, c) => {
-    const logger = c.get('logger');
-
-    if (err instanceof HttpError) {
-      return c.json({ message: err.message }, { status: err.statusCode });
-    }
-
-    if (err instanceof HTTPException) {
-      const errMessage = await err.getResponse().text();
-      return c.json({ message: errMessage }, { status: err.status });
-    }
-
-    logger.error('Unhandled error', {
-      error: err.message,
-      stack: err.stack,
-      path: c.req.path,
-      method: c.req.method,
-    });
-
-    const message = config.NODE_ENV === 'production'
-      ? 'Internal Server Error'
-      : err.message;
-
-    return c.json({ message }, { status: HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR });
-  });
-
-  return app;
-}
-
-const app = createApp();
+const app = createApp({ aiServiceClient, productResolverService });
 
 export default {
   port: config.PORT,
