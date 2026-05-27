@@ -26,7 +26,7 @@ export default class AbacusProvider implements LLMProvider {
   }
 
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    return withRetry(() => this.callAPI(messages, options), RETRY_PRESETS.AGGRESSIVE);
+    return withRetry(() => this.callAPI(messages, options), RETRY_PRESETS.STANDARD);
   }
 
   private async callAPI(messages: ChatMessage[], options: ChatOptions): Promise<string> {

@@ -27,7 +27,7 @@ export default class OpenAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   async embed(texts: string[]): Promise<EmbeddingResult> {
-    return withRetry(() => this.callAPI(texts), RETRY_PRESETS.AGGRESSIVE);
+    return withRetry(() => this.callAPI(texts), RETRY_PRESETS.STANDARD);
   }
 
   private async callAPI(texts: string[]): Promise<EmbeddingResult> {
