@@ -1,99 +1,280 @@
 # ai-service
 
-Centralized AI capabilities for the bargah.com.br platform. Built with **Hono** and **Bun**.
+Centralized AI capabilities for [bargah.com.br](https://bargah.com.br). Exposes three HTTP endpoints so the rest of the platform (core-api, scripts) never talks to OpenAI / Abacus / future providers directly — credentials, prompts, retry policy, and provider abstractions all live here.
 
-Exposes three HTTP capabilities so other services never call AI providers (OpenAI, Abacus) directly:
+Designed to be **provider-agnostic**: swapping a chat or embedding provider means implementing one interface and registering it — no caller changes.
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /api/ai/extract` | Extract structured deal data (product, store, price, coupons, etc) from a raw Telegram message via LLM. |
-| `POST /api/ai/embed` | Generate vector embeddings for one or more texts (used for product similarity search). |
-| `POST /api/ai/judge` | Decide whether a new product is the same as any of N candidate products, for catalog deduplication. |
+## Key Technologies
 
-A single LLM provider (Abacus or OpenAI) backs `extract` and `judge`. Embeddings always use OpenAI (only provider with high-quality multilingual text embeddings).
+*   **Hono**: Fast, lightweight web framework built on Web Standards
+*   **Abacus AI (RouteLLM)**: Default LLM provider — OpenAI-compatible chat completions
+*   **OpenAI**: Default embedding provider (and optional alternative LLM)
+*   **Zod**: Schema validation for env vars and HTTP request/response
+*   **Bun**: Fast JavaScript runtime, package manager, and test runner
+
+## What's Included
+
+- Three capabilities, each in its own folder under `src/capabilities/`:
+  - **extract** — `POST /api/ai/extract`: raw deal text → structured fields (product, store, price, coupons, category, productKey)
+  - **embed** — `POST /api/ai/embed`: list of texts → list of 1536-dim vectors via `text-embedding-3-small`
+  - **judge** — `POST /api/ai/judge`: a new product + N candidates → decision (match or null)
+- Provider abstractions: independent `AbacusProvider` / `OpenAIProvider` for chat, `OpenAIEmbeddingProvider` for vectors
+- Exponential-backoff retry with configurable presets, shared across providers
+- Prompt cache hinting (OpenAI `prompt_cache_key`) so repeated system prompts don't pay full token cost
+- Structured logging (development: colored console, production: JSON)
+- Health check endpoint reporting active providers and models
+- Unit tests for retry, schemas, and the orchestrators
 
 ## Setup
 
+### 1. Install Dependencies
+
 ```sh
 bun install
+```
+
+### 2. Configure Environment
+
+```sh
 cp .env.example .env
-# fill in ABACUS_API_KEY and/or OPENAI_API_KEY
+```
+
+Required keys depend on which providers you use (see inline docs in `.env.example`). The minimum to boot:
+
+- `OPENAI_API_KEY` — always required, embeddings only work via OpenAI
+- `ABACUS_API_KEY` — required if `LLM_PROVIDER=abacus` (default)
+
+### 3. Start Development Server
+
+```sh
 bun run dev
 ```
 
-## Environment
+The server listens on `PORT` (default `3003`). `GET /health` reports the active LLM and embedding providers.
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `NODE_ENV` | | `development` | `development` \| `production` \| `test` |
-| `PORT` | | `3003` | HTTP port |
-| `LOG_LEVEL` | | `debug` (dev) / `info` (prod) | `debug` \| `info` \| `warn` \| `error` |
-| `LLM_PROVIDER` | | `abacus` | `abacus` \| `openai` — backs `extract` and `judge` |
-| `ABACUS_API_KEY` | if `LLM_PROVIDER=abacus` | — | RouteLLM API key |
-| `ABACUS_MODEL` | | `claude-3-7-sonnet-20250219` | Model identifier on RouteLLM |
-| `ABACUS_BASE_URL` | | RouteLLM URL | Chat completion endpoint |
-| `ABACUS_TIMEOUT_MS` | | `30000` | Request timeout |
-| `OPENAI_API_KEY` | always (for embed) | — | OpenAI API key |
-| `OPENAI_LLM_MODEL` | | `gpt-4.1-nano` | Chat model when `LLM_PROVIDER=openai` |
-| `OPENAI_LLM_BASE_URL` | | OpenAI URL | Chat completion endpoint |
-| `OPENAI_LLM_TIMEOUT_MS` | | `30000` | Request timeout |
-| `OPENAI_EMBEDDING_MODEL` | | `text-embedding-3-small` | Embedding model |
-| `OPENAI_EMBEDDING_BASE_URL` | | OpenAI URL | Embedding endpoint |
-| `OPENAI_EMBEDDING_TIMEOUT_MS` | | `30000` | Request timeout |
+## Available Scripts
 
-## Scripts
+| Command            | Description                              |
+| ------------------ | ---------------------------------------- |
+| `bun run dev`      | Start development server with hot-reload |
+| `bun run lint`     | Run ESLint                               |
+| `bun run test:bun` | Run unit tests                           |
 
-| Command | Description |
-|---|---|
-| `bun run dev` | Start with hot-reload |
-| `bun run lint` | Run ESLint |
-| `bun run test:bun` | Run unit tests |
-
-## Architecture
+## Project Structure
 
 ```
 src/
-├── capabilities/            # one folder per HTTP capability
-│   ├── extract/             # POST /api/ai/extract
-│   ├── embed/               # POST /api/ai/embed
-│   └── judge/               # POST /api/ai/judge
+├── capabilities/                # one folder per HTTP capability
+│   ├── extract/
+│   │   ├── extract.ts            # POST /api/ai/extract
+│   │   ├── schemas.ts            # Zod request/response
+│   │   ├── prompts/              # extraction system prompt
+│   │   └── services/             # ExtractOrchestrator
+│   ├── embed/
+│   │   ├── embed.ts              # POST /api/ai/embed
+│   │   ├── schemas.ts
+│   │   └── services/             # EmbedOrchestrator
+│   └── judge/
+│       ├── judge.ts              # POST /api/ai/judge
+│       ├── schemas.ts
+│       ├── prompts/              # judge system prompt (matching rules)
+│       └── services/             # JudgeOrchestrator
 ├── providers/
-│   ├── llm/                 # Abacus + OpenAI chat completion (shared base class)
-│   └── embedding/           # OpenAI embeddings
-├── shared/                  # cross-capability primitives (retry, errors, types)
-├── constants/               # http codes, categories
-├── logger/                  # console logger with LOG_LEVEL support
-├── middleware/              # request logger
-├── types/                   # Hono context augmentation
-├── config.ts                # Zod-validated env vars
-└── index.ts                 # app factory + startup
+│   ├── llm/                      # chat-completion providers (Abacus, OpenAI)
+│   │   ├── abacus.ts             # standalone implementation
+│   │   ├── openai.ts             # standalone implementation (with prompt_cache_key)
+│   │   ├── factory.ts            # createLLMProvider(name) → LLMProvider
+│   │   └── types.ts              # LLMProvider interface + ChatOptions
+│   └── embedding/                # embedding providers
+│       ├── openai.ts             # text-embedding-3-small
+│       ├── factory.ts
+│       └── types.ts              # EmbeddingProvider interface
+├── shared/                       # cross-capability primitives
+│   ├── retry.ts                  # withRetry + presets (AGGRESSIVE / STANDARD / FAST)
+│   ├── errors.ts                 # AIServiceError / AIAPIError / AIParsingError
+│   └── types.ts                  # ChatCompletionRequest/Response, EmbeddingRequest/Response
+├── constants/                    # http codes, deal categories
+├── logger/                       # console logger (LOG_LEVEL aware)
+├── middleware/request-logger.ts
+├── types/hono.d.ts
+├── config.ts                     # Zod-validated env vars
+└── index.ts                      # app factory + startup wiring
 ```
+
+## Architecture
 
 ### Capabilities are HTTP-shaped, providers are protocol-shaped
 
-A *capability* is what callers ask for (e.g. "extract a deal", "judge if these products match"). It has its own prompt, schema, and orchestrator that knows how to use one or more providers.
+A **capability** is what callers ask for ("extract a deal", "embed these texts", "is this the same product?"). Each capability has its own folder with prompt, schema, and an orchestrator that knows how to use one or more providers.
 
-A *provider* is how we talk to a specific LLM API (Abacus, OpenAI). Providers are interchangeable behind a thin `LLMProvider` / `EmbeddingProvider` interface.
+A **provider** is how we talk to one upstream API (OpenAI chat completions, OpenAI embeddings, Abacus chat). Providers are interchangeable behind a thin interface:
 
-This lets us:
-- Swap providers via env var without touching capabilities.
-- Add new capabilities (e.g. summarization) by adding a new folder under `capabilities/`, not by extending a god-class.
-- Share retry policy, error vocabulary, and types in one place (`shared/`) — but **not** HTTP/fetch details, which are kept per-provider so each provider can evolve independently.
+```typescript
+interface LLMProvider {
+  readonly name: string;
+  readonly model: string;
+  chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
+}
 
-## Adding a new capability
+interface EmbeddingProvider {
+  readonly name: string;
+  readonly model: string;
+  embed(texts: string[]): Promise<EmbeddingResult>;
+}
+```
 
-1. Create `src/capabilities/<name>/`.
-2. Add `<name>.ts` (Hono route), `schemas.ts` (Zod validation), and `services/<name>-orchestrator.ts`.
-3. Inject the orchestrator via `c.set('xOrchestrator', ...)` in `index.ts` and declare it in `src/types/hono.d.ts`.
-4. Mount the route under `/api/ai/<name>`.
+Capabilities depend on the interface, not the implementation. Swapping a provider means changing one line in `index.ts` (or one env var, since the factory already does the routing).
 
-## Adding a new LLM provider
+### Why standalone providers instead of a shared base class
 
-1. Create `src/providers/llm/<name>.ts` implementing the `LLMProvider` interface (`chat(messages, options)`).
-2. Register it in `src/providers/llm/factory.ts`.
-3. Add config keys to `src/config.ts` and `.env.example`.
+`abacus.ts` and `openai.ts` look ~95% alike today because Abacus exposes an OpenAI-compatible API. A shared base class would shrink the line count but **couples** the two: a future Abacus quirk (custom headers, error envelope, billing fields) would either force the base class to grow or push the divergence into ugly subclass overrides.
 
-Existing providers (`abacus.ts`, `openai.ts`) are kept independent on purpose — they look similar today because Abacus follows OpenAI's wire format, but each may diverge without the other being touched.
+Keeping them independent is **~50 lines of acceptable duplication** for stronger independence. The truly shared concepts (retry policy, error vocabulary, request/response types) already live in `shared/`.
+
+### Retry happens inside the provider
+
+Every provider's `chat()` / `embed()` wraps the actual HTTP call in `withRetry()` so transient failures (5xx, 408, 429, network errors) retry transparently with exponential backoff. Capabilities never see them. 4xx errors and parsing failures throw immediately — they won't be fixed by retrying.
+
+### Prompt caching
+
+For OpenAI, the provider reads `options.cacheKey` and forwards it as `prompt_cache_key`. With a fixed system prompt and a per-capability cache key (e.g. `'bargah-extraction'`), the static prefix gets a 50% token discount on repeat calls. Abacus ignores the field silently — no special casing needed.
+
+## API
+
+### `POST /api/ai/extract`
+
+Extracts structured deal data from a raw Telegram message.
+
+**Request**:
+```json
+{
+  "text": "🎮 PlayStation 5 Slim Digital 1TB\nPor R$ 2.849\nhttps://amazon.com.br/dp/B0CL5KNB9M",
+  "chat": "promo_channel",
+  "messageId": 12345,
+  "links": ["https://www.amazon.com.br/dp/B0CL5KNB9M"]
+}
+```
+
+**Response**:
+```json
+{
+  "text": "...",
+  "description": "Pra zerar o backlog. Edição digital com 1TB.",
+  "product": "PlayStation 5 Slim Digital 1TB",
+  "store": "Amazon",
+  "price": 284900,
+  "coupons": [],
+  "productKey": "sony-playstation-5-slim-digital-1tb",
+  "category": "games"
+}
+```
+
+### `POST /api/ai/embed`
+
+Generates vector embeddings for the given texts (batch up to 100).
+
+**Request**:
+```json
+{ "texts": ["PlayStation 5 Slim", "iPhone 15 Pro Max"] }
+```
+
+**Response**:
+```json
+{
+  "embeddings": [[0.023, -0.187, ...], [0.412, 0.034, ...]],
+  "model": "text-embedding-3-small",
+  "dimensions": 1536,
+  "usage": { "promptTokens": 12, "totalTokens": 12 }
+}
+```
+
+### `POST /api/ai/judge`
+
+Given a new product and similarity-ranked candidates, returns the matching candidate id or `null`.
+
+**Request**:
+```json
+{
+  "newProduct": "Galax RTX 4080 Super NITRO OC 16GB",
+  "candidates": [
+    { "id": "abc-123", "name": "Nvidia RTX 4080 Super 16GB", "score": 0.96 },
+    { "id": "def-456", "name": "ASUS RTX 4090 24GB", "score": 0.81 }
+  ]
+}
+```
+
+**Response**:
+```json
+{ "matchedId": "abc-123" }
+```
+
+### `GET /health`
+
+Returns service version and active providers per capability.
+
+## How to Add a New Capability
+
+### 1. Create `src/capabilities/<name>/`
+
+```
+<name>/
+├── <name>.ts                # Hono route — POST /api/ai/<name>
+├── schemas.ts               # Zod request/response
+├── prompts/                 # (optional) system prompt(s)
+└── services/<name>-orchestrator.ts
+```
+
+### 2. Implement the orchestrator
+
+```typescript
+export default class FooOrchestrator {
+  constructor(
+    private readonly llm: LLMProvider,
+    private readonly logger: Logger,
+  ) {}
+
+  async run(input: FooRequest): Promise<FooResponse> {
+    const messages = buildMessages(input);
+    const raw = await this.llm.chat(messages, {
+      responseFormat: 'json_object',
+      temperature: 0,
+      cacheKey: 'bargah-foo',
+    });
+    return parseResponse(raw);
+  }
+}
+```
+
+### 3. Wire it up
+
+- Add the orchestrator type to `src/types/hono.d.ts`
+- Instantiate it in `src/index.ts` and `c.set('fooOrchestrator', instance)`
+- Mount the route: `app.route('/api/ai/foo', foo)`
+
+## How to Add a New LLM Provider
+
+### 1. Implement `LLMProvider` in `src/providers/llm/<name>.ts`
+
+```typescript
+export default class MyProvider implements LLMProvider {
+  readonly name = 'myprovider';
+  readonly model: string;
+  // ... config, constructor, chat(messages, options) ...
+}
+```
+
+### 2. Register it in `src/providers/llm/factory.ts`
+
+```typescript
+case 'myprovider': {
+  if (!config.MYPROVIDER_API_KEY) throw new Error('Missing MYPROVIDER_API_KEY');
+  return new MyProvider({ /* config */ });
+}
+```
+
+### 3. Add env vars
+
+Add `MYPROVIDER_API_KEY` (and any model / URL / timeout vars) to `src/config.ts` and `.env.example`.
 
 ## License
 
