@@ -8,7 +8,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "backfill:products": "bun run scripts/backfill-product-catalog.ts",
-    "audit:catalog": "bun run scripts/audit-catalog.ts"
+    "audit:catalog": "bun run scripts/audit-catalog.ts",
+    "cleanup:catalog": "bun run scripts/cleanup-catalog.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",
