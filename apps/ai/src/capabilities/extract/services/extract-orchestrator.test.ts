@@ -34,7 +34,6 @@ const validExtraction = {
   store: 'Amazon',
   price: 284900,
   coupons: [],
-  productKey: 'sony-playstation-5-slim-digital-1tb',
   category: 'games',
 };
 

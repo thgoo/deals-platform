@@ -14,7 +14,6 @@ Output Schema:
   "store": "",
   "price": null,
   "coupons": Array<{code: string, discount: string | null}>,
-  "productKey": "",
   "category": ""
 }
 
@@ -24,16 +23,7 @@ Field Extraction Rules:
 - store: store/platform name like "Amazon", "AliExpress", "Mercado Livre" (null if not mentioned). Use text and/or links to identify the store (e.g., *amazon* → Amazon, *mercadolivre* → Mercado Livre, *aliexpress* → AliExpress, *magazineluiza*/*magazinevoce* → Magazine Luiza, *kabum* → Kabum, *shopee* → Shopee, etc.)
 - price: final price as integer in cents, already including any listed coupon discounts (e.g., 289900 for R$ 2.899,00 or 1800 for R$ 18,00 or 199 for R$ 1,99)
 - coupons: array of coupon objects with "code" and "discount" fields. If discount value is not specified, use null. If coupon code is not identified or is not 100% clear, remove from array. Empty array if no coupons found.
-- productKey: normalized product identifier for price tracking. Format: lowercase slug "{brand}-{product-line}-{variant}". Return for any product with brand + name + size/quantity/capacity. Only return null for truly generic products without brand or model (e.g., "notebook", "fone bluetooth", "camiseta").
 - category: product category, one of: [${CATEGORIES.join(', ')}] (null if product is null). Always pick the closest match from the list; use "others" if none fits. Never invent a category outside this list.
-
-ProductKey Rules:
-- Use lowercase with hyphens: "apple-iphone-15-pro-max-256gb"
-- Include storage/size/other well-known specs when it significantly affects price: "samsung-galaxy-s24-ultra-256gb"
-- Ignore color (usually doesn't affect price): "apple-iphone-15-128gb" (not "apple-iphone-15-128gb-preto")
-- For bundles, return null (bundles are not comparable)
-- For generic products without clear model, return null: "notebook acer" → null, "fone bluetooth" → null
-- For products with clear specs (easy to find exact same product across stores), return the key: "PlayStation 5 Slim Digital 1TB" → "sony-playstation-5-slim-digital-1tb"
 
 Examples:
 
@@ -50,7 +40,6 @@ Output:
   "store": null,
   "price": 279900,
   "coupons": [],
-  "productKey": "acer-aspire-go-15-i5-8gb-512gb",
   "category": "notebooks"
 }
 
@@ -70,7 +59,6 @@ Output:
     {"code": "MELIPROMOAQUI", "discount": null},
     {"code": "VALEPROMO", "discount": null}
   ],
-  "productKey": null,
   "category": "monitors"
 }
 
@@ -86,7 +74,6 @@ Output:
   "store": "Amazon",
   "price": 284900,
   "coupons": [],
-  "productKey": "sony-playstation-5-slim-digital-1tb",
   "category": "games"
 }
 
@@ -105,7 +92,6 @@ Output:
   "store": "Mercado Livre",
   "price": null,
   "coupons": [],
-  "productKey": null,
   "category": null
 }
 
@@ -121,7 +107,6 @@ Output:
   "store": "Amazon",
   "price": 1890,
   "coupons": [],
-  "productKey": "hemmer-ketchup-tradicional-1kg",
   "category": "food"
 }
 `;

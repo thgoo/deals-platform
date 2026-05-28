@@ -59,7 +59,6 @@ describe('extractionSchema', () => {
     store: 'Amazon',
     price: 284900,
     coupons: [],
-    productKey: 'sony-playstation-5-slim-digital-1tb',
     category: 'games',
   };
 
@@ -79,7 +78,6 @@ describe('extractionSchema', () => {
       product: null,
       store: null,
       price: null,
-      productKey: null,
       category: null,
     });
     expect(result.success).toBe(true);

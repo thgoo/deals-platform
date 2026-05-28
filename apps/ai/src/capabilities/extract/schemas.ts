@@ -21,7 +21,6 @@ export const extractionSchema = z.object({
   store: z.string().nullable(),
   price: z.number().transform(Math.round).nullable(),
   coupons: z.array(couponSchema).default([]),
-  productKey: z.string().nullable(),
   category: z.string().nullable().transform((val): Category | null => {
     if (val === null) return null;
     if ((CATEGORIES as readonly string[]).includes(val)) return val as Category;

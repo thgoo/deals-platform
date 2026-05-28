@@ -42,7 +42,6 @@ export default class ExtractOrchestrator {
       hasProduct: result.product !== null,
       hasStore: result.store !== null,
       hasPrice: result.price !== null,
-      hasProductKey: result.productKey !== null,
       couponsCount: result.coupons.length,
       category: result.category,
     });
