@@ -6,6 +6,7 @@ import type UserService from '~/auth/services/user-service';
 import type BusinessStatsService from '~/dashboard/services/business-stats-service';
 import type CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import type HeartbeatService from '~/dashboard/services/heartbeat-service';
+import type PriceStatsService from '~/dashboard/services/price-stats-service';
 import type { Session, User } from '~/db/schemas';
 import type DealService from '~/deals/services/deal-service';
 import type LinkPipelineService from '~/link-pipeline/services/link-pipeline-service';
@@ -25,6 +26,7 @@ declare module 'hono' {
     heartbeatService: HeartbeatService;
     catalogStatsService: CatalogStatsService;
     businessStatsService: BusinessStatsService;
+    priceStatsService: PriceStatsService;
     logger: Logger;
     user: User;
     session: Session;

@@ -4,6 +4,7 @@ import { dashboardAuth } from './middleware/dashboard-auth';
 import {
   daysQuerySchema,
   decisionsQuerySchema,
+  priceLeadersQuerySchema,
   timeseriesQuerySchema,
   topQuerySchema,
 } from './schemas';
@@ -56,6 +57,17 @@ app.get('/business/deals-timeseries', zValidator('query', timeseriesQuerySchema)
   const { days } = c.req.valid('query');
   const series = await c.get('businessStatsService').getDealsTimeSeries(days);
   return c.json(series);
+});
+
+app.get('/catalog/price-leaders', zValidator('query', priceLeadersQuerySchema), async c => {
+  const { limit, minDeals } = c.req.valid('query');
+  const leaders = await c.get('priceStatsService').getPriceLeaders(limit, minDeals);
+  return c.json(leaders);
+});
+
+app.get('/catalog/price-history/:productId', async c => {
+  const history = await c.get('priceStatsService').getPriceHistory(c.req.param('productId'));
+  return c.json(history);
 });
 
 export default app;

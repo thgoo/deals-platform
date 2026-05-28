@@ -15,6 +15,7 @@ import dashboard from '~/dashboard/dashboard';
 import BusinessStatsService from '~/dashboard/services/business-stats-service';
 import CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import HeartbeatService from '~/dashboard/services/heartbeat-service';
+import PriceStatsService from '~/dashboard/services/price-stats-service';
 import deals from '~/deals/deals';
 import DealService from '~/deals/services/deal-service';
 import { getAffiliateConfig } from '~/link-pipeline/config';
@@ -68,6 +69,7 @@ export function createApp({
   heartbeatService = new HeartbeatService(),
   catalogStatsService = new CatalogStatsService(),
   businessStatsService = new BusinessStatsService(),
+  priceStatsService = new PriceStatsService(),
   appLogger = new ConsoleLogger(),
   enableLogger = true,
 } = {}) {
@@ -95,6 +97,7 @@ export function createApp({
     c.set('heartbeatService', heartbeatService);
     c.set('catalogStatsService', catalogStatsService);
     c.set('businessStatsService', businessStatsService);
+    c.set('priceStatsService', priceStatsService);
     c.set('logger', appLogger);
     await next();
   });

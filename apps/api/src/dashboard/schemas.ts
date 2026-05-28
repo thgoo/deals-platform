@@ -19,3 +19,8 @@ export const topQuerySchema = z.object({
 export const decisionsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
+
+export const priceLeadersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  minDeals: z.coerce.number().int().min(2).max(1000).default(10),
+});
