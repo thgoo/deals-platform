@@ -233,10 +233,16 @@ class Backfill {
       return;
     }
 
-    if (
-      best.score >= AUTO_MATCH_THRESHOLD
-      && !specsConflict(deal.product ?? '', best.canonicalName)
-    ) {
+    // Spec gate applies to ALL match paths (auto-match AND judge). The judge
+    // was accepting matches with obvious capacity / storage differences, so
+    // we short-circuit to created_new whenever specs disagree.
+    if (specsConflict(deal.product ?? '', best.canonicalName)) {
+      await this.createAndPersist(deal, embedding, externalIds, candidates, best.score, 'llm_high');
+      this.stats.created_new++;
+      return;
+    }
+
+    if (best.score >= AUTO_MATCH_THRESHOLD) {
       await this.urlMappings.saveAll(externalIds, best.productId, 'llm_high');
       await this.applyResolution(deal, best.productId, 'embedding_only', candidates, best.score);
       this.stats.embedding_only++;

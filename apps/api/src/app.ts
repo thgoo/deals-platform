@@ -50,12 +50,6 @@ function buildDefaultProductResolver(aiClient: AiServiceClient): ProductResolver
   );
 }
 
-function buildDefaultCatalogStats(): CatalogStatsService {
-  const products = new ProductService();
-  const candidateSearch = new CandidateSearchService(products, logger);
-  return new CatalogStatsService(candidateSearch);
-}
-
 function buildDefaultLinkPipeline(): LinkPipelineService {
   const rewriters = buildRewriterRegistry(getAffiliateConfig());
   const identifiers = buildIdentifierRegistry();
@@ -72,7 +66,7 @@ export function createApp({
   linkPipelineService = buildDefaultLinkPipeline(),
   productResolverService = buildDefaultProductResolver(aiServiceClient),
   heartbeatService = new HeartbeatService(),
-  catalogStatsService = buildDefaultCatalogStats(),
+  catalogStatsService = new CatalogStatsService(),
   businessStatsService = new BusinessStatsService(),
   appLogger = new ConsoleLogger(),
   enableLogger = true,

@@ -1,5 +1,5 @@
 import type { CanonicalIdentifier } from '../types';
-import { AFFILIATE_NETWORK_DOMAINS, SHORTENER_DOMAINS } from '~/link-pipeline/resolvers/constants';
+import { AFFILIATE_NETWORK_DOMAINS, NON_PRODUCT_HOSTS, SHORTENER_DOMAINS } from '~/link-pipeline/resolvers/constants';
 
 /**
  * Catch-all identifier for stores we haven't explicitly modeled.
@@ -17,7 +17,11 @@ import { AFFILIATE_NETWORK_DOMAINS, SHORTENER_DOMAINS } from '~/link-pipeline/re
  * MUST be registered LAST so specific identifiers (Amazon, ML, Kabum, Pichau, ...)
  * claim their stores first and keep their compact `source` names.
  */
-const EXCLUDED_HOST_FRAGMENTS = [...SHORTENER_DOMAINS, ...AFFILIATE_NETWORK_DOMAINS];
+const EXCLUDED_HOST_FRAGMENTS = [
+  ...SHORTENER_DOMAINS,
+  ...AFFILIATE_NETWORK_DOMAINS,
+  ...NON_PRODUCT_HOSTS,
+];
 
 const hostFallbackIdentifier: CanonicalIdentifier = {
   name: 'host-fallback',

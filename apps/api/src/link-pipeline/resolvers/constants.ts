@@ -24,6 +24,48 @@ export const AFFILIATE_NETWORK_DOMAINS = [
   'redirect.viglink.com',
 ];
 
+/**
+ * Hosts whose URLs are NOT product pages — they navigate to channels,
+ * collections, videos, articles, or generic redirects. The host-fallback
+ * identifier MUST exclude these, otherwise a deal that happens to link to
+ * a Telegram channel or a YouTube live stream ends up "mapping" that URL
+ * to whatever product was first seen alongside it, and subsequent unrelated
+ * deals with the same link get mis-matched to that product.
+ *
+ * Evidence from real prod data (May 2026 cleanup):
+ *   - youtube.com/live/hggfobq_mdc → captured as "product"; 83 unrelated deals
+ *     followed the bogus URL anchor.
+ *   - linktr.ee/adrenaline_oficial → "Notebook Lenovo IdeaPad"; 26 unrelated
+ *     deals routed to it.
+ *   - t.me/ofertasadrenaline → "Monitor AOC 22B35"; multiple unrelated deals.
+ *
+ * Note: this list is for the host-fallback identifier ONLY. The url-resolver's
+ * shortener-follow logic uses SHORTENER_DOMAINS — keep them separate.
+ */
+export const NON_PRODUCT_HOSTS = [
+  // Telegram / chat
+  't.me',
+  // Bio / link aggregators
+  'linktr.ee',
+  // Generic shorteners (URL anchor-level — different from SHORTENER_DOMAINS
+  // which controls redirect-following)
+  'tinyurl.com',
+  'bit.ly',
+  'kb1.me',
+  'l1nq.com',
+  'r321.app',
+  'shope.ee',
+  // Custom redirect / aggregator domains
+  'linkmc.click',
+  'adrena.click',
+  'msi.gm',
+  // Video platforms
+  'youtube.com',
+  'youtu.be',
+  // Review / news / blogs
+  'tecnoblog.net',
+];
+
 export const PROMOZONE_RESOLVE_API
   = 'https://link-shortener-501307668672.southamerica-east1.run.app/resolve';
 

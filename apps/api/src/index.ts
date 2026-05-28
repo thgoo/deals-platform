@@ -3,7 +3,6 @@ process.title = 'bargah-api';
 import AiServiceClient from '~/ai-service-client';
 import { createApp } from '~/app';
 import { config } from '~/config';
-import CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import { logger } from '~/logger';
 import CandidateSearchService from '~/products/services/candidate-search-service';
 import DecisionService from '~/products/services/decision-service';
@@ -30,41 +29,7 @@ const productResolverService = new ProductResolverService(
   logger,
 );
 
-// Dashboard's duplicate-suspects feature reuses the resolver's loaded cache —
-// O(N²) scan over the same embeddings without paying for a second load.
-const catalogStatsService = new CatalogStatsService(candidateSearchService);
-
-// Warm the expensive duplicate-suspects cache at boot — the O(N²) scan over
-// thousands of product embeddings can take 10s+ on the first hit. Warming
-// here means the first dashboard HTTP request finds the result already cached.
-// Fire-and-forget so it doesn't block accepting traffic; the cache's
-// stale-while-revalidate handles late readers gracefully.
-const warmStart = Date.now();
-void catalogStatsService.warmDuplicatesCache()
-  .then(() => logger.info('Dashboard duplicates cache warmed', {
-    durationMs: Date.now() - warmStart,
-  }))
-  .catch(err => logger.warn('Dashboard duplicates warmup failed', {
-    error: err instanceof Error ? err.message : String(err),
-  }));
-
-// Periodic refresh — the duplicate scan is expensive but the data only changes
-// when new products are added. 12h is a good cadence: catches new duplicates
-// the same day, far cheaper than running on every dashboard hit. The compute
-// itself yields to the event loop so it never blocks request handling.
-const DUPLICATES_REFRESH_MS = 12 * 60 * 60 * 1000;
-setInterval(() => {
-  const start = Date.now();
-  void catalogStatsService.refreshDuplicatesCache()
-    .then(() => logger.info('Dashboard duplicates cache refreshed', {
-      durationMs: Date.now() - start,
-    }))
-    .catch(err => logger.warn('Dashboard duplicates refresh failed', {
-      error: err instanceof Error ? err.message : String(err),
-    }));
-}, DUPLICATES_REFRESH_MS);
-
-const app = createApp({ aiServiceClient, productResolverService, catalogStatsService });
+const app = createApp({ aiServiceClient, productResolverService });
 
 export default {
   port: config.PORT,

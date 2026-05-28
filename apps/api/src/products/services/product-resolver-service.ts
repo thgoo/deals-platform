@@ -88,7 +88,17 @@ export default class ProductResolverService {
       return this.createNewProduct(input, productName, queryEmbedding, candidates, best?.score);
     }
 
-    if (best.score >= AUTO_MATCH_THRESHOLD && !specsConflict(productName, best.canonicalName)) {
+    // Spec gate applies to ALL match paths. If specs disagree (BTU, GB, RTX
+    // model, polegadas, etc.), the deal is for a different product no matter
+    // how close the embedding looks — skip both auto-match and the judge.
+    // Past data showed the LLM judge accepting matches with clear storage /
+    // capacity differences ("HD 8TB" vs "HD 12TB", "256GB" vs "512GB"), so
+    // putting specsConflict in front of the judge is safer than asking it.
+    if (specsConflict(productName, best.canonicalName)) {
+      return this.createNewProduct(input, productName, queryEmbedding, candidates, best.score);
+    }
+
+    if (best.score >= AUTO_MATCH_THRESHOLD) {
       await this.urlMappings.saveAll(input.externalIds, best.productId, 'llm_high');
       await this.decisions.record({
         dealId: input.dealId,
@@ -100,8 +110,6 @@ export default class ProductResolverService {
       return { productId: best.productId, method: 'embedding_only', similarityScore: best.score };
     }
 
-    // Either similarity in the ambiguous zone OR auto-match blocked by spec
-    // conflict — let the LLM judge make the call.
     return this.askJudgeAndDecide(input, productName, queryEmbedding, candidates);
   }
 

@@ -15,12 +15,6 @@ interface SearchOptions {
   topK: number;
 }
 
-export interface DuplicatePair {
-  productA: { id: string; canonicalName: string };
-  productB: { id: string; canonicalName: string };
-  similarity: number;
-}
-
 /**
  * In-memory cosine-similarity search over the product catalog.
  *
@@ -88,53 +82,6 @@ export default class CandidateSearchService {
     return scored.slice(0, options.topK);
   }
 
-  /**
-   * Pairs of distinct products whose embeddings cosine-similarity-match above
-   * `threshold` — likely duplicates that should have been merged. O(N²) pairwise
-   * scan over the in-memory embedding cache.
-   *
-   * Yields back to the event loop every {@link YIELD_EVERY_N_ROWS} outer
-   * iterations. Without yielding, a 5k-product scan blocks the single-threaded
-   * Bun event loop for ~30 seconds — every HTTP request piles up behind it and
-   * the dashboard appears completely frozen. Chunked yielding keeps the server
-   * responsive while the scan runs in the background; total compute time is
-   * effectively unchanged.
-   */
-  async findDuplicatePairs(options: { threshold: number; limit: number }): Promise<DuplicatePair[]> {
-    const cache = this.cache;
-    const pairs: DuplicatePair[] = [];
-
-    for (let i = 0; i < cache.length; i++) {
-      const a = cache[i];
-      if (!a) continue;
-      for (let j = i + 1; j < cache.length; j++) {
-        const b = cache[j];
-        if (!b) continue;
-        const sim = dot(a.embedding, b.embedding);
-        if (sim >= options.threshold) {
-          pairs.push({
-            productA: { id: a.id, canonicalName: a.canonicalName },
-            productB: { id: b.id, canonicalName: b.canonicalName },
-            similarity: sim,
-          });
-        }
-      }
-
-      // Yield to the event loop so concurrent HTTP requests don't starve.
-      if (i % YIELD_EVERY_N_ROWS === 0) {
-        await yieldToEventLoop();
-      }
-    }
-
-    pairs.sort((a, b) => b.similarity - a.similarity);
-    return pairs.slice(0, options.limit);
-  }
-}
-
-const YIELD_EVERY_N_ROWS = 25;
-
-function yieldToEventLoop(): Promise<void> {
-  return new Promise(resolve => setImmediate(resolve));
 }
 
 function toCached(product: Product): CachedProduct {

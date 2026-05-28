@@ -1,5 +1,4 @@
 import { desc, sql } from 'drizzle-orm';
-import type CandidateSearchService from '~/products/services/candidate-search-service';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productMatchDecisionsTable } from '~/db/schemas/product-match-decisions';
@@ -34,12 +33,6 @@ export interface MatchMethodStat {
   share: number;
 }
 
-export interface DuplicateSuspect {
-  productA: { id: string; canonicalName: string };
-  productB: { id: string; canonicalName: string };
-  similarity: number;
-}
-
 export interface RecentDecision {
   id: number;
   dealId: number;
@@ -62,27 +55,19 @@ export interface SourceStat {
 }
 
 // TTLs picked per "how fast does this number change in practice".
-// Heartbeat / decisions favor freshness; expensive aggregates lean on cache
-// to keep the dashboard responsive. SWR pattern means stale is served
-// immediately while background recompute runs, so longer TTLs don't make the
-// UI feel old — they just reduce how often we hit MySQL with the same query.
+// SWR pattern means stale is served immediately while background recompute
+// runs, so longer TTLs don't make the UI feel old — they just reduce how
+// often we hit MySQL with the same query.
 const OVERVIEW_TTL_MS = 60_000;
 const MATCH_METHODS_TTL_MS = 5 * 60_000;
-// Duplicates is driven by the background cron (every 12h, see index.ts);
-// long TTL prevents the dashboard from ever triggering an on-demand recompute
-// of the expensive O(N²) scan.
-const DUPLICATES_TTL_MS = 24 * 60 * 60_000;
 const RECENT_DECISIONS_TTL_MS = 10_000;
 const SOURCES_TTL_MS = 5 * 60_000;
 
 export default class CatalogStatsService {
   private overviewCache = createTtlCache<CatalogOverview>(OVERVIEW_TTL_MS);
   private matchMethodsCache = createTtlCache<MatchMethodStat[]>(MATCH_METHODS_TTL_MS);
-  private duplicatesCache = createTtlCache<DuplicateSuspect[]>(DUPLICATES_TTL_MS);
   private recentDecisionsCache = createTtlCache<RecentDecision[]>(RECENT_DECISIONS_TTL_MS);
   private sourcesCache = createTtlCache<SourceStat[]>(SOURCES_TTL_MS);
-
-  constructor(private readonly candidateSearch: CandidateSearchService) {}
 
   /**
    * Five top-level KPIs about the catalog itself — answers "how well are we
@@ -163,41 +148,6 @@ export default class CatalogStatsService {
       count: Number(r.count),
       share: total === 0 ? 0 : Number(r.count) / total,
     }));
-  }
-
-  /**
-   * Pairs of products with cosine similarity above `threshold`. These are
-   * likely the SAME product that should have been merged — they signal either
-   * a mis-tuned AUTO_MATCH threshold or an LLM judge that's too conservative.
-   *
-   * Cost: O(N²) over the in-memory embedding cache. For N=5k → ~12M dot
-   * products of 1536-dim vectors → ~1s in Bun. Acceptable for an admin tool.
-   */
-  findDuplicateSuspects(threshold: number, limit: number): Promise<DuplicateSuspect[]> {
-    return this.duplicatesCache.get(() =>
-      this.candidateSearch.findDuplicatePairs({ threshold, limit }),
-    );
-  }
-
-  /**
-   * Eagerly populate the duplicate-suspects cache. Called at boot so the first
-   * dashboard request doesn't have to wait for the O(N²) embedding scan.
-   * Uses the same defaults the dashboard page passes (threshold=0.85, limit=12).
-   */
-  async warmDuplicatesCache(): Promise<void> {
-    await this.duplicatesCache.warm(() =>
-      this.candidateSearch.findDuplicatePairs({ threshold: 0.85, limit: 12 }),
-    );
-  }
-
-  /**
-   * Recompute the duplicate-suspects cache on a schedule. Called by the boot
-   * cron in index.ts so the data stays fresh without ever blocking a request.
-   */
-  async refreshDuplicatesCache(): Promise<void> {
-    await this.duplicatesCache.refresh(() =>
-      this.candidateSearch.findDuplicatePairs({ threshold: 0.85, limit: 12 }),
-    );
   }
 
   /**

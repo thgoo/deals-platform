@@ -4,7 +4,6 @@ import { dashboardAuth } from './middleware/dashboard-auth';
 import {
   daysQuerySchema,
   decisionsQuerySchema,
-  duplicatesQuerySchema,
   timeseriesQuerySchema,
   topQuerySchema,
 } from './schemas';
@@ -28,12 +27,6 @@ app.get('/catalog/match-methods', zValidator('query', daysQuerySchema), async c 
   const { days } = c.req.valid('query');
   const stats = await c.get('catalogStatsService').getMatchMethodStats(days);
   return c.json(stats);
-});
-
-app.get('/catalog/duplicate-suspects', zValidator('query', duplicatesQuerySchema), async c => {
-  const { threshold, limit } = c.req.valid('query');
-  const suspects = await c.get('catalogStatsService').findDuplicateSuspects(threshold, limit);
-  return c.json(suspects);
 });
 
 app.get('/catalog/decisions', zValidator('query', decisionsQuerySchema), async c => {
