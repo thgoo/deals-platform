@@ -5,6 +5,8 @@ import type {
   HeartbeatStats,
   MatchMethodStat,
   NamedCount,
+  PriceHistory,
+  PriceLeader,
   RecentDecision,
   SourceStat,
 } from './types';
@@ -51,4 +53,13 @@ export const dashboardApi = {
     get<NamedCount[]>(`/business/top-categories?days=${days}&limit=${limit}`),
   dealsTimeSeries: (days = 30) =>
     get<DailyCount[]>(`/business/deals-timeseries?days=${days}`),
+
+  priceLeaders: (limit = 20, minDeals = 10) =>
+    get<PriceLeader[]>(
+      `/catalog/price-leaders?limit=${limit}&minDeals=${minDeals}`,
+    ),
+  priceHistory: (productId: string) =>
+    get<PriceHistory>(
+      `/catalog/price-history/${encodeURIComponent(productId)}`,
+    ),
 };

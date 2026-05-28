@@ -1,6 +1,8 @@
+import type { PriceHistory } from './_lib/types';
 import BracketCard from './_components/bracket-card';
 import DecisionsCard from './_components/decisions-card';
 import {
+  formatBRL,
   formatCompact,
   formatNumber,
   formatPercent,
@@ -8,6 +10,8 @@ import {
 import HealthIndicator from './_components/health-indicator';
 import HorizontalBars from './_components/horizontal-bars';
 import MethodsDonut from './_components/methods-donut';
+import PriceFloorChart from './_components/price-floor-chart';
+import PriceLeadersTable from './_components/price-leaders-table';
 import RefreshTicker from './_components/refresh-ticker';
 import SourcesTable from './_components/sources-table';
 import StatCard from './_components/stat-card';
@@ -42,6 +46,7 @@ export default async function IntelligencePage() {
     topCategories,
     timeSeries,
     sources,
+    priceLeaders,
   ] = await Promise.all([
     dashboardApi.heartbeat().catch((e) => {
       reportFail('heartbeat')(e);
@@ -75,7 +80,25 @@ export default async function IntelligencePage() {
       reportFail('sources')(e);
       return [];
     }),
+    dashboardApi.priceLeaders(20, 10).catch((e) => {
+      reportFail('priceLeaders')(e);
+      return [];
+    }),
   ]);
+
+  // Feature the deepest-history product with a trustworthy band (low spread).
+  // Falling back to the top leader keeps the chart populated even if every
+  // product looks suspect (e.g. early data).
+  const featured =
+    priceLeaders.find((l) => !l.suspect) ?? priceLeaders[0] ?? null;
+  let priceHistory: PriceHistory | null = null;
+  if (featured) {
+    try {
+      priceHistory = await dashboardApi.priceHistory(featured.productId);
+    } catch (e) {
+      reportFail('priceHistory')(e);
+    }
+  }
 
   const renderedAt = new Date().toISOString();
 
@@ -209,6 +232,58 @@ export default async function IntelligencePage() {
         </div>
       </Section>
 
+      {/* ── Price intelligence ────────────────────────────────────── */}
+      <Section
+        title="price intelligence"
+        subtitle="robust price band · p10 floor / median / p90 · all history"
+      >
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
+          <BracketCard className="flex flex-col gap-4">
+            {featured && priceHistory ? (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="label-eyebrow">price floor tracker</span>
+                    <span className="text-sm text-zinc-800">
+                      {featured.canonicalName}
+                    </span>
+                  </div>
+                  <FloorBadge
+                    latestCents={
+                      priceHistory.points.at(-1)?.price ?? priceHistory.median
+                    }
+                    floorCents={priceHistory.p10}
+                  />
+                </div>
+                <PriceFloorChart
+                  points={priceHistory.points}
+                  p10={priceHistory.p10}
+                  median={priceHistory.median}
+                />
+                <div className="flex flex-wrap gap-4 text-[10px] tracking-wider text-zinc-400 uppercase">
+                  <LegendDot color="#06b6d4" label="price" />
+                  <LegendDot color="#a1a1aa" label="median" />
+                  <LegendDot color="#059669" label="floor · p10" />
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-zinc-400">
+                no priced product history yet
+              </div>
+            )}
+          </BracketCard>
+          <BracketCard className="flex flex-col gap-4">
+            <span className="label-eyebrow">
+              deepest histories · spread = p90/p10
+            </span>
+            <PriceLeadersTable
+              leaders={priceLeaders}
+              featuredId={featured?.productId}
+            />
+          </BracketCard>
+        </div>
+      </Section>
+
       {/* ── Sources / identifier health ───────────────────────────── */}
       <Section
         title="sources"
@@ -257,5 +332,49 @@ function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+/**
+ * How far the most recent price sits above the historical floor (p10). This is
+ * the headline "is this actually a good price right now?" number — green when
+ * at/near the floor, amber as it climbs away from it.
+ */
+function FloorBadge({
+  latestCents,
+  floorCents,
+}: {
+  latestCents: number;
+  floorCents: number;
+}) {
+  const pctAbove = floorCents > 0 ? (latestCents - floorCents) / floorCents : 0;
+  const atFloor = pctAbove <= 0.02;
+  const color = atFloor ? '#059669' : pctAbove < 0.15 ? '#0e7490' : '#b45309';
+
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <span
+        className="mono text-lg leading-none tabular-nums"
+        style={{ color }}
+      >
+        {atFloor ? 'at floor' : `+${formatPercent(pctAbove)}`}
+      </span>
+      <span className="text-[10px] tracking-wider text-zinc-400 uppercase">
+        latest {formatBRL(latestCents)} · floor {formatBRL(floorCents)}
+      </span>
+    </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-block h-2 w-2 rounded-full"
+        style={{ background: color }}
+        aria-hidden
+      />
+      {label}
+    </span>
   );
 }

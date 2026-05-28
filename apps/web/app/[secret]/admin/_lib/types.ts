@@ -57,3 +57,32 @@ export interface DailyCount {
   day: string;
   count: number;
 }
+
+export interface PriceLeader {
+  productId: string;
+  canonicalName: string;
+  category: string | null;
+  deals: number;
+  /** Percentile prices in cents. p10 = robust floor, p90 = robust ceiling. */
+  p10: number;
+  median: number;
+  p90: number;
+  /** p90 / p10 — near 1 is a stable price, high flags a contaminated band. */
+  spreadRatio: number;
+  suspect: boolean;
+}
+
+export interface PricePoint {
+  ts: string;
+  /** Price in cents. */
+  price: number;
+  store: string | null;
+}
+
+export interface PriceHistory {
+  productId: string;
+  points: PricePoint[];
+  p10: number;
+  median: number;
+  p90: number;
+}

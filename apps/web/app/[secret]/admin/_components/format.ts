@@ -8,6 +8,12 @@ const COMPACT = new Intl.NumberFormat('en-US', {
 
 const FULL = new Intl.NumberFormat('en-US');
 
+// Prices are stored in cents — the only BRL-locale formatting in the dashboard.
+const BRL = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+
 export function formatNumber(n: number): string {
   return FULL.format(n);
 }
@@ -18,6 +24,11 @@ export function formatCompact(n: number): string {
 
 export function formatPercent(share: number, decimals = 1): string {
   return `${(share * 100).toFixed(decimals)}%`;
+}
+
+/** Format a price given in cents as Brazilian currency, e.g. 284900 → R$ 2.849,00. */
+export function formatBRL(cents: number): string {
+  return BRL.format(cents / 100);
 }
 
 export function formatRelativeTime(iso: string | null): string {
