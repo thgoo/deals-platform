@@ -10,7 +10,6 @@ import {
   updateExtractedSchema,
   updateImageSchema,
   updateLinksSchema,
-  updateProductKeySchema,
 } from './schemas';
 import { cleanPromoText } from './text-cleaner';
 
@@ -124,7 +123,6 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     store: extraction.store,
     description: extraction.description,
     product: extraction.product,
-    productKey: extraction.productKey,
     category: extraction.category,
     mediaType: body.media?.type,
     photoId: body.media?.photo_id ? String(body.media.photo_id) : undefined,
@@ -260,11 +258,11 @@ app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c =
   return c.json({ ok: true, updated: false });
 });
 
-app.get('/price-history/:productKey', async c => {
+app.get('/price-history/:productId', async c => {
   const dealService = c.get('dealService');
-  const productKey = c.req.param('productKey');
+  const productId = c.req.param('productId');
 
-  const history = await dealService.getPriceHistory(productKey);
+  const history = await dealService.getPriceHistory(productId);
 
   if (!history) {
     return c.json({ error: 'No price history found for this product' }, 404);
@@ -324,22 +322,6 @@ app.patch('/:id/links', webhookAuth, zValidator('json', updateLinksSchema), asyn
   return c.json({ ok: true, id: deal.id, links: deal.links });
 });
 
-app.patch('/:id/product-key', webhookAuth, zValidator('json', updateProductKeySchema), async c => {
-  const dealService = c.get('dealService');
-  const logger = c.get('logger');
-  const id = parseInt(c.req.param('id'), 10);
-  const { product_key, category } = c.req.valid('json');
-  if (isNaN(id)) {
-    return c.json({ error: 'Invalid deal ID' }, 400);
-  }
-  const deal = await dealService.updateProductKey(id, product_key ?? null, category ?? null);
-  if (!deal) {
-    return c.json({ error: 'Deal not found' }, 404);
-  }
-  logger.info('Deal product key updated', { dealId: id, productKey: product_key, category });
-  return c.json({ ok: true, id: deal.id, productKey: deal.productKey, category: deal.category });
-});
-
 app.patch('/:id/extracted', webhookAuth, zValidator('json', updateExtractedSchema), async c => {
   const dealService = c.get('dealService');
   const logger = c.get('logger');
@@ -357,7 +339,6 @@ app.patch('/:id/extracted', webhookAuth, zValidator('json', updateExtractedSchem
     store: body.store,
     price: body.price,
     coupons: body.coupons,
-    productKey: body.product_key,
     category: body.category,
   });
 

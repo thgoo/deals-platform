@@ -25,7 +25,6 @@ export const dealsTable = mysqlTable('deals', {
   store: varchar({ length: 255 }),
   description: text(),
   product: varchar({ length: 500 }),
-  productKey: varchar('product_key', { length: 200 }),
   category: varchar({ length: 50 }),
   mediaType: varchar('media_type', { length: 50 }),
   photoId: varchar('photo_id', { length: 255 }),
@@ -40,7 +39,6 @@ export const dealsTable = mysqlTable('deals', {
   photoIdIdx: index('photo_id_idx').on(table.photoId),
   chatMessageIdx: index('chat_message_idx').on(table.chat, table.messageId),
   storeIdx: index('store_idx').on(table.store),
-  productKeyIdx: index('product_key_idx').on(table.productKey),
   categoryIdx: index('category_idx').on(table.category),
   productIdx: index('product_id_idx').on(table.productId),
 }));

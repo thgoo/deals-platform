@@ -3,6 +3,7 @@ import type { PriceHistoryResponse } from '../types';
 import type { Deal, NewDeal } from '~/db/schemas/deals';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
+import { productsTable } from '~/db/schemas/products';
 
 export class DealService {
   /**
@@ -221,7 +222,6 @@ export class DealService {
     store: string | null;
     price: number | null;
     coupons: Deal['coupons'];
-    productKey: string | null;
     category: string | null;
   }): Promise<Deal | null> {
     const result = await db.update(dealsTable)
@@ -249,37 +249,25 @@ export class DealService {
   }
 
   /**
-   * Update deal product key and category
+   * Price history for a canonical product, aggregated across every store that
+   * sells it (mapped via `product_url_mappings`). The canonical name comes
+   * from the `products` table so the response reflects the catalog's truth
+   * rather than whatever any one deal text happened to say.
    */
-  async updateProductKey(id: number, productKey: string | null, category: string | null): Promise<Deal | null> {
-    const result = await db.update(dealsTable)
-      .set({ productKey, category })
-      .where(eq(dealsTable.id, id));
-    if (result[0].affectedRows === 0) {
-      return null;
-    }
-    const [deal] = await db.select()
-      .from(dealsTable)
-      .where(eq(dealsTable.id, id));
-    return deal ? this.parseDeal(deal) : null;
-  }
-
-  /**
-   * Get price history for a product key
-   */
-  async getPriceHistory(productKey: string): Promise<PriceHistoryResponse | null> {
+  async getPriceHistory(productId: string): Promise<PriceHistoryResponse | null> {
     const deals = await db.select({
       id: dealsTable.id,
       price: dealsTable.price,
       store: dealsTable.store,
       ts: dealsTable.ts,
-      product: dealsTable.product,
       category: dealsTable.category,
+      canonicalName: productsTable.canonicalName,
     })
       .from(dealsTable)
+      .innerJoin(productsTable, eq(dealsTable.productId, productsTable.id))
       .where(
         and(
-          eq(dealsTable.productKey, productKey),
+          eq(dealsTable.productId, productId),
           isNotNull(dealsTable.price),
         ),
       )
@@ -295,9 +283,9 @@ export class DealService {
     const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
 
     return {
-      productKey,
-      category: deals[0].category,
-      product: deals[0].product,
+      productId,
+      canonicalName: deals[0]?.canonicalName ?? null,
+      category: deals[0]?.category ?? null,
       history: deals.map(d => ({
         price: d.price as number,
         store: d.store,

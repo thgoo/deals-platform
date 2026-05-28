@@ -67,11 +67,6 @@ export const listDealsQuerySchema = z.object({
   hasCoupon: data.hasCoupon === 'true' ? true : data.hasCoupon === 'false' ? false : undefined,
 }));
 
-export const updateProductKeySchema = z.object({
-  product_key: z.string().nullable().optional(),
-  category: z.string().nullable().optional(),
-});
-
 export const updateExtractedSchema = z.object({
   text: z.string().min(1),
   description: z.string().nullable(),
@@ -79,6 +74,5 @@ export const updateExtractedSchema = z.object({
   store: z.string().nullable(),
   price: z.number().nullable(),
   coupons: z.array(couponSchema).nullable(),
-  product_key: z.string().nullable(),
   category: z.string().nullable(),
 });

@@ -13,9 +13,9 @@ export interface PriceHistoryStats {
 }
 
 export interface PriceHistoryResponse {
-  productKey: string;
+  productId: string;
+  canonicalName: string | null;
   category: string | null;
-  product: string | null;
   history: PriceHistoryItem[];
   stats: PriceHistoryStats;
 }

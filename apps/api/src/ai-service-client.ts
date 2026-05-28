@@ -42,7 +42,6 @@ export interface ExtractResponse {
   store: string | null;
   price: number | null;
   coupons: Coupon[];
-  productKey: string | null;
   category: string | null;
 }
 
