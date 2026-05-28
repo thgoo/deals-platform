@@ -24,17 +24,17 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
 
-  const hasProductKey = !!deal.productKey;
+  const hasProductId = !!deal.productId;
 
   const {
     data: priceHistory,
     isLoading: isLoadingHistory,
     error: priceHistoryError,
     notFound: priceHistoryNotFound,
-  } = usePriceHistory(deal.productKey, { enabled: hasProductKey });
+  } = usePriceHistory(deal.productId, { enabled: hasProductId });
 
   const isHistoryLoading =
-    hasProductKey &&
+    hasProductId &&
     !!isLoadingHistory &&
     !priceHistory &&
     !priceHistoryNotFound &&
@@ -47,9 +47,9 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
     priceHistoryNotFound ||
     (!!priceHistory && (priceHistory.stats?.totalDeals ?? 0) < 2);
 
-  const isHistoryEnabled = hasProductKey && isHistoryAvailable;
+  const isHistoryEnabled = hasProductId && isHistoryAvailable;
 
-  const historyDisabledTitle = !hasProductKey
+  const historyDisabledTitle = !hasProductId
     ? undefined
     : isHistoryLoading
       ? 'Carregando histórico em background...'
@@ -64,17 +64,20 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
     const result = getPriceIndicator(deal.price, priceHistory.stats);
     if (!result) return null;
 
-    const icon = result.trend === 'down' ? TrendingDown
-      : result.trend === 'up' ? TrendingUp
-      : null;
+    const icon =
+      result.trend === 'down'
+        ? TrendingDown
+        : result.trend === 'up'
+          ? TrendingUp
+          : null;
 
     const COLOR_MAP: Record<string, string> = {
       [PRICE_LEVEL.HISTORICAL_MIN]: 'text-green-700',
-      [PRICE_LEVEL.GREAT]:          'text-green-600',
-      [PRICE_LEVEL.GOOD]:           'text-green-500',
-      [PRICE_LEVEL.AVERAGE]:        'text-yellow-600',
-      [PRICE_LEVEL.ABOVE]:          'text-red-500',
-      [PRICE_LEVEL.HIGH]:           'text-red-600',
+      [PRICE_LEVEL.GREAT]: 'text-green-600',
+      [PRICE_LEVEL.GOOD]: 'text-green-500',
+      [PRICE_LEVEL.AVERAGE]: 'text-yellow-600',
+      [PRICE_LEVEL.ABOVE]: 'text-red-500',
+      [PRICE_LEVEL.HIGH]: 'text-red-600',
     };
     const color = COLOR_MAP[result.level] ?? 'text-gray-500';
 
@@ -104,7 +107,7 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
       <div className="fixed inset-4 z-50 m-auto flex max-h-[90vh] items-start justify-center pt-0 sm:inset-8">
         <div
           className={`pixel-pop border-foreground flex max-h-full w-full overflow-hidden rounded-xl border-4 bg-white shadow-[4px_4px_0px_var(--pixel-dark)] transition-all duration-300 md:w-auto ${
-            hasProductKey && showHistoryPanel ? 'lg:max-w-4xl' : 'max-w-lg'
+            hasProductId && showHistoryPanel ? 'lg:max-w-4xl' : 'max-w-lg'
           }`}
         >
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden md:w-[420px]">
@@ -120,7 +123,7 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
               </button>
             </div>
 
-            {hasProductKey && (
+            {hasProductId && (
               <div className="border-foreground flex border-b-2 lg:hidden">
                 <button
                   onClick={() => setActiveTab('details')}
@@ -174,7 +177,7 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             </div>
           </div>
 
-          {hasProductKey && (
+          {hasProductId && (
             <div className="hidden lg:flex">
               <div
                 className="border-foreground overflow-hidden border-l-4 bg-gray-50 transition-all duration-300 ease-in-out"

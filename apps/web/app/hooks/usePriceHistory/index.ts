@@ -13,13 +13,13 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 const inFlight = new Map<string, Promise<CacheEntry>>();
 
-async function fetchPriceHistory(productKey: string): Promise<CacheEntry> {
-  const existing = inFlight.get(productKey);
+async function fetchPriceHistory(productId: string): Promise<CacheEntry> {
+  const existing = inFlight.get(productId);
   if (existing) return existing;
 
   const promise = (async () => {
     const res = await fetch(
-      getApiUrl(`/api/deals/price-history/${encodeURIComponent(productKey)}`),
+      getApiUrl(`/api/deals/price-history/${encodeURIComponent(productId)}`),
     );
     if (res.status === 404) {
       return { data: null, notFound: true, ts: Date.now() };
@@ -35,17 +35,17 @@ async function fetchPriceHistory(productKey: string): Promise<CacheEntry> {
     };
   })();
 
-  inFlight.set(productKey, promise);
+  inFlight.set(productId, promise);
 
   try {
     return await promise;
   } finally {
-    inFlight.delete(productKey);
+    inFlight.delete(productId);
   }
 }
 
 export function usePriceHistory(
-  productKey?: string | null,
+  productId?: string | null,
   options?: {
     enabled?: boolean;
     staleTimeMs?: number;
@@ -62,21 +62,21 @@ export function usePriceHistory(
   const lastKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !productKey) {
+    if (!enabled || !productId) {
       setIsLoading(false);
       setError(null);
       setNotFound(false);
       return;
     }
 
-    if (lastKeyRef.current !== productKey) {
-      lastKeyRef.current = productKey;
+    if (lastKeyRef.current !== productId) {
+      lastKeyRef.current = productId;
       setData(null);
       setError(null);
       setNotFound(false);
     }
 
-    const cached = cache.get(productKey);
+    const cached = cache.get(productId);
     const isFresh = cached && Date.now() - cached.ts < staleTimeMs;
 
     if (isFresh) {
@@ -93,9 +93,9 @@ export function usePriceHistory(
       setError(null);
 
       try {
-        const result = await fetchPriceHistory(productKey);
+        const result = await fetchPriceHistory(productId);
         if (cancelled) return;
-        cache.set(productKey, result);
+        cache.set(productId, result);
         setData(result.data);
         setNotFound(result.notFound);
       } catch (e) {
@@ -111,7 +111,7 @@ export function usePriceHistory(
     return () => {
       cancelled = true;
     };
-  }, [enabled, productKey, staleTimeMs]);
+  }, [enabled, productId, staleTimeMs]);
 
   return { data, isLoading, error, notFound };
 }
