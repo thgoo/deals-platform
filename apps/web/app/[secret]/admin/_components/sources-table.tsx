@@ -10,13 +10,18 @@ interface SourcesTableProps {
  * as either a `specific` parser (Amazon, ML, Kabum, ...) or the catch-all
  * host-fallback. Reading top-down should show the specific ones leading —
  * if Amazon falls to zero, the parser is broken.
+ *
+ * The `% of total` column shows each source's percentage of the catalog's
+ * total URL mappings — a "where do our identifiers come from" lens. Specific
+ * parsers dominating means the canonical-id strategy is working; a tall
+ * fallback share means that store ranks high enough to deserve its own parser.
  */
 export default function SourcesTable({ sources }: SourcesTableProps) {
   if (sources.length === 0) {
     return <div className="text-xs text-zinc-400">no mappings yet</div>;
   }
 
-  const max = sources[0]?.mappings ?? 1;
+  const total = sources.reduce((sum, s) => sum + s.mappings, 0);
 
   return (
     <div className="overflow-x-auto">
@@ -28,13 +33,14 @@ export default function SourcesTable({ sources }: SourcesTableProps) {
             <th className="py-2 pr-4 text-right font-medium">
               unique products
             </th>
-            <th className="py-2 pr-4 font-medium">share</th>
+            <th className="py-2 pr-4 font-medium">% of total</th>
             <th className="py-2 pr-0 text-right font-medium">type</th>
           </tr>
         </thead>
         <tbody>
           {sources.map((s) => {
-            const width = Math.max(2, (s.mappings / max) * 100);
+            const share = total === 0 ? 0 : s.mappings / total;
+            const width = Math.max(0.4, share * 100);
             const isSpecific = s.identifierType === 'specific';
             return (
               <tr
@@ -49,14 +55,19 @@ export default function SourcesTable({ sources }: SourcesTableProps) {
                   {formatNumber(s.uniqueProducts)}
                 </td>
                 <td className="py-2 pr-4">
-                  <div className="h-1 w-24 bg-zinc-100">
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${width}%`,
-                        background: isSpecific ? '#06b6d4' : '#a1a1aa',
-                      }}
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="h-1 w-24 bg-zinc-100">
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${width}%`,
+                          background: isSpecific ? '#06b6d4' : '#a1a1aa',
+                        }}
+                      />
+                    </div>
+                    <span className="mono w-12 text-right text-[10px] text-zinc-500 tabular-nums">
+                      {(share * 100).toFixed(1)}%
+                    </span>
                   </div>
                 </td>
                 <td className="py-2 pr-0 text-right">
