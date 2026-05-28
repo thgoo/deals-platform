@@ -1,6 +1,5 @@
 import BracketCard from './_components/bracket-card';
 import DecisionsCard from './_components/decisions-card';
-import DuplicatesList from './_components/duplicates-list';
 import {
   formatCompact,
   formatNumber,
@@ -38,7 +37,6 @@ export default async function IntelligencePage() {
     heartbeat,
     overview,
     methods,
-    duplicates,
     decisions,
     topStores,
     topCategories,
@@ -55,10 +53,6 @@ export default async function IntelligencePage() {
     }),
     dashboardApi.matchMethods(7).catch((e) => {
       reportFail('matchMethods')(e);
-      return [];
-    }),
-    dashboardApi.duplicateSuspects(0.85, 12).catch((e) => {
-      reportFail('duplicates')(e);
       return [];
     }),
     dashboardApi.recentDecisions(100).catch((e) => {
@@ -222,16 +216,6 @@ export default async function IntelligencePage() {
       >
         <BracketCard>
           <SourcesTable sources={sources} />
-        </BracketCard>
-      </Section>
-
-      {/* ── Audit · suspicious matches ────────────────────────────── */}
-      <Section
-        title="audit · duplicate suspects"
-        subtitle="pairs ≥ 85% similar — likely should have been merged"
-      >
-        <BracketCard>
-          <DuplicatesList suspects={duplicates} />
         </BracketCard>
       </Section>
 

@@ -28,12 +28,6 @@ export interface MatchMethodStat {
   share: number;
 }
 
-export interface DuplicateSuspect {
-  productA: { id: string; canonicalName: string };
-  productB: { id: string; canonicalName: string };
-  similarity: number;
-}
-
 export interface RecentDecision {
   id: number;
   dealId: number;

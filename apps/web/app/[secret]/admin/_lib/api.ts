@@ -2,7 +2,6 @@ import 'server-only';
 import type {
   CatalogOverview,
   DailyCount,
-  DuplicateSuspect,
   HeartbeatStats,
   MatchMethodStat,
   NamedCount,
@@ -42,10 +41,6 @@ export const dashboardApi = {
   catalogOverview: () => get<CatalogOverview>('/catalog/overview'),
   matchMethods: (days = 7) =>
     get<MatchMethodStat[]>(`/catalog/match-methods?days=${days}`),
-  duplicateSuspects: (threshold = 0.85, limit = 20) =>
-    get<DuplicateSuspect[]>(
-      `/catalog/duplicate-suspects?threshold=${threshold}&limit=${limit}`,
-    ),
   recentDecisions: (limit = 50) =>
     get<RecentDecision[]>(`/catalog/decisions?limit=${limit}`),
   sources: () => get<SourceStat[]>('/catalog/sources'),
