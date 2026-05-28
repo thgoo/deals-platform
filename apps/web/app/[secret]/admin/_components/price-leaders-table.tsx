@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { PriceLeader } from '../_lib/types';
 import { formatBRL, formatNumber } from './format';
 
@@ -5,6 +6,8 @@ interface PriceLeadersTableProps {
   leaders: PriceLeader[];
   /** Highlight this product's row — it's the one shown in the chart above. */
   featuredId?: string;
+  /** Dashboard route (e.g. `/<secret>/admin`) used to build product links. */
+  basePath: string;
 }
 
 /**
@@ -17,6 +20,7 @@ interface PriceLeadersTableProps {
 export default function PriceLeadersTable({
   leaders,
   featuredId,
+  basePath,
 }: PriceLeadersTableProps) {
   if (leaders.length === 0) {
     return <div className="text-xs text-zinc-400">no priced products yet</div>;
@@ -47,7 +51,13 @@ export default function PriceLeadersTable({
                 }`}
               >
                 <td className="max-w-[22rem] truncate py-2 pr-4 text-zinc-800">
-                  {l.canonicalName}
+                  <Link
+                    href={`${basePath}?product=${encodeURIComponent(l.productId)}`}
+                    scroll={false}
+                    className="hover:text-cyan-700 hover:underline"
+                  >
+                    {l.canonicalName}
+                  </Link>
                 </td>
                 <td className="mono py-2 pr-4 text-[10px] tracking-wider text-zinc-500 uppercase">
                   {l.category ?? '—'}

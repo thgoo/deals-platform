@@ -83,7 +83,7 @@ export default function PriceFloorChart({
         <XYChart
           width={width}
           height={height}
-          margin={{ top: 8, right: 12, bottom: 24, left: 56 }}
+          margin={{ top: 8, right: 12, bottom: 40, left: 56 }}
           xScale={{ type: 'point' }}
           yScale={{ type: 'linear', nice: true, zero: false }}
         >
@@ -108,7 +108,7 @@ export default function PriceFloorChart({
           />
           <AnimatedAxis
             orientation="bottom"
-            numTicks={Math.min(7, series.length)}
+            numTicks={Math.min(6, series.length)}
             stroke="rgba(0,0,0,0.15)"
             tickFormat={(v: number | Date | string) => {
               const i = typeof v === 'number' ? v : Number(v);
@@ -119,8 +119,10 @@ export default function PriceFloorChart({
             tickLabelProps={() => ({
               fill: '#71717a',
               fontSize: 10,
-              textAnchor: 'middle',
-              dy: '0.5em',
+              // Angled so dense date ticks don't overlap on a narrow card.
+              textAnchor: 'end',
+              angle: -35,
+              dy: '0.25em',
             })}
           />
           {/* p10 floor — emerald dashed reference line. */}

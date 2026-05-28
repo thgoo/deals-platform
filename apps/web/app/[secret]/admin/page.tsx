@@ -29,7 +29,14 @@ export const dynamic = 'force-dynamic';
  * Layout: top status strip, then four logical sections (heartbeat, catalog
  * health, business volume, audit) stacked vertically.
  */
-export default async function IntelligencePage() {
+export default async function IntelligencePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ secret: string }>;
+  searchParams: Promise<{ product?: string }>;
+}) {
+  const { secret } = await params;
   // Per-endpoint fallback: a single timeout (e.g., backfill saturating MySQL)
   // would otherwise reject Promise.all and kill the whole page. Each fetch
   // now degrades to a typed empty value, the failed section shows zeros, and
@@ -86,11 +93,18 @@ export default async function IntelligencePage() {
     }),
   ]);
 
-  // Feature the deepest-history product with a trustworthy band (low spread).
-  // Falling back to the top leader keeps the chart populated even if every
-  // product looks suspect (e.g. early data).
+  // Featured product drives the chart. Honor an explicit `?product=<id>` pick
+  // (clicked from the leaders table); otherwise default to the deepest-history
+  // product with a trustworthy band, falling back to the top leader so the
+  // chart stays populated even if everything looks suspect (e.g. early data).
+  const { product: selectedId } = await searchParams;
   const featured =
-    priceLeaders.find((l) => !l.suspect) ?? priceLeaders[0] ?? null;
+    (selectedId
+      ? priceLeaders.find((l) => l.productId === selectedId)
+      : undefined) ??
+    priceLeaders.find((l) => !l.suspect) ??
+    priceLeaders[0] ??
+    null;
   let priceHistory: PriceHistory | null = null;
   if (featured) {
     try {
@@ -279,6 +293,7 @@ export default async function IntelligencePage() {
             <PriceLeadersTable
               leaders={priceLeaders}
               featuredId={featured?.productId}
+              basePath={`/${secret}/admin`}
             />
           </BracketCard>
         </div>
