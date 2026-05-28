@@ -50,7 +50,7 @@ export default function PriceLeadersTable({
                   isFeatured ? 'bg-cyan-50/60' : ''
                 }`}
               >
-                <td className="max-w-[22rem] truncate py-2 pr-4 text-zinc-800">
+                <td className="max-w-[40rem] truncate py-2 pr-4 text-zinc-800">
                   <Link
                     href={`${basePath}?product=${encodeURIComponent(l.productId)}`}
                     scroll={false}

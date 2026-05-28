@@ -251,7 +251,7 @@ export default async function IntelligencePage({
         title="price intelligence"
         subtitle="robust price band · p10 floor / median / p90 · all history"
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
+        <div className="flex flex-col gap-6">
           <BracketCard className="flex flex-col gap-4">
             {featured && priceHistory ? (
               <>
@@ -273,6 +273,7 @@ export default async function IntelligencePage({
                   points={priceHistory.points}
                   p10={priceHistory.p10}
                   median={priceHistory.median}
+                  height={300}
                 />
                 <div className="flex flex-wrap gap-4 text-[10px] tracking-wider text-zinc-400 uppercase">
                   <LegendDot color="#06b6d4" label="price" />
