@@ -25,10 +25,10 @@ const VERDICT_COLOR: Record<string, string> = {
 };
 
 const REASON_LABEL: Record<string, string> = {
-  unrelated: 'no shared tokens — different product',
-  spec_mismatch: 'shared name but conflicting spec',
-  no_name: 'no extracted name — manual check',
-  ok: 'matches',
+  unrelated: 'different product',
+  spec_mismatch: 'different variant / spec',
+  no_name: 'no name — check it',
+  ok: 'name matches',
 };
 
 /** Reveal lines progressively so the analysis reads like a terminal working. */
@@ -179,7 +179,25 @@ export default function ReviewModal({
                 <div className="mt-1 text-zinc-400">
                   ▸ {analysis.deals.length} deals · median {formatBRL(median)}
                 </div>
-                <div className="mt-2 flex flex-col gap-0.5">
+                <div className="mt-1 text-zinc-500">
+                  ▸ checked = will be unlinked. Suggestions pre-ticked (
+                  <span style={{ color: '#dc2626' }}>red</span>); override
+                  freely — you decide.
+                </div>
+
+                {/* Column header — widths mirror DealLine. */}
+                <div className="mt-3 flex items-center gap-2 border-b border-zinc-200 pb-1 text-[10px] tracking-wider text-zinc-400 uppercase">
+                  <span className="w-3 shrink-0" title="unlink?">
+                    ✓
+                  </span>
+                  <span className="w-14 shrink-0">suggest</span>
+                  <span className="w-24 shrink-0 text-right">price</span>
+                  <span className="w-10 shrink-0 text-right">off</span>
+                  <span className="flex-1">product</span>
+                  <span className="hidden shrink-0 sm:inline">why</span>
+                </div>
+
+                <div className="mt-1 flex flex-col gap-0.5">
                   {shown.map((d) => (
                     <DealLine
                       key={d.dealId}
@@ -253,7 +271,7 @@ export default function ReviewModal({
                   }
                   className="border border-red-600 bg-red-600 px-3 py-1.5 text-[11px] font-medium tracking-wider text-white uppercase hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Unlink {selected.size}
+                  Unlink {selected.size} selected
                 </button>
               )}
             </div>
