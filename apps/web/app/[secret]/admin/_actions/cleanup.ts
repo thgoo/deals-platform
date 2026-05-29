@@ -1,6 +1,5 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import type { ProductAnalysis } from '../_lib/types';
 
 // Server actions: the dashboard secret stays on the server. The client review
@@ -42,12 +41,10 @@ export async function cleanProduct(
   if (!res.ok) {
     throw new Error(`clean failed: ${res.status}`);
   }
-  const result = (await res.json()) as { unlinked: number };
-
-  // Refresh the server-rendered anomaly queue so the cleaned product's band
-  // recomputes on the next view.
-  revalidatePath('/[secret]/admin', 'page');
-  return result;
+  // The modal refreshes the page once on close (router.refresh), so we don't
+  // revalidate here — that would re-run the heavy dashboard queries inline and
+  // block the action's return.
+  return res.json() as Promise<{ unlinked: number }>;
 }
 
 export async function updateDealPrice(
@@ -66,7 +63,6 @@ export async function updateDealPrice(
   if (!res.ok) {
     throw new Error(`update price failed: ${res.status}`);
   }
-  revalidatePath('/[secret]/admin', 'page');
   return res.json() as Promise<{ ok: boolean }>;
 }
 
@@ -79,6 +75,40 @@ export async function deleteDeal(dealId: number): Promise<{ ok: boolean }> {
   if (!res.ok) {
     throw new Error(`delete deal failed: ${res.status}`);
   }
-  revalidatePath('/[secret]/admin', 'page');
   return res.json() as Promise<{ ok: boolean }>;
+}
+
+export async function updateProductName(
+  productId: string,
+  canonicalName: string,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(
+    `${BACKEND}/api/dashboard/catalog/products/${encodeURIComponent(productId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'X-Dashboard-Secret': SECRET,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ canonicalName }),
+      cache: 'no-store',
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`rename failed: ${res.status}`);
+  }
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
+/**
+ * Invalidates the heavy dashboard caches on the backend. Called once when the
+ * review modal closes, just before router.refresh, so the queue/panels
+ * recompute fresh — without slowing the inline edits while the modal is open.
+ */
+export async function refreshDashboardCaches(): Promise<void> {
+  await fetch(`${BACKEND}/api/dashboard/cache/invalidate`, {
+    method: 'POST',
+    headers: { 'X-Dashboard-Secret': SECRET },
+    cache: 'no-store',
+  });
 }

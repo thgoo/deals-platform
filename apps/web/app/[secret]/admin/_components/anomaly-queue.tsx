@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import type { Anomaly } from '../_lib/types';
+import { refreshDashboardCaches } from '../_actions/cleanup';
 import { formatBRL, formatNumber } from './format';
 import ReviewModal from './review-modal';
 
@@ -19,6 +20,17 @@ interface AnomalyQueueProps {
 export default function AnomalyQueue({ anomalies }: AnomalyQueueProps) {
   const router = useRouter();
   const [active, setActive] = useState<Anomaly | null>(null);
+  const [isRefreshing, startTransition] = useTransition();
+
+  // Invalidate the backend caches, then re-fetch the server component. Wrapped
+  // in a transition so it never blocks interaction — the indicator just shows
+  // the queue is catching up after edits made in the modal.
+  const refresh = () => {
+    startTransition(async () => {
+      await refreshDashboardCaches();
+      router.refresh();
+    });
+  };
 
   if (anomalies.length === 0) {
     return (
@@ -30,6 +42,11 @@ export default function AnomalyQueue({ anomalies }: AnomalyQueueProps) {
 
   return (
     <>
+      {isRefreshing && (
+        <div className="mb-2 flex items-center gap-2 text-[11px] tracking-wider text-cyan-700 uppercase">
+          <span className="animate-spin">↻</span> updating dashboard…
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-left tracking-wider text-zinc-400 uppercase">
@@ -88,7 +105,7 @@ export default function AnomalyQueue({ anomalies }: AnomalyQueueProps) {
           productId={active.productId}
           canonicalName={active.canonicalName}
           onClose={() => setActive(null)}
-          onCleaned={() => router.refresh()}
+          onCleaned={refresh}
         />
       )}
     </>

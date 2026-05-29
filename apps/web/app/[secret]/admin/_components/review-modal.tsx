@@ -1,13 +1,14 @@
 'use client';
 
 import { Check, Pencil, Trash2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnalyzedDeal, ProductAnalysis } from '../_lib/types';
 import {
   analyzeProduct,
   cleanProduct,
   deleteDeal,
   updateDealPrice,
+  updateProductName,
 } from '../_actions/cleanup';
 import BracketCard from './bracket-card';
 import { formatBRL } from './format';
@@ -51,6 +52,14 @@ export default function ReviewModal({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [unlinkedCount, setUnlinkedCount] = useState(0);
   const [error, setError] = useState<string>('');
+  // Set by any mutation; on close we refresh the page once so the queue and
+  // price panels behind recompute — instead of revalidating on every edit.
+  const [dirty, setDirty] = useState(false);
+  // Product name is editable (curation); kept in local state so the title
+  // reflects a rename immediately.
+  const [name, setName] = useState(canonicalName);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
   const logRef = useRef<HTMLDivElement>(null);
 
   // Fetch the analysis on mount.
@@ -92,19 +101,25 @@ export default function ReviewModal({
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [visible]);
 
+  // Refresh the page once on close (only if something changed), then unmount.
+  const finishAndClose = useCallback(() => {
+    if (dirty) onCleaned();
+    onClose();
+  }, [dirty, onCleaned, onClose]);
+
   // Lock the page scroll behind the modal and close on Escape.
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') finishAndClose();
     };
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKey);
     };
-  }, [onClose]);
+  }, [finishAndClose]);
 
   // Median is recomputed live from the current deals so price edits / deletes
   // reflect immediately without re-fetching.
@@ -121,6 +136,7 @@ export default function ReviewModal({
 
   const handleEditPrice = async (dealId: number, priceCents: number) => {
     await updateDealPrice(dealId, priceCents);
+    setDirty(true);
     setAnalysis((prev) => {
       if (!prev) return prev;
       const deals = prev.deals.map((d) =>
@@ -132,6 +148,7 @@ export default function ReviewModal({
 
   const handleDelete = async (dealId: number) => {
     await deleteDeal(dealId);
+    setDirty(true);
     setSelected((prev) => {
       const next = new Set(prev);
       next.delete(dealId);
@@ -149,6 +166,18 @@ export default function ReviewModal({
     setVisible((v) => Math.max(0, v - 1));
   };
 
+  const saveRename = async () => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed || trimmed === name) {
+      setEditingName(false);
+      return;
+    }
+    await updateProductName(productId, trimmed);
+    setName(trimmed);
+    setDirty(true);
+    setEditingName(false);
+  };
+
   const handleClean = async () => {
     if (selected.size === 0) return;
     setPhase('cleaning');
@@ -156,7 +185,7 @@ export default function ReviewModal({
       const result = await cleanProduct(productId, [...selected]);
       setUnlinkedCount(result.unlinked);
       setPhase('done');
-      onCleaned();
+      setDirty(true);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
       setPhase('error');
@@ -168,7 +197,7 @@ export default function ReviewModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/30 p-4 backdrop-blur-[1px]"
-      onClick={onClose}
+      onClick={finishAndClose}
     >
       <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
         <BracketCard className="flex max-h-[85vh] w-full flex-col gap-4">
@@ -181,7 +210,7 @@ export default function ReviewModal({
               </span>
             </div>
             <button
-              onClick={onClose}
+              onClick={finishAndClose}
               className="text-zinc-400 transition-colors hover:text-cyan-700"
               aria-label="Close"
             >
@@ -194,9 +223,58 @@ export default function ReviewModal({
             ref={logRef}
             className="mono min-h-0 flex-1 overflow-y-auto text-xs leading-relaxed text-zinc-600"
           >
-            <div className="cursor-help text-zinc-400" title={canonicalName}>
-              $ analyze &quot;{truncate(canonicalName, 60)}&quot;
-            </div>
+            {editingName ? (
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <span className="shrink-0">$ analyze</span>
+                <input
+                  autoFocus
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void saveRename();
+                    if (e.key === 'Escape') setEditingName(false);
+                  }}
+                  className="min-w-0 flex-1 border-b border-cyan-600 bg-transparent text-zinc-700 outline-none"
+                />
+                <button
+                  onClick={() => void saveRename()}
+                  title="Save name"
+                  aria-label="Save name"
+                  className="shrink-0 text-emerald-600 hover:text-emerald-700"
+                >
+                  <Check size={13} />
+                </button>
+                <button
+                  onClick={() => setEditingName(false)}
+                  title="Cancel"
+                  aria-label="Cancel rename"
+                  className="shrink-0 text-zinc-400 hover:text-zinc-700"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <div className="group/name flex items-center gap-1.5 text-zinc-400">
+                <span className="shrink-0">$ analyze</span>
+                <span
+                  className="min-w-0 flex-1 truncate text-zinc-500"
+                  title={name}
+                >
+                  &quot;{name}&quot;
+                </span>
+                <button
+                  onClick={() => {
+                    setNameDraft(name);
+                    setEditingName(true);
+                  }}
+                  title="Rename product"
+                  aria-label="Rename product"
+                  className="shrink-0 text-zinc-300 opacity-0 transition group-hover/name:opacity-100 hover:text-cyan-700"
+                >
+                  <Pencil size={11} />
+                </button>
+              </div>
+            )}
 
             {phase === 'scanning' && (
               <div className="mt-1" style={{ color: '#ea580c' }}>
@@ -283,7 +361,7 @@ export default function ReviewModal({
             </span>
             <div className="flex gap-2">
               <button
-                onClick={onClose}
+                onClick={finishAndClose}
                 className="border border-zinc-300 px-3 py-1.5 text-[11px] tracking-wider text-zinc-600 uppercase hover:bg-zinc-100"
               >
                 {phase === 'done' ? 'Close' : 'Cancel'}
@@ -537,8 +615,4 @@ function parseBrlToCents(input: string): number | null {
 
 function Blink() {
   return <span className="animate-pulse">_</span>;
-}
-
-function truncate(s: string, max: number): string {
-  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
