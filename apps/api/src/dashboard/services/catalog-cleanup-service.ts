@@ -72,7 +72,12 @@ export default class CatalogCleanupService {
         FROM deals
         WHERE price IS NOT NULL AND product_id IS NOT NULL
         GROUP BY product_id
+        -- Cheap pre-filter: a product can only have p90/p10 > N if MAX/MIN > N
+        -- (since p90 <= max and p10 >= min). This shrinks the set the expensive
+        -- PERCENTILE_CONT window runs over from "all products" to just the
+        -- spread suspects — without dropping any true anomaly.
         HAVING COUNT(*) >= ${sql.raw(String(minDeals))}
+           AND MAX(price) > MIN(price) * ${sql.raw(String(SUSPECT_SPREAD_RATIO))}
       )
       SELECT product_id, canonical_name, category, deals, p10, med, p90
       FROM (

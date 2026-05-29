@@ -73,9 +73,10 @@ export default class PriceStatsService {
   }
 
   private async computePriceLeaders(limit: number, minDeals: number): Promise<PriceLeader[]> {
-    // Pre-filter to eligible products with a cheap GROUP BY before the window
-    // pass — running PERCENTILE_CONT over the full deals table is O(rows) and
-    // costs minutes; restricting to products with enough deals keeps it ~2s.
+    // Resolve the top-N products by deal count with a cheap GROUP BY FIRST, then
+    // run the expensive PERCENTILE_CONT window over only those N rows. Computing
+    // percentiles for every eligible product and then LIMITing is O(all
+    // products) and times out on a busy DB; this keeps the window tiny.
     const rows = await db.execute<{
       product_id: string;
       canonical_name: string;
@@ -91,6 +92,8 @@ export default class PriceStatsService {
         WHERE price IS NOT NULL AND product_id IS NOT NULL
         GROUP BY product_id
         HAVING COUNT(*) >= ${sql.raw(String(minDeals))}
+        ORDER BY COUNT(*) DESC
+        LIMIT ${sql.raw(String(limit))}
       )
       SELECT id AS product_id, canonical_name, category, deals, p10, med, p90
       FROM (
@@ -108,7 +111,6 @@ export default class PriceStatsService {
         WHERE d.price IS NOT NULL
       ) t
       ORDER BY deals DESC
-      LIMIT ${sql.raw(String(limit))}
     `);
 
     return readRows<{
