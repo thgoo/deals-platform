@@ -1,9 +1,14 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { Check, Pencil, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { AnalyzedDeal, ProductAnalysis } from '../_lib/types';
-import { analyzeProduct, cleanProduct } from '../_actions/cleanup';
+import {
+  analyzeProduct,
+  cleanProduct,
+  deleteDeal,
+  updateDealPrice,
+} from '../_actions/cleanup';
 import BracketCard from './bracket-card';
 import { formatBRL } from './format';
 
@@ -101,7 +106,9 @@ export default function ReviewModal({
     };
   }, [onClose]);
 
-  const median = analysis?.median ?? 0;
+  // Median is recomputed live from the current deals so price edits / deletes
+  // reflect immediately without re-fetching.
+  const median = analysis ? medianOf(analysis.deals.map((d) => d.price)) : 0;
 
   const toggle = (dealId: number) => {
     setSelected((prev) => {
@@ -110,6 +117,36 @@ export default function ReviewModal({
       else next.add(dealId);
       return next;
     });
+  };
+
+  const handleEditPrice = async (dealId: number, priceCents: number) => {
+    await updateDealPrice(dealId, priceCents);
+    setAnalysis((prev) => {
+      if (!prev) return prev;
+      const deals = prev.deals.map((d) =>
+        d.dealId === dealId ? { ...d, price: priceCents } : d,
+      );
+      return { ...prev, deals };
+    });
+  };
+
+  const handleDelete = async (dealId: number) => {
+    await deleteDeal(dealId);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(dealId);
+      return next;
+    });
+    setAnalysis((prev) => {
+      if (!prev) return prev;
+      const removed = prev.deals.find((d) => d.dealId === dealId);
+      const deals = prev.deals.filter((d) => d.dealId !== dealId);
+      const summary = { ...prev.summary };
+      if (removed)
+        summary[removed.verdict] = Math.max(0, summary[removed.verdict] - 1);
+      return { ...prev, deals, summary };
+    });
+    setVisible((v) => Math.max(0, v - 1));
   };
 
   const handleClean = async () => {
@@ -157,7 +194,7 @@ export default function ReviewModal({
             ref={logRef}
             className="mono min-h-0 flex-1 overflow-y-auto text-xs leading-relaxed text-zinc-600"
           >
-            <div className="text-zinc-400">
+            <div className="cursor-help text-zinc-400" title={canonicalName}>
               $ analyze &quot;{truncate(canonicalName, 60)}&quot;
             </div>
 
@@ -194,6 +231,8 @@ export default function ReviewModal({
                       checked={selected.has(d.dealId)}
                       disabled={phase !== 'review'}
                       onToggle={() => toggle(d.dealId)}
+                      onEditPrice={handleEditPrice}
+                      onDelete={handleDelete}
                     />
                   ))}
                 </div>
@@ -270,54 +309,192 @@ export default function ReviewModal({
   );
 }
 
+type RowMode = 'idle' | 'edit' | 'confirmDelete';
+
 function DealLine({
   deal,
   median,
   checked,
   disabled,
   onToggle,
+  onEditPrice,
+  onDelete,
 }: {
   deal: AnalyzedDeal;
   median: number;
   checked: boolean;
   disabled: boolean;
   onToggle: () => void;
+  onEditPrice: (dealId: number, priceCents: number) => Promise<void>;
+  onDelete: (dealId: number) => Promise<void>;
 }) {
+  const [mode, setMode] = useState<RowMode>('idle');
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+
   const color = VERDICT_COLOR[deal.verdict] ?? '#a1a1aa';
   const reason = REASON_LABEL[deal.reason] ?? deal.reason;
   const fullName = deal.product ?? '—';
   const deviation = describeDeviation(deal.price, median);
 
+  const startEdit = () => {
+    setDraft((deal.price / 100).toFixed(2).replace('.', ','));
+    setMode('edit');
+  };
+
+  const saveEdit = async () => {
+    const cents = parseBrlToCents(draft);
+    if (cents === null || cents === deal.price) {
+      setMode('idle');
+      return;
+    }
+    setBusy(true);
+    try {
+      await onEditPrice(deal.dealId, cents);
+      setMode('idle');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setBusy(true);
+    try {
+      await onDelete(deal.dealId);
+      // Row unmounts on success; no state reset needed.
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <label className="flex cursor-pointer items-baseline gap-1.5 py-0.5 hover:bg-zinc-100">
+    <div className="group flex items-baseline gap-1.5 py-0.5 hover:bg-zinc-100">
       <input
         type="checkbox"
         checked={checked}
-        disabled={disabled}
+        disabled={disabled || mode !== 'idle'}
         onChange={onToggle}
         className="mr-1 h-3 w-3 shrink-0 translate-y-0.5 accent-red-600"
       />
       {/* suggestion + reason (colored by verdict) */}
-      <span style={{ color }} className="shrink-0">
+      <span
+        style={{ color }}
+        className="shrink-0 cursor-pointer"
+        onClick={onToggle}
+      >
         {deal.verdict} suggested · {reason}
       </span>
       <span className="shrink-0 text-zinc-300">·</span>
-      {/* price (strong) */}
-      <span className="shrink-0 font-medium text-zinc-800 tabular-nums">
-        {formatBRL(deal.price)}
-      </span>
-      {deviation && (
+
+      {/* price — editable */}
+      {mode === 'edit' ? (
+        <span className="inline-flex shrink-0 items-baseline gap-1">
+          <span className="text-zinc-400">R$</span>
+          <input
+            autoFocus
+            value={draft}
+            disabled={busy}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void saveEdit();
+              if (e.key === 'Escape') setMode('idle');
+            }}
+            className="w-20 border-b border-cyan-600 bg-transparent text-zinc-800 tabular-nums outline-none"
+          />
+        </span>
+      ) : (
+        <span
+          className="shrink-0 cursor-pointer font-medium text-zinc-800 tabular-nums"
+          onClick={onToggle}
+        >
+          {formatBRL(deal.price)}
+        </span>
+      )}
+
+      {deviation && mode !== 'edit' && (
         <>
           <span className="shrink-0 text-zinc-300">·</span>
           <span className="shrink-0 text-zinc-400">{deviation}</span>
         </>
       )}
       <span className="shrink-0 text-zinc-300">·</span>
+
       {/* product name (full on hover) */}
-      <span className="min-w-0 flex-1 truncate text-zinc-600" title={fullName}>
+      <span
+        className="min-w-0 flex-1 cursor-pointer truncate text-zinc-600"
+        title={fullName}
+        onClick={onToggle}
+      >
         {fullName}
       </span>
-    </label>
+
+      {/* row actions */}
+      {!disabled && (
+        <span className="ml-2 flex shrink-0 items-center gap-2">
+          {mode === 'idle' && (
+            <>
+              <button
+                onClick={startEdit}
+                title="Fix price"
+                aria-label="Fix price"
+                className="text-zinc-400 opacity-0 transition group-hover:opacity-100 hover:text-cyan-700"
+              >
+                <Pencil size={12} />
+              </button>
+              <button
+                onClick={() => setMode('confirmDelete')}
+                title="Delete deal"
+                aria-label="Delete deal"
+                className="text-zinc-400 opacity-0 transition group-hover:opacity-100 hover:text-red-600"
+              >
+                <Trash2 size={12} />
+              </button>
+            </>
+          )}
+          {mode === 'edit' && (
+            <>
+              <button
+                onClick={() => void saveEdit()}
+                disabled={busy}
+                title="Save"
+                aria-label="Save price"
+                className="text-emerald-600 hover:text-emerald-700 disabled:opacity-40"
+              >
+                <Check size={13} />
+              </button>
+              <button
+                onClick={() => setMode('idle')}
+                disabled={busy}
+                title="Cancel"
+                aria-label="Cancel"
+                className="text-zinc-400 hover:text-zinc-700"
+              >
+                <X size={13} />
+              </button>
+            </>
+          )}
+          {mode === 'confirmDelete' && (
+            <span className="inline-flex items-center gap-2">
+              <span style={{ color: '#dc2626' }}>delete?</span>
+              <button
+                onClick={() => void confirmDelete()}
+                disabled={busy}
+                className="tracking-wider text-red-600 uppercase hover:text-red-700 disabled:opacity-40"
+              >
+                yes
+              </button>
+              <button
+                onClick={() => setMode('idle')}
+                disabled={busy}
+                className="tracking-wider text-zinc-400 uppercase hover:text-zinc-700"
+              >
+                no
+              </button>
+            </span>
+          )}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -328,6 +505,34 @@ function describeDeviation(price: number, median: number): string {
   if (ratio < 1.3) return 'near median';
   const factor = ratio < 10 ? ratio.toFixed(1) : ratio.toFixed(0);
   return price > median ? `${factor}× over median` : `${factor}× under median`;
+}
+
+/** Median of prices (cents), ignoring zero/empty — mirrors the backend. */
+function medianOf(prices: number[]): number {
+  const sorted = prices.filter((p) => p > 0).sort((a, b) => a - b);
+  const n = sorted.length;
+  if (n === 0) return 0;
+  const mid = Math.floor(n / 2);
+  return n % 2 === 0
+    ? Math.round(((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2)
+    : (sorted[mid] ?? 0);
+}
+
+/**
+ * Parses a user-typed BRL value into cents. Handles "367,46", "367.46",
+ * "3.674,60" and "R$ 367,46". Returns null if it isn't a positive number.
+ */
+function parseBrlToCents(input: string): number | null {
+  let s = input.replace(/r\$|\s/gi, '').trim();
+  if (!s) return null;
+  if (s.includes(',') && s.includes('.')) {
+    s = s.replace(/\./g, '').replace(',', '.'); // BR: dot=thousands, comma=decimal
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const value = Number(s);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value * 100);
 }
 
 function Blink() {

@@ -49,3 +49,36 @@ export async function cleanProduct(
   revalidatePath('/[secret]/admin', 'page');
   return result;
 }
+
+export async function updateDealPrice(
+  dealId: number,
+  priceCents: number,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
+    method: 'PATCH',
+    headers: {
+      'X-Dashboard-Secret': SECRET,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ price: priceCents }),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    throw new Error(`update price failed: ${res.status}`);
+  }
+  revalidatePath('/[secret]/admin', 'page');
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
+export async function deleteDeal(dealId: number): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
+    method: 'DELETE',
+    headers: { 'X-Dashboard-Secret': SECRET },
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    throw new Error(`delete deal failed: ${res.status}`);
+  }
+  revalidatePath('/[secret]/admin', 'page');
+  return res.json() as Promise<{ ok: boolean }>;
+}
