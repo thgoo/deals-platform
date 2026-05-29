@@ -5,10 +5,12 @@ import {
   anomaliesQuerySchema,
   cleanProductBodySchema,
   daysQuerySchema,
+  dealIdParamSchema,
   decisionsQuerySchema,
   priceLeadersQuerySchema,
   timeseriesQuerySchema,
   topQuerySchema,
+  updateDealPriceBodySchema,
 } from './schemas';
 
 const app = new Hono();
@@ -87,6 +89,24 @@ app.get('/catalog/products/:productId/analyze', async c => {
 app.post('/catalog/products/:productId/clean', zValidator('json', cleanProductBodySchema), async c => {
   const { dealIds } = c.req.valid('json');
   const result = await c.get('catalogCleanupService').cleanProduct(c.req.param('productId'), dealIds);
+  return c.json(result);
+});
+
+app.patch(
+  '/deals/:dealId',
+  zValidator('param', dealIdParamSchema),
+  zValidator('json', updateDealPriceBodySchema),
+  async c => {
+    const { dealId } = c.req.valid('param');
+    const { price } = c.req.valid('json');
+    const result = await c.get('catalogCleanupService').updateDealPrice(dealId, price);
+    return c.json(result);
+  },
+);
+
+app.delete('/deals/:dealId', zValidator('param', dealIdParamSchema), async c => {
+  const { dealId } = c.req.valid('param');
+  const result = await c.get('catalogCleanupService').deleteDeal(dealId);
   return c.json(result);
 });
 

@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
+import { productMatchDecisionsTable } from '~/db/schemas/product-match-decisions';
 import { productsTable } from '~/db/schemas/products';
 import { sharedTokenCount } from '~/products/utils/product-name-tokens';
 import { specsConflict } from '~/products/utils/spec-conflict';
@@ -200,6 +201,40 @@ export default class CatalogCleanupService {
 
     this.anomaliesCache.invalidate();
     return { unlinked };
+  }
+
+  /**
+   * Corrects a single deal's price (in cents). For the common case of an AI
+   * mis-parse ("R$ 367,46" extracted as 367460) — the deal belongs to the
+   * product, only the value is wrong. The raw `deals.text` is left untouched as
+   * the source of truth; only the cleaned `price` field changes.
+   */
+  async updateDealPrice(dealId: number, priceCents: number): Promise<{ ok: boolean }> {
+    const result = await db
+      .update(dealsTable)
+      .set({ price: priceCents })
+      .where(eq(dealsTable.id, dealId));
+
+    this.anomaliesCache.invalidate();
+    return { ok: drizzleAffectedRows(result) > 0 };
+  }
+
+  /**
+   * Hard-deletes a junk deal. Its match-decision rows are removed first to
+   * satisfy the FK (product_match_decisions.deal_id → deals.id, ON DELETE NO
+   * ACTION). Both run in one transaction.
+   */
+  async deleteDeal(dealId: number): Promise<{ ok: boolean }> {
+    const ok = await db.transaction(async tx => {
+      await tx
+        .delete(productMatchDecisionsTable)
+        .where(eq(productMatchDecisionsTable.dealId, dealId));
+      const result = await tx.delete(dealsTable).where(eq(dealsTable.id, dealId));
+      return drizzleAffectedRows(result) > 0;
+    });
+
+    this.anomaliesCache.invalidate();
+    return { ok };
   }
 }
 
