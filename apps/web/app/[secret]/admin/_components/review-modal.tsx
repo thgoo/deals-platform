@@ -60,6 +60,8 @@ export default function ReviewModal({
   const [name, setName] = useState(canonicalName);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  // Non-destructive error line for inline mutations (delete/edit/rename).
+  const [actionError, setActionError] = useState('');
   const logRef = useRef<HTMLDivElement>(null);
 
   // Fetch the analysis on mount.
@@ -147,7 +149,12 @@ export default function ReviewModal({
   };
 
   const handleDelete = async (dealId: number) => {
-    await deleteDeal(dealId);
+    const result = await deleteDeal(dealId);
+    if (!result.ok) {
+      setActionError(result.error ?? 'delete failed');
+      return;
+    }
+    setActionError('');
     setDirty(true);
     setSelected((prev) => {
       const next = new Set(prev);
@@ -273,6 +280,12 @@ export default function ReviewModal({
                 >
                   <Pencil size={11} />
                 </button>
+              </div>
+            )}
+
+            {actionError && (
+              <div className="mt-1 break-words" style={{ color: '#dc2626' }}>
+                ✗ {actionError}
               </div>
             )}
 

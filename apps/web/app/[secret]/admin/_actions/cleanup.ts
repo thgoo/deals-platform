@@ -66,16 +66,31 @@ export async function updateDealPrice(
   return res.json() as Promise<{ ok: boolean }>;
 }
 
-export async function deleteDeal(dealId: number): Promise<{ ok: boolean }> {
-  const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
-    method: 'DELETE',
-    headers: { 'X-Dashboard-Secret': SECRET },
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    throw new Error(`delete deal failed: ${res.status}`);
+export async function deleteDeal(
+  dealId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  // Returns the error instead of throwing — Next masks thrown server-action
+  // errors in production, so we surface the real cause to the modal.
+  try {
+    const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
+      method: 'DELETE',
+      headers: { 'X-Dashboard-Secret': SECRET },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return {
+        ok: false,
+        error: `core-api ${res.status} ${body.slice(0, 200)}`,
+      };
+    }
+    return (await res.json()) as { ok: boolean };
+  } catch (e) {
+    return {
+      ok: false,
+      error: `request failed: ${e instanceof Error ? e.message : String(e)}`,
+    };
   }
-  return res.json() as Promise<{ ok: boolean }>;
 }
 
 export async function updateProductName(
