@@ -86,3 +86,33 @@ export interface PriceHistory {
   median: number;
   p90: number;
 }
+
+export interface Anomaly {
+  productId: string;
+  canonicalName: string;
+  category: string | null;
+  deals: number;
+  p10: number;
+  median: number;
+  p90: number;
+  spreadRatio: number;
+}
+
+export type DealVerdict = 'keep' | 'unlink' | 'review';
+
+export interface AnalyzedDeal {
+  dealId: number;
+  price: number;
+  store: string | null;
+  product: string | null;
+  verdict: DealVerdict;
+  reason: string;
+}
+
+export interface ProductAnalysis {
+  productId: string;
+  canonicalName: string;
+  median: number;
+  deals: AnalyzedDeal[];
+  summary: { keep: number; unlink: number; review: number };
+}

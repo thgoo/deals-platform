@@ -1,5 +1,6 @@
 import 'server-only';
 import type {
+  Anomaly,
   CatalogOverview,
   DailyCount,
   HeartbeatStats,
@@ -62,4 +63,7 @@ export const dashboardApi = {
     get<PriceHistory>(
       `/catalog/price-history/${encodeURIComponent(productId)}`,
     ),
+
+  anomalies: (limit = 50, minDeals = 5) =>
+    get<Anomaly[]>(`/catalog/anomalies?limit=${limit}&minDeals=${minDeals}`),
 };

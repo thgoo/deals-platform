@@ -1,4 +1,5 @@
 import type { PriceHistory } from './_lib/types';
+import AnomalyQueue from './_components/anomaly-queue';
 import BracketCard from './_components/bracket-card';
 import DecisionsCard from './_components/decisions-card';
 import {
@@ -54,6 +55,7 @@ export default async function IntelligencePage({
     timeSeries,
     sources,
     priceLeaders,
+    anomalies,
   ] = await Promise.all([
     dashboardApi.heartbeat().catch((e) => {
       reportFail('heartbeat')(e);
@@ -89,6 +91,10 @@ export default async function IntelligencePage({
     }),
     dashboardApi.priceLeaders(20, 10).catch((e) => {
       reportFail('priceLeaders')(e);
+      return [];
+    }),
+    dashboardApi.anomalies(50, 5).catch((e) => {
+      reportFail('anomalies')(e);
       return [];
     }),
   ]);
@@ -298,6 +304,16 @@ export default async function IntelligencePage({
             />
           </BracketCard>
         </div>
+      </Section>
+
+      {/* ── Anomaly queue / catalog cleanup ───────────────────────── */}
+      <Section
+        title="anomaly queue"
+        subtitle="contaminated products · review & unlink wrong deals"
+      >
+        <BracketCard>
+          <AnomalyQueue anomalies={anomalies} />
+        </BracketCard>
       </Section>
 
       {/* ── Sources / identifier health ───────────────────────────── */}
