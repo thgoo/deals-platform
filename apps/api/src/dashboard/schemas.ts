@@ -42,3 +42,7 @@ export const updateDealPriceBodySchema = z.object({
 export const dealIdParamSchema = z.object({
   dealId: z.coerce.number().int().positive(),
 });
+
+export const updateProductNameBodySchema = z.object({
+  canonicalName: z.string().trim().min(1).max(500),
+});

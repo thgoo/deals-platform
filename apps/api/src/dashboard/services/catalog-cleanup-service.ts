@@ -199,8 +199,23 @@ export default class CatalogCleanupService {
       unlinked += drizzleAffectedRows(result);
     }
 
-    this.anomaliesCache.invalidate();
+    // No inline invalidation — the modal refreshes the dashboard once on close
+    // (which calls invalidateCaches), keeping the unlink action itself snappy.
     return { unlinked };
+  }
+
+  /** Renames a product's canonical name (curation after over-merge splits). */
+  async updateProductName(productId: string, canonicalName: string): Promise<{ ok: boolean }> {
+    const result = await db
+      .update(productsTable)
+      .set({ canonicalName })
+      .where(eq(productsTable.id, productId));
+    return { ok: drizzleAffectedRows(result) > 0 };
+  }
+
+  /** Clears the anomalies cache. Called on modal close so the queue recomputes. */
+  invalidateCaches(): void {
+    this.anomaliesCache.invalidate();
   }
 
   /**
@@ -215,7 +230,10 @@ export default class CatalogCleanupService {
       .set({ price: priceCents })
       .where(eq(dealsTable.id, dealId));
 
-    this.anomaliesCache.invalidate();
+    // No cache invalidation here: this is an interactive single-row edit and
+    // the modal updates its own state. Letting the anomalies cache serve its
+    // current value keeps the (auto) route revalidation off the heavy percentile
+    // query, so the UI frees up instantly. The queue refreshes on modal close.
     return { ok: drizzleAffectedRows(result) > 0 };
   }
 
@@ -233,7 +251,8 @@ export default class CatalogCleanupService {
       return drizzleAffectedRows(result) > 0;
     });
 
-    this.anomaliesCache.invalidate();
+    // Same as updateDealPrice — keep interactive deletes snappy; the queue
+    // refreshes when the modal closes.
     return { ok };
   }
 }

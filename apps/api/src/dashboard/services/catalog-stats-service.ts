@@ -78,6 +78,14 @@ export default class CatalogStatsService {
     return this.overviewCache.get(() => this.computeOverview());
   }
 
+  /** Clears all catalog-stats caches so they recompute after catalog edits. */
+  invalidateCaches(): void {
+    this.overviewCache.invalidate();
+    this.matchMethodsCache.invalidate();
+    this.recentDecisionsCache.invalidate();
+    this.sourcesCache.invalidate();
+  }
+
   private async computeOverview(): Promise<CatalogOverview> {
     const [
       [productsRow],

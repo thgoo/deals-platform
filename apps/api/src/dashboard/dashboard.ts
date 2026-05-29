@@ -11,6 +11,7 @@ import {
   timeseriesQuerySchema,
   topQuerySchema,
   updateDealPriceBodySchema,
+  updateProductNameBodySchema,
 } from './schemas';
 
 const app = new Hono();
@@ -108,6 +109,25 @@ app.delete('/deals/:dealId', zValidator('param', dealIdParamSchema), async c => 
   const { dealId } = c.req.valid('param');
   const result = await c.get('catalogCleanupService').deleteDeal(dealId);
   return c.json(result);
+});
+
+app.patch(
+  '/catalog/products/:productId',
+  zValidator('json', updateProductNameBodySchema),
+  async c => {
+    const { canonicalName } = c.req.valid('json');
+    const result = await c.get('catalogCleanupService').updateProductName(c.req.param('productId'), canonicalName);
+    return c.json(result);
+  },
+);
+
+// Invalidates the heavy dashboard caches. Called once when the review modal
+// closes after edits — keeps the inline mutations snappy (no inline recompute).
+app.post('/cache/invalidate', async c => {
+  c.get('catalogCleanupService').invalidateCaches();
+  c.get('priceStatsService').invalidateCaches();
+  c.get('catalogStatsService').invalidateCaches();
+  return c.json({ ok: true });
 });
 
 export default app;

@@ -67,6 +67,11 @@ export default class PriceStatsService {
     return this.leadersCache.get(() => this.computePriceLeaders(limit, minDeals));
   }
 
+  /** Clears the price-leaders cache so it recomputes after catalog edits. */
+  invalidateCaches(): void {
+    this.leadersCache.invalidate();
+  }
+
   private async computePriceLeaders(limit: number, minDeals: number): Promise<PriceLeader[]> {
     // Pre-filter to eligible products with a cheap GROUP BY before the window
     // pass — running PERCENTILE_CONT over the full deals table is O(rows) and
