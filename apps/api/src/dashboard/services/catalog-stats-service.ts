@@ -17,6 +17,7 @@ const SPECIFIC_IDENTIFIERS = new Set([
   'mercadolivre',
   'pichau',
   'shopee',
+  'terabyte',
 ]);
 
 export interface CatalogOverview {

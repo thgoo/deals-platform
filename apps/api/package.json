@@ -10,7 +10,8 @@
     "backfill:products": "bun run scripts/backfill-product-catalog.ts",
     "audit:catalog": "bun run scripts/audit-catalog.ts",
     "cleanup:catalog": "bun run scripts/cleanup-catalog.ts",
-    "split:overmerged": "bun run scripts/split-overmerged-products.ts"
+    "split:overmerged": "bun run scripts/split-overmerged-products.ts",
+    "migrate:terabyte": "bun run scripts/migrate-terabyte-url-mappings.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",

@@ -9,6 +9,7 @@ import magaluIdentifier from './providers/magalu';
 import mercadoLivreIdentifier from './providers/mercadolivre';
 import pichauIdentifier from './providers/pichau';
 import shopeeIdentifier from './providers/shopee';
+import terabyteIdentifier from './providers/terabyte';
 
 /**
  * Builds a pre-loaded registry with all canonical-id extractors.
@@ -28,6 +29,7 @@ export function buildIdentifierRegistry(): Registry<CanonicalIdentifier> {
   registry.register(aliExpressIdentifier);
   registry.register(shopeeIdentifier);
   registry.register(pichauIdentifier);
+  registry.register(terabyteIdentifier);
   registry.register(hostFallbackIdentifier);
 
   return registry;
