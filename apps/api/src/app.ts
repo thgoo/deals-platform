@@ -84,7 +84,16 @@ export function createApp({
   }));
 
   if (process.env['NODE_ENV'] === 'production') {
-    app.use(csrf({ origin: config.CORS_ORIGINS.split(',').map(o => o.trim()) }));
+    // CSRF only protects cookie-authenticated, browser-submitted routes. The
+    // dashboard API is authenticated by the X-Dashboard-Secret header (which a
+    // cross-site browser cannot set), so CSRF can't apply — and the global
+    // middleware was wrongly 403'ing server-to-server calls from the web app
+    // that carry no Origin header (e.g. the catalog-cleanup mutations).
+    const csrfMiddleware = csrf({ origin: config.CORS_ORIGINS.split(',').map(o => o.trim()) });
+    app.use('*', async (c, next) => {
+      if (c.req.path.startsWith('/api/dashboard')) return next();
+      return csrfMiddleware(c, next);
+    });
   }
   if (enableLogger) app.use(requestLogger());
 

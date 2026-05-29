@@ -105,10 +105,7 @@ app.patch(
   },
 );
 
-// POST (not DELETE) on purpose: some proxies/WAFs in front of the API block the
-// DELETE method outright, which surfaces as a 500 in the caller with nothing in
-// the API logs. POST goes through everywhere.
-app.post('/deals/:dealId/delete', zValidator('param', dealIdParamSchema), async c => {
+app.delete('/deals/:dealId', zValidator('param', dealIdParamSchema), async c => {
   const { dealId } = c.req.valid('param');
   const result = await c.get('catalogCleanupService').deleteDeal(dealId);
   return c.json(result);
