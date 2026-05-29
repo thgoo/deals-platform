@@ -24,3 +24,12 @@ export const priceLeadersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
   minDeals: z.coerce.number().int().min(2).max(1000).default(10),
 });
+
+export const anomaliesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  minDeals: z.coerce.number().int().min(3).max(1000).default(5),
+});
+
+export const cleanProductBodySchema = z.object({
+  dealIds: z.array(z.number().int().positive()).min(1).max(1000),
+});

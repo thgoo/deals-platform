@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import AiServiceClient from '~/ai-service-client';
 import alerts from '~/alerts/alerts';
 import AlertService from '~/alerts/services/alert-service';
@@ -13,6 +14,7 @@ import { config } from '~/config';
 import { HTTP_STATUS_CODE } from '~/constants/http';
 import dashboard from '~/dashboard/dashboard';
 import BusinessStatsService from '~/dashboard/services/business-stats-service';
+import CatalogCleanupService from '~/dashboard/services/catalog-cleanup-service';
 import CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import HeartbeatService from '~/dashboard/services/heartbeat-service';
 import PriceStatsService from '~/dashboard/services/price-stats-service';
@@ -70,6 +72,7 @@ export function createApp({
   catalogStatsService = new CatalogStatsService(),
   businessStatsService = new BusinessStatsService(),
   priceStatsService = new PriceStatsService(),
+  catalogCleanupService = new CatalogCleanupService(),
   appLogger = new ConsoleLogger(),
   enableLogger = true,
 } = {}) {
@@ -98,6 +101,7 @@ export function createApp({
     c.set('catalogStatsService', catalogStatsService);
     c.set('businessStatsService', businessStatsService);
     c.set('priceStatsService', priceStatsService);
+    c.set('catalogCleanupService', catalogCleanupService);
     c.set('logger', appLogger);
     await next();
   });
@@ -111,7 +115,7 @@ export function createApp({
     const appErr = c.get('logger');
 
     if (err instanceof HttpError) {
-      return c.json({ message: err.message }, { status: err.statusCode });
+      return c.json({ message: err.message }, { status: err.statusCode as ContentfulStatusCode });
     }
 
     if (err instanceof HTTPException) {

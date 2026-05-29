@@ -2,6 +2,8 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { dashboardAuth } from './middleware/dashboard-auth';
 import {
+  anomaliesQuerySchema,
+  cleanProductBodySchema,
   daysQuerySchema,
   decisionsQuerySchema,
   priceLeadersQuerySchema,
@@ -68,6 +70,24 @@ app.get('/catalog/price-leaders', zValidator('query', priceLeadersQuerySchema), 
 app.get('/catalog/price-history/:productId', async c => {
   const history = await c.get('priceStatsService').getPriceHistory(c.req.param('productId'));
   return c.json(history);
+});
+
+app.get('/catalog/anomalies', zValidator('query', anomaliesQuerySchema), async c => {
+  const { limit, minDeals } = c.req.valid('query');
+  const anomalies = await c.get('catalogCleanupService').getAnomalies(minDeals, limit);
+  return c.json(anomalies);
+});
+
+app.get('/catalog/products/:productId/analyze', async c => {
+  const analysis = await c.get('catalogCleanupService').analyzeProduct(c.req.param('productId'));
+  if (!analysis) return c.json({ message: 'Not Found' }, 404);
+  return c.json(analysis);
+});
+
+app.post('/catalog/products/:productId/clean', zValidator('json', cleanProductBodySchema), async c => {
+  const { dealIds } = c.req.valid('json');
+  const result = await c.get('catalogCleanupService').cleanProduct(c.req.param('productId'), dealIds);
+  return c.json(result);
 });
 
 export default app;

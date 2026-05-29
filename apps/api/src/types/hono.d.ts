@@ -4,6 +4,7 @@ import type PasswordService from '~/auth/services/password-service';
 import type SessionService from '~/auth/services/session-service';
 import type UserService from '~/auth/services/user-service';
 import type BusinessStatsService from '~/dashboard/services/business-stats-service';
+import type CatalogCleanupService from '~/dashboard/services/catalog-cleanup-service';
 import type CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import type HeartbeatService from '~/dashboard/services/heartbeat-service';
 import type PriceStatsService from '~/dashboard/services/price-stats-service';
@@ -27,6 +28,7 @@ declare module 'hono' {
     catalogStatsService: CatalogStatsService;
     businessStatsService: BusinessStatsService;
     priceStatsService: PriceStatsService;
+    catalogCleanupService: CatalogCleanupService;
     logger: Logger;
     user: User;
     session: Session;
