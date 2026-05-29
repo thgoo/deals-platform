@@ -180,24 +180,12 @@ export default function ReviewModal({
                   ▸ {analysis.deals.length} deals · median {formatBRL(median)}
                 </div>
                 <div className="mt-1 text-zinc-500">
-                  ▸ checked = will be unlinked. Suggestions pre-ticked (
-                  <span style={{ color: '#dc2626' }}>red</span>); override
-                  freely — you decide.
+                  ▸ tick a row to unlink it. Suggestions are pre-ticked (
+                  <span style={{ color: '#dc2626' }}>unlink</span> in red) —
+                  override freely, you decide.
                 </div>
 
-                {/* Column header — widths mirror DealLine. */}
-                <div className="mt-3 flex items-center gap-2 border-b border-zinc-200 pb-1 text-[10px] tracking-wider text-zinc-400 uppercase">
-                  <span className="w-3 shrink-0" title="unlink?">
-                    ✓
-                  </span>
-                  <span className="w-14 shrink-0">suggest</span>
-                  <span className="w-24 shrink-0 text-right">price</span>
-                  <span className="w-10 shrink-0 text-right">off</span>
-                  <span className="flex-1">product</span>
-                  <span className="hidden shrink-0 sm:inline">why</span>
-                </div>
-
-                <div className="mt-1 flex flex-col gap-0.5">
+                <div className="mt-2 flex flex-col">
                   {shown.map((d) => (
                     <DealLine
                       key={d.dealId}
@@ -296,39 +284,50 @@ function DealLine({
   onToggle: () => void;
 }) {
   const color = VERDICT_COLOR[deal.verdict] ?? '#a1a1aa';
-  const ratio =
-    median > 0 && deal.price > 0
-      ? deal.price > median
-        ? deal.price / median
-        : median / deal.price
-      : 0;
+  const reason = REASON_LABEL[deal.reason] ?? deal.reason;
+  const fullName = deal.product ?? '—';
+  const deviation = describeDeviation(deal.price, median);
 
   return (
-    <label className="flex cursor-pointer items-center gap-2 hover:bg-zinc-100">
+    <label className="flex cursor-pointer items-baseline gap-1.5 py-0.5 hover:bg-zinc-100">
       <input
         type="checkbox"
         checked={checked}
         disabled={disabled}
         onChange={onToggle}
-        className="h-3 w-3 shrink-0 accent-red-600"
+        className="mr-1 h-3 w-3 shrink-0 translate-y-0.5 accent-red-600"
       />
-      <span style={{ color }} className="w-14 shrink-0">
-        {deal.verdict}
+      {/* suggestion + reason (colored by verdict) */}
+      <span style={{ color }} className="shrink-0">
+        {deal.verdict} suggested · {reason}
       </span>
-      <span className="w-24 shrink-0 text-right text-zinc-500 tabular-nums">
+      <span className="shrink-0 text-zinc-300">·</span>
+      {/* price (strong) */}
+      <span className="shrink-0 font-medium text-zinc-800 tabular-nums">
         {formatBRL(deal.price)}
       </span>
-      <span className="w-10 shrink-0 text-right text-zinc-400">
-        {ratio >= 2 ? `${ratio.toFixed(0)}×` : ''}
-      </span>
-      <span className="flex-1 truncate text-zinc-700">
-        {deal.product ?? '—'}
-      </span>
-      <span className="hidden shrink-0 text-zinc-400 sm:inline">
-        {REASON_LABEL[deal.reason] ?? deal.reason}
+      {deviation && (
+        <>
+          <span className="shrink-0 text-zinc-300">·</span>
+          <span className="shrink-0 text-zinc-400">{deviation}</span>
+        </>
+      )}
+      <span className="shrink-0 text-zinc-300">·</span>
+      {/* product name (full on hover) */}
+      <span className="min-w-0 flex-1 truncate text-zinc-600" title={fullName}>
+        {fullName}
       </span>
     </label>
   );
+}
+
+/** Human phrase for how far a price sits from the product's median. */
+function describeDeviation(price: number, median: number): string {
+  if (median <= 0 || price <= 0) return '';
+  const ratio = price > median ? price / median : median / price;
+  if (ratio < 1.3) return 'near median';
+  const factor = ratio < 10 ? ratio.toFixed(1) : ratio.toFixed(0);
+  return price > median ? `${factor}× over median` : `${factor}× under median`;
 }
 
 function Blink() {
