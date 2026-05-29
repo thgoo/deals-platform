@@ -11,7 +11,8 @@
     "audit:catalog": "bun run scripts/audit-catalog.ts",
     "cleanup:catalog": "bun run scripts/cleanup-catalog.ts",
     "split:overmerged": "bun run scripts/split-overmerged-products.ts",
-    "migrate:terabyte": "bun run scripts/migrate-terabyte-url-mappings.ts"
+    "migrate:terabyte": "bun run scripts/migrate-terabyte-url-mappings.ts",
+    "unlink:outliers": "bun run scripts/unlink-outlier-deals.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",
