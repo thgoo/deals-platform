@@ -3,13 +3,25 @@ import type DecisionService from './decision-service';
 import type ProductService from './product-service';
 import type UrlMappingService from './url-mapping-service';
 import type AiServiceClient from '~/ai-service-client';
+import type { ExternalId } from '~/link-pipeline/types';
 import type { Logger } from '~/logger';
 import type { Candidate, ResolveInput, ResolveResult } from '~/products/types';
 import { EMBEDDING_MODEL_VERSIONS } from '~/db/schemas/products';
-import { AUTO_MATCH_THRESHOLD, CANDIDATE_TOP_K, LLM_JUDGE_THRESHOLD } from '~/products/matching-config';
+import {
+  AUTO_MATCH_THRESHOLD,
+  CANDIDATE_TOP_K,
+  LLM_JUDGE_THRESHOLD,
+} from '~/products/matching-config';
 import { specsConflict } from '~/products/utils/spec-conflict';
 
 const SKIPPED_RESULT: ResolveResult = { productId: null, method: 'skipped' };
+
+// Sources where two different external IDs = two physically different products.
+// Mercado Livre is excluded: one product legitimately has many MLBs (one per seller).
+// host-fallback is excluded: slug/path IDs are not stable enough for this guarantee.
+const CATALOG_SOURCES = new Set([
+  'amazon', 'terabyte', 'kabum', 'pichau', 'magalu', 'aliexpress', 'shopee',
+]);
 
 /**
  * Decides which product a deal belongs to (or creates a new one).
@@ -99,6 +111,9 @@ export default class ProductResolverService {
     }
 
     if (best.score >= AUTO_MATCH_THRESHOLD) {
+      if (await this.hasCatalogIdConflict(best.productId, input.externalIds)) {
+        return this.createNewProduct(input, productName, queryEmbedding, candidates, best.score);
+      }
       await this.urlMappings.saveAll(input.externalIds, best.productId, 'llm_high');
       await this.decisions.record({
         dealId: input.dealId,
@@ -135,6 +150,10 @@ export default class ProductResolverService {
     }
 
     if (matchedId) {
+      if (await this.hasCatalogIdConflict(matchedId, input.externalIds)) {
+        const topScore = candidates[0]?.score;
+        return this.createNewProduct(input, productName, queryEmbedding, candidates, topScore, 'llm_medium');
+      }
       await this.urlMappings.saveAll(input.externalIds, matchedId, 'llm_medium');
       await this.decisions.record({
         dealId: input.dealId,
@@ -191,6 +210,26 @@ export default class ProductResolverService {
       });
       return null;
     }
+  }
+
+  private async hasCatalogIdConflict(candidateId: string, incomingIds: ExternalId[]): Promise<boolean> {
+    const specific = incomingIds.filter(id => CATALOG_SOURCES.has(id.source));
+    if (specific.length === 0) return false;
+
+    for (const incoming of specific) {
+      const existing = await this.urlMappings.findByProductAndSource(candidateId, incoming.source);
+      const conflict = existing.find(m => m.externalId !== incoming.externalId);
+      if (conflict) {
+        this.logger.warn('Catalog ID conflict — rejecting semantic merge', {
+          candidateId,
+          source: incoming.source,
+          incomingId: incoming.externalId,
+          existingId: conflict.externalId,
+        });
+        return true;
+      }
+    }
+    return false;
   }
 
   private logResolved(dealId: number, result: ResolveResult, start: number): void {

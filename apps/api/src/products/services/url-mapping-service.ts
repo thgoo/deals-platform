@@ -25,6 +25,16 @@ export default class UrlMappingService {
    * (which Drizzle 0.36 mis-serializes as a parameter, sending the column object
    * raw to mysql2 and producing `Unknown column 'name'`).
    */
+  async findByProductAndSource(productId: string, source: string): Promise<ProductUrlMapping[]> {
+    return db
+      .select()
+      .from(productUrlMappingsTable)
+      .where(and(
+        eq(productUrlMappingsTable.productId, productId),
+        eq(productUrlMappingsTable.source, source),
+      ));
+  }
+
   async saveAll(
     externalIds: ExternalId[],
     productId: string,
