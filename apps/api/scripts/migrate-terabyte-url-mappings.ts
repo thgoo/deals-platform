@@ -28,7 +28,7 @@ import { logger } from '~/logger';
 //  Dry-run by default. Pass `--commit` to apply changes.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PRODUCT_ID_RE = /\/produto\/(\d+)/i;
+const PRODUCT_ID_RE = /produto\/(\d+)/i;
 
 interface FallbackRow {
   id: number;
