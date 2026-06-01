@@ -2,10 +2,15 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productMatchDecisionsTable } from '~/db/schemas/product-match-decisions';
+import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
+import { extractExternalIds } from '~/link-pipeline/identifiers/identifier-extractor';
+import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
 import { sharedTokenCount } from '~/products/utils/product-name-tokens';
 import { specsConflict } from '~/products/utils/spec-conflict';
 import { createTtlCache } from '../cache';
+
+const URL_IN_TEXT_RE = /(https?:\/\/[^\s\n\]"'<>]+)/g;
 
 export interface Anomaly {
   productId: string;
@@ -190,6 +195,53 @@ export default class CatalogCleanupService {
   async cleanProduct(productId: string, dealIds: number[]): Promise<CleanResult> {
     if (dealIds.length === 0) return { unlinked: 0 };
 
+    // 1. Fetch the links + text of the deals being unlinked so we can extract
+    //    any catalog IDs (ASINs, Terabyte IDs, …) they carry. Those IDs have
+    //    url_mapping entries pointing to THIS product — without removing them
+    //    the next backfill will url_anchor-match the deals right back here.
+    const dealRows = await db
+      .select({ id: dealsTable.id, links: dealsTable.links, text: dealsTable.text })
+      .from(dealsTable)
+      .where(inArray(dealsTable.id, dealIds));
+
+    const registry = buildIdentifierRegistry();
+    const toDeleteMappings: { source: string; externalId: string }[] = [];
+
+    for (const row of dealRows) {
+      const links = parseLinks(row.links);
+      const urlsInText = [...row.text.matchAll(URL_IN_TEXT_RE)].map(m => m[1] as string);
+      const ids = extractExternalIds([...links, ...urlsInText], registry);
+      for (const id of ids) {
+        toDeleteMappings.push({ source: id.source, externalId: id.externalId });
+      }
+    }
+
+    // 2. Delete the url_mappings that would cause re-linking. Scoped to THIS
+    //    product so mappings for the same IDs on other products are untouched.
+    if (toDeleteMappings.length > 0) {
+      const unique = [...new Map(
+        toDeleteMappings.map(m => [`${m.source}:${m.externalId}`, m]),
+      ).values()];
+
+      const CHUNK = 50;
+      for (let i = 0; i < unique.length; i += CHUNK) {
+        const batch = unique.slice(i, i + CHUNK);
+        await db.delete(productUrlMappingsTable).where(
+          and(
+            eq(productUrlMappingsTable.productId, productId),
+            sql.join(
+              batch.map(m => sql`(
+                ${productUrlMappingsTable.source} = ${m.source}
+                AND ${productUrlMappingsTable.externalId} = ${m.externalId}
+              )`),
+              sql` OR `,
+            ),
+          ),
+        );
+      }
+    }
+
+    // 3. Unlink the deals.
     let unlinked = 0;
     const CHUNK = 500;
     for (let i = 0; i < dealIds.length; i += CHUNK) {
@@ -204,8 +256,6 @@ export default class CatalogCleanupService {
       unlinked += drizzleAffectedRows(result);
     }
 
-    // No inline invalidation — the modal refreshes the dashboard once on close
-    // (which calls invalidateCaches), keeping the unlink action itself snappy.
     return { unlinked };
   }
 
@@ -263,6 +313,14 @@ export default class CatalogCleanupService {
     // refreshes when the modal closes.
     return { ok };
   }
+}
+
+function parseLinks(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) as string[]; } catch { return []; }
+  }
+  return [];
 }
 
 function classify(dealName: string | null, canonical: string): { verdict: DealVerdict; reason: string } {
