@@ -7,7 +7,7 @@ import {
   analyzeProduct,
   cleanProduct,
   deleteDeal,
-  updateDealPrice,
+  updateDeal,
   updateProductName,
 } from '../_actions/cleanup';
 import BracketCard from './bracket-card';
@@ -136,13 +136,16 @@ export default function ReviewModal({
     });
   };
 
-  const handleEditPrice = async (dealId: number, priceCents: number) => {
-    await updateDealPrice(dealId, priceCents);
+  const handleEditDeal = async (
+    dealId: number,
+    fields: { price?: number; product?: string },
+  ) => {
+    await updateDeal(dealId, fields);
     setDirty(true);
     setAnalysis((prev) => {
       if (!prev) return prev;
       const deals = prev.deals.map((d) =>
-        d.dealId === dealId ? { ...d, price: priceCents } : d,
+        d.dealId === dealId ? { ...d, ...fields } : d,
       );
       return { ...prev, deals };
     });
@@ -322,7 +325,7 @@ export default function ReviewModal({
                       checked={selected.has(d.dealId)}
                       disabled={phase !== 'review'}
                       onToggle={() => toggle(d.dealId)}
-                      onEditPrice={handleEditPrice}
+                      onEdit={handleEditDeal}
                       onDelete={handleDelete}
                     />
                   ))}
@@ -408,7 +411,7 @@ function DealLine({
   checked,
   disabled,
   onToggle,
-  onEditPrice,
+  onEdit,
   onDelete,
 }: {
   deal: AnalyzedDeal;
@@ -416,11 +419,15 @@ function DealLine({
   checked: boolean;
   disabled: boolean;
   onToggle: () => void;
-  onEditPrice: (dealId: number, priceCents: number) => Promise<void>;
+  onEdit: (
+    dealId: number,
+    fields: { price?: number; product?: string },
+  ) => Promise<void>;
   onDelete: (dealId: number) => Promise<void>;
 }) {
   const [mode, setMode] = useState<RowMode>('idle');
-  const [draft, setDraft] = useState('');
+  const [priceDraft, setPriceDraft] = useState('');
+  const [productDraft, setProductDraft] = useState('');
   const [busy, setBusy] = useState(false);
 
   const color = VERDICT_COLOR[deal.verdict] ?? '#a1a1aa';
@@ -429,19 +436,24 @@ function DealLine({
   const deviation = describeDeviation(deal.price, median);
 
   const startEdit = () => {
-    setDraft((deal.price / 100).toFixed(2).replace('.', ','));
+    setPriceDraft((deal.price / 100).toFixed(2).replace('.', ','));
+    setProductDraft(deal.product ?? '');
     setMode('edit');
   };
 
   const saveEdit = async () => {
-    const cents = parseBrlToCents(draft);
-    if (cents === null || cents === deal.price) {
+    const fields: { price?: number; product?: string } = {};
+    const cents = parseBrlToCents(priceDraft);
+    if (cents !== null && cents !== deal.price) fields.price = cents;
+    const trimmed = productDraft.trim();
+    if (trimmed && trimmed !== deal.product) fields.product = trimmed;
+    if (Object.keys(fields).length === 0) {
       setMode('idle');
       return;
     }
     setBusy(true);
     try {
-      await onEditPrice(deal.dealId, cents);
+      await onEdit(deal.dealId, fields);
       setMode('idle');
     } finally {
       setBusy(false);
@@ -452,7 +464,6 @@ function DealLine({
     setBusy(true);
     try {
       await onDelete(deal.dealId);
-      // Row unmounts on success; no state reset needed.
     } finally {
       setBusy(false);
     }
@@ -467,7 +478,7 @@ function DealLine({
         onChange={onToggle}
         className="mr-1 h-3 w-3 shrink-0 translate-y-0.5 accent-red-600"
       />
-      {/* suggestion + reason (colored by verdict) */}
+      {/* suggestion + reason */}
       <span
         style={{ color }}
         className="shrink-0 cursor-pointer"
@@ -477,47 +488,61 @@ function DealLine({
       </span>
       <span className="shrink-0 text-zinc-300">·</span>
 
-      {/* price — editable */}
       {mode === 'edit' ? (
-        <span className="inline-flex shrink-0 items-baseline gap-1">
-          <span className="text-zinc-400">R$</span>
+        // Edit mode: price + name side by side
+        <>
+          <span className="inline-flex shrink-0 items-baseline gap-1">
+            <span className="text-zinc-400">R$</span>
+            <input
+              autoFocus
+              value={priceDraft}
+              disabled={busy}
+              onChange={(e) => setPriceDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void saveEdit();
+                if (e.key === 'Escape') setMode('idle');
+              }}
+              className="w-20 border-b border-cyan-600 bg-transparent text-zinc-800 tabular-nums outline-none"
+            />
+          </span>
+          <span className="shrink-0 text-zinc-300">·</span>
           <input
-            autoFocus
-            value={draft}
+            value={productDraft}
             disabled={busy}
-            onChange={(e) => setDraft(e.target.value)}
+            placeholder="product name"
+            onChange={(e) => setProductDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void saveEdit();
               if (e.key === 'Escape') setMode('idle');
             }}
-            className="w-20 border-b border-cyan-600 bg-transparent text-zinc-800 tabular-nums outline-none"
+            className="min-w-0 flex-1 border-b border-cyan-600 bg-transparent text-zinc-700 outline-none"
           />
-        </span>
+        </>
       ) : (
-        <span
-          className="shrink-0 cursor-pointer font-medium text-zinc-800 tabular-nums"
-          onClick={onToggle}
-        >
-          {formatBRL(deal.price)}
-        </span>
-      )}
-
-      {deviation && mode !== 'edit' && (
+        // Read mode: price + deviation + name
         <>
+          <span
+            className="shrink-0 cursor-pointer font-medium text-zinc-800 tabular-nums"
+            onClick={onToggle}
+          >
+            {formatBRL(deal.price)}
+          </span>
+          {deviation && (
+            <>
+              <span className="shrink-0 text-zinc-300">·</span>
+              <span className="shrink-0 text-zinc-400">{deviation}</span>
+            </>
+          )}
           <span className="shrink-0 text-zinc-300">·</span>
-          <span className="shrink-0 text-zinc-400">{deviation}</span>
+          <span
+            className="min-w-0 flex-1 cursor-pointer truncate text-zinc-600"
+            title={fullName}
+            onClick={onToggle}
+          >
+            {fullName}
+          </span>
         </>
       )}
-      <span className="shrink-0 text-zinc-300">·</span>
-
-      {/* product name (full on hover) */}
-      <span
-        className="min-w-0 flex-1 cursor-pointer truncate text-zinc-600"
-        title={fullName}
-        onClick={onToggle}
-      >
-        {fullName}
-      </span>
 
       {/* row actions */}
       {!disabled && (
@@ -526,8 +551,8 @@ function DealLine({
             <>
               <button
                 onClick={startEdit}
-                title="Fix price"
-                aria-label="Fix price"
+                title="Edit price & name"
+                aria-label="Edit price and name"
                 className="text-zinc-400 opacity-0 transition group-hover:opacity-100 hover:text-cyan-700"
               >
                 <Pencil size={12} />
@@ -548,7 +573,7 @@ function DealLine({
                 onClick={() => void saveEdit()}
                 disabled={busy}
                 title="Save"
-                aria-label="Save price"
+                aria-label="Save"
                 className="text-emerald-600 hover:text-emerald-700 disabled:opacity-40"
               >
                 <Check size={13} />

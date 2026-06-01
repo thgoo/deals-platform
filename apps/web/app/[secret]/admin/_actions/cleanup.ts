@@ -47,9 +47,9 @@ export async function cleanProduct(
   return res.json() as Promise<{ unlinked: number }>;
 }
 
-export async function updateDealPrice(
+export async function updateDeal(
   dealId: number,
-  priceCents: number,
+  fields: { price?: number; product?: string },
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
     method: 'PATCH',
@@ -57,11 +57,11 @@ export async function updateDealPrice(
       'X-Dashboard-Secret': SECRET,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ price: priceCents }),
+    body: JSON.stringify(fields),
     cache: 'no-store',
   });
   if (!res.ok) {
-    throw new Error(`update price failed: ${res.status}`);
+    throw new Error(`update deal failed: ${res.status}`);
   }
   return res.json() as Promise<{ ok: boolean }>;
 }
