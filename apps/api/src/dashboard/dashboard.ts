@@ -10,7 +10,7 @@ import {
   priceLeadersQuerySchema,
   timeseriesQuerySchema,
   topQuerySchema,
-  updateDealPriceBodySchema,
+  updateDealBodySchema,
   updateProductNameBodySchema,
 } from './schemas';
 
@@ -96,11 +96,11 @@ app.post('/catalog/products/:productId/clean', zValidator('json', cleanProductBo
 app.patch(
   '/deals/:dealId',
   zValidator('param', dealIdParamSchema),
-  zValidator('json', updateDealPriceBodySchema),
+  zValidator('json', updateDealBodySchema),
   async c => {
     const { dealId } = c.req.valid('param');
-    const { price } = c.req.valid('json');
-    const result = await c.get('catalogCleanupService').updateDealPrice(dealId, price);
+    const body = c.req.valid('json');
+    const result = await c.get('catalogCleanupService').updateDeal(dealId, body);
     return c.json(result);
   },
 );

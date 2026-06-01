@@ -224,21 +224,24 @@ export default class CatalogCleanupService {
   }
 
   /**
-   * Corrects a single deal's price (in cents). For the common case of an AI
-   * mis-parse ("R$ 367,46" extracted as 367460) — the deal belongs to the
-   * product, only the value is wrong. The raw `deals.text` is left untouched as
-   * the source of truth; only the cleaned `price` field changes.
+   * Corrects a deal's extracted fields. Either or both of `price` (cents) and
+   * `product` (AI-extracted name) can be updated in one round-trip. The raw
+   * `deals.text` is left untouched as the source of truth.
    */
-  async updateDealPrice(dealId: number, priceCents: number): Promise<{ ok: boolean }> {
+  async updateDeal(
+    dealId: number,
+    fields: { price?: number; product?: string },
+  ): Promise<{ ok: boolean }> {
+    const update: Partial<{ price: number; product: string }> = {};
+    if (fields.price !== undefined) update.price = fields.price;
+    if (fields.product !== undefined) update.product = fields.product;
+    if (Object.keys(update).length === 0) return { ok: false };
+
     const result = await db
       .update(dealsTable)
-      .set({ price: priceCents })
+      .set(update)
       .where(eq(dealsTable.id, dealId));
 
-    // No cache invalidation here: this is an interactive single-row edit and
-    // the modal updates its own state. Letting the anomalies cache serve its
-    // current value keeps the (auto) route revalidation off the heavy percentile
-    // query, so the UI frees up instantly. The queue refreshes on modal close.
     return { ok: drizzleAffectedRows(result) > 0 };
   }
 

@@ -34,9 +34,11 @@ export const cleanProductBodySchema = z.object({
   dealIds: z.array(z.number().int().positive()).min(1).max(1000),
 });
 
-export const updateDealPriceBodySchema = z.object({
-  // Price in cents. Capped high to catch typos but still allow expensive items.
-  price: z.number().int().positive().max(100_000_00),
+export const updateDealBodySchema = z.object({
+  price: z.number().int().positive().max(100_000_00).optional(),
+  product: z.string().trim().min(1).max(500).optional(),
+}).refine(d => d.price !== undefined || d.product !== undefined, {
+  message: 'At least one of price or product must be provided',
 });
 
 export const dealIdParamSchema = z.object({
