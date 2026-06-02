@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import AdminNav from './_components/admin-nav';
 import './intelligence.css';
 
 export const metadata: Metadata = {
@@ -36,7 +37,14 @@ export default async function IntelligenceLayout({
     notFound();
   }
 
-  return <div data-intelligence>{children}</div>;
+  return (
+    <div data-intelligence>
+      <div className="mx-auto max-w-7xl px-6 pt-6">
+        <AdminNav secret={secret} />
+      </div>
+      {children}
+    </div>
+  );
 }
 
 function secureCompare(a: string, b: string): boolean {

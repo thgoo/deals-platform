@@ -118,7 +118,13 @@ export default function RefreshTicker({
   const label = formatRelativeTime(renderedAt);
 
   return (
-    <span className="mono text-[10px] tracking-widest text-zinc-400 uppercase">
+    // suppressHydrationWarning: relative time ("0s ago", "1s ago") is computed
+    // from Date.now() at render time. The value is guaranteed to differ between
+    // server render and client hydration — that's expected and harmless here.
+    <span
+      suppressHydrationWarning
+      className="mono text-[10px] tracking-widest text-zinc-400 uppercase"
+    >
       refreshed {label}
     </span>
   );

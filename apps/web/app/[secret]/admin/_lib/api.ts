@@ -3,12 +3,16 @@ import type {
   Anomaly,
   CatalogOverview,
   DailyCount,
+  ExplorerSortField,
   HeartbeatStats,
   MatchMethodStat,
   NamedCount,
   PriceHistory,
   PriceLeader,
+  ProductDetail,
+  ProductPage,
   RecentDecision,
+  SortOrder,
   SourceStat,
 } from './types';
 
@@ -66,4 +70,30 @@ export const dashboardApi = {
 
   anomalies: (limit = 50, minDeals = 5) =>
     get<Anomaly[]>(`/catalog/anomalies?limit=${limit}&minDeals=${minDeals}`),
+
+  products: (
+    params: {
+      q?: string;
+      category?: string;
+      sort?: ExplorerSortField;
+      order?: SortOrder;
+      page?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.category) qs.set('category', params.category);
+    if (params.sort) qs.set('sort', params.sort);
+    if (params.order) qs.set('order', params.order);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString();
+    return get<ProductPage>(`/catalog/products${query ? `?${query}` : ''}`);
+  },
+
+  productDetail: (productId: string) =>
+    get<ProductDetail>(
+      `/catalog/products/${encodeURIComponent(productId)}/detail`,
+    ),
 };

@@ -116,3 +116,59 @@ export interface ProductAnalysis {
   deals: AnalyzedDeal[];
   summary: { keep: number; unlink: number; review: number };
 }
+
+export type ExplorerSortField =
+  | 'deals'
+  | 'p10'
+  | 'median'
+  | 'spread'
+  | 'created_at';
+export type SortOrder = 'asc' | 'desc';
+
+export interface ExplorerProduct {
+  id: string;
+  canonicalName: string;
+  category: string | null;
+  deals: number;
+  p10: number | null;
+  median: number | null;
+  p90: number | null;
+  spreadRatio: number | null;
+  createdAt: string;
+}
+
+export interface ProductPage {
+  items: ExplorerProduct[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface TimelineEvent {
+  dealId: number;
+  ts: string;
+  price: number;
+  store: string | null;
+  chat: string | null;
+  description: string | null;
+  coupons: { code: string; discount?: string }[] | null;
+  isFloor: boolean;
+}
+
+export interface ProductSource {
+  source: string;
+  externalId: string;
+  createdAt: string;
+}
+
+export interface ProductDetail {
+  id: string;
+  canonicalName: string;
+  category: string | null;
+  createdAt: string;
+  events: TimelineEvent[];
+  sources: ProductSource[];
+  p10: number;
+  median: number;
+  p90: number;
+}
