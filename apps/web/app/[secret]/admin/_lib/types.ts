@@ -155,6 +155,23 @@ export interface TimelineEvent {
   isFloor: boolean;
 }
 
+export type TimelineMarkerKind =
+  | 'debut'
+  | 'new-store'
+  | 'drop'
+  | 'rise'
+  | 'normal';
+
+export interface TimelineRichEvent {
+  event: TimelineEvent;
+  narrative: string;
+  context: string | null;
+  marker: TimelineMarkerKind;
+  isLast: boolean;
+  pctChange: number | null;
+  store: string | null;
+}
+
 export interface ProductSource {
   source: string;
   externalId: string;
