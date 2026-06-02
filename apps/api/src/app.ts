@@ -18,6 +18,7 @@ import CatalogCleanupService from '~/dashboard/services/catalog-cleanup-service'
 import CatalogStatsService from '~/dashboard/services/catalog-stats-service';
 import HeartbeatService from '~/dashboard/services/heartbeat-service';
 import PriceStatsService from '~/dashboard/services/price-stats-service';
+import ProductExplorerService from '~/dashboard/services/product-explorer-service';
 import deals from '~/deals/deals';
 import DealService from '~/deals/services/deal-service';
 import { getAffiliateConfig } from '~/link-pipeline/config';
@@ -73,6 +74,7 @@ export function createApp({
   businessStatsService = new BusinessStatsService(),
   priceStatsService = new PriceStatsService(),
   catalogCleanupService = new CatalogCleanupService(),
+  productExplorerService = new ProductExplorerService(),
   appLogger = new ConsoleLogger(),
   enableLogger = true,
 } = {}) {
@@ -111,6 +113,7 @@ export function createApp({
     c.set('businessStatsService', businessStatsService);
     c.set('priceStatsService', priceStatsService);
     c.set('catalogCleanupService', catalogCleanupService);
+    c.set('productExplorerService', productExplorerService);
     c.set('logger', appLogger);
     await next();
   });

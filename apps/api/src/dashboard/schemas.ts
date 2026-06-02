@@ -48,3 +48,12 @@ export const dealIdParamSchema = z.object({
 export const updateProductNameBodySchema = z.object({
   canonicalName: z.string().trim().min(1).max(500),
 });
+
+export const productSearchQuerySchema = z.object({
+  q: z.string().default(''),
+  category: z.string().default(''),
+  sort: z.enum(['deals', 'p10', 'median', 'spread', 'created_at']).default('deals'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});

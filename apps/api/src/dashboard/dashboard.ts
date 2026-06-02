@@ -8,6 +8,7 @@ import {
   dealIdParamSchema,
   decisionsQuerySchema,
   priceLeadersQuerySchema,
+  productSearchQuerySchema,
   timeseriesQuerySchema,
   topQuerySchema,
   updateDealBodySchema,
@@ -120,6 +121,18 @@ app.patch(
     return c.json(result);
   },
 );
+
+app.get('/catalog/products', zValidator('query', productSearchQuerySchema), async c => {
+  const params = c.req.valid('query');
+  const page = await c.get('productExplorerService').search(params);
+  return c.json(page);
+});
+
+app.get('/catalog/products/:productId/detail', async c => {
+  const detail = await c.get('productExplorerService').getProductDetail(c.req.param('productId'));
+  if (!detail) return c.json({ message: 'Not Found' }, 404);
+  return c.json(detail);
+});
 
 // Invalidates the heavy dashboard caches. Called once when the review modal
 // closes after edits — keeps the inline mutations snappy (no inline recompute).
