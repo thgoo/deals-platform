@@ -38,13 +38,12 @@ MySQL                                   ├── packages/
 | 6 | pgvector replaces in-memory search ✅ | med | 1 d | 5 |
 | 7 | Durable ingestion (raw messages + queue + worker) ✅ | med | 3–4 d | 5 (6 recommended) |
 | 8 | Media stored and served by api ✅ | low–med | 1 d | 7 |
-| 9 | Admin auth | low | 0.5 d | 1 |
+| 9 | Admin auth ✅ | low | 0.5 d | 1 |
 
 \* Focused days for one person. Expect roughly 2–3× calendar time part-time. Total: roughly 2–3 focused weeks.
 
-> **Do now, independent of this plan:** add an auth check inside the admin server actions
-> (`deals-client-web/app/[secret]/admin/_actions/cleanup.ts`). It's a live security hole and a 15-minute fix;
-> don't wait for Phase 9.
+> The admin server actions were unauthenticated in production until phase 9 — deploy it (or at least the
+> `requireAdmin()` checks) early.
 
 ---
 
@@ -269,13 +268,19 @@ Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-8--photos-served-b
 
 ---
 
-## Phase 9 — Admin auth
+## Phase 9 — Admin auth ✅ (tag `phase-9`)
 
-Can be done any time after Phase 1.
+Decision (2026-10-14): single admin login; drop the unused public accounts.
 
-- [ ] Replace the `[secret]` URL slug with a real login: one admin user (env-configured password hash) + session cookie (reuse `SessionService`), **or** put `/admin` behind Cloudflare Access.
-- [ ] Server actions check the session inside every action.
-- [ ] Delete public `/api/auth/register` (and the `users.document` column) unless you plan end-user accounts.
+- [x] `/login` (web): password checked against `ADMIN_PASSWORD_HASH` (scrypt; `:` separators because Next expands
+      `$NAME` in .env values), HMAC-signed httpOnly session cookie (`ADMIN_SESSION_SECRET`, 30 days, stateless).
+- [x] Admin at `/admin` (was `/<DASHBOARD_SECRET>/admin`). The layout requires a session; **every server action
+      checks it itself** — verified: a direct action POST without the cookie is refused.
+- [x] `DASHBOARD_SECRET` stays, only for server-side web → api calls.
+- [x] api: `/api/auth/*`, `users`, `sessions`, `SESSION_SECRET` and the auth dependencies removed (prod had 0 users).
+- [x] `scripts/hash-admin-password.ts`; `setup-local-env` generates a local admin password.
+
+Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-9--admin-login).
 
 ---
 
@@ -301,4 +306,4 @@ Can be done any time after Phase 1.
 | Acceptable downtime for the cutover (minutes? an hour?) | 5 |
 | Does mtcute deliver missed channel messages after a restart? (verify in rehearsal) | 5, 7 |
 | R2 vs S3 vs api-stored images? | 8 |
-| Do you want end-user accounts someday? (decides whether `/api/auth` survives) | 9 |
+| ~~End-user accounts?~~ No — removed in phase 9. | 9 |

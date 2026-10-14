@@ -237,3 +237,23 @@ Order matters: **api first** (it accepts both the new upload and the old notific
    `MEDIA_DIR` line in its `.env` (unused now). `pm2 save`.
 
 Rollback: checkout `phase-7` for web + crawler + api (the old crawler path still works with either api).
+
+## Phase 9 — admin login
+
+Apps restarted: api, web. One migration (drops the unused `users` and `sessions` tables).
+
+1. Pick a long admin password and hash it (anywhere with the repo and bun):
+   ```sh
+   bun scripts/hash-admin-password.ts 'a long passphrase'
+   ```
+2. In `apps/web/.env*` on the server add:
+   ```sh
+   ADMIN_PASSWORD_HASH=scrypt:…      # output of step 1
+   ADMIN_SESSION_SECRET=…            # openssl rand -hex 32
+   ```
+3. Checkout `phase-9`, `bun install --frozen-lockfile`, `cd apps/api && bun run db:migrate`,
+   `pm2 restart api.bargah.com.br`, build web, `pm2 restart bargah.com.br`, `pm2 save`.
+4. Check: `https://<site>/admin` redirects to `/login`; logging in shows the dashboard; the old
+   `/<secret>/admin` URL is a 404. `SESSION_SECRET` can be removed from `apps/api/.env`.
+
+Rollback: checkout `phase-8` (the dropped tables were empty and unused; recreate them only if you roll back further).
