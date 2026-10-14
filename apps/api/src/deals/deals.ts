@@ -1,14 +1,15 @@
+import { createDealSchema, updateImageSchema } from '@bargah/shared';
+import type { DealsPageDto, ImageUpdatedEvent, StoresResponse } from '@bargah/shared';
 import { zValidator } from '@hono/zod-validator';
 import { EventEmitter } from 'events';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { Deal } from '~/db/schemas/deals';
+import { toDealDto } from './dto';
 import { webhookAuth } from './middleware/webhook-auth';
 import {
-  createDealSchema,
   listDealsQuerySchema,
   updateExtractedSchema,
-  updateImageSchema,
   updateLinksSchema,
 } from './schemas';
 import { cleanPromoText } from './text-cleaner';
@@ -184,11 +185,12 @@ app.get('/', zValidator('query', listDealsQuerySchema), async c => {
     ? items[items.length - 1].ts.toISOString()
     : null;
 
-  return c.json({
-    items,
+  const page: DealsPageDto = {
+    items: items.map(toDealDto),
     nextCursor,
     hasMore,
-  });
+  };
+  return c.json(page);
 });
 
 app.get('/stream', c => {
@@ -197,13 +199,13 @@ app.get('/stream', c => {
   return streamSSE(c, async stream => {
     const handleNewDeal = (deal: Deal) => {
       stream.writeSSE({
-        data: JSON.stringify(deal),
+        data: JSON.stringify(toDealDto(deal)),
         event: 'new-deal',
         id: String(deal.id),
       });
     };
 
-    const handleImageUpdated = (payload: { id: number; localPath: string }) => {
+    const handleImageUpdated = (payload: ImageUpdatedEvent) => {
       stream.writeSSE({
         data: JSON.stringify(payload),
         event: 'image-updated',
@@ -246,10 +248,8 @@ app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c =
   if (deal) {
     logger.info('Image updated', { photoId: photo_id, path: local_path, dealId: deal.id });
 
-    dealEvents.emit('image-updated', {
-      id: deal.id,
-      localPath: deal.localPath,
-    });
+    const event: ImageUpdatedEvent = { id: deal.id, localPath: deal.localPath };
+    dealEvents.emit('image-updated', event);
 
     return c.json({ ok: true, updated: true, dealId: deal.id });
   }
@@ -279,9 +279,8 @@ app.get('/stores', async c => {
   const days = sinceDays ? parseInt(sinceDays, 10) : 3;
   const stores = await dealService.getAvailableStores(orderByCount, days);
 
-  return c.json({
-    stores,
-  });
+  const body: StoresResponse = { stores };
+  return c.json(body);
 });
 
 app.get('/:id', async c => {
@@ -298,7 +297,7 @@ app.get('/:id', async c => {
     return c.json({ error: 'Deal not found' }, 404);
   }
 
-  return c.json(deal);
+  return c.json(toDealDto(deal));
 });
 
 app.patch('/:id/links', webhookAuth, zValidator('json', updateLinksSchema), async c => {

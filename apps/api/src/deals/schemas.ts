@@ -1,43 +1,11 @@
 import { z } from 'zod';
 
-export const mediaSchema = z.object({
-  type: z.string(),
-  photo_id: z.union([z.string(), z.number()]).optional(),
-  doc_id: z.number().optional(),
-  url: z.string().optional(),
-  site_name: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  has_photo: z.boolean().optional(),
-  local_path: z.string().optional(),
-}).optional();
-
 export const couponSchema = z.object({
   code: z.string(),
   discount: z.string().optional(),
   description: z.string().optional(),
   expiresAt: z.string().optional(),
   url: z.string().optional(),
-});
-
-/**
- * Payload sent by the crawler. Everything that requires processing or AI work
- * (link expansion, affiliate rewriting, deal extraction) is performed in core-api
- * — the crawler only ships the raw Telegram message.
- */
-export const createDealSchema = z.object({
-  message_id: z.number(),
-  chat: z.string().min(1),
-  chat_id: z.string().optional(),
-  ts: z.string().datetime(),
-  text: z.string(),
-  links: z.array(z.string().url()).max(5).default([]),
-  media: mediaSchema,
-});
-
-export const updateImageSchema = z.object({
-  photo_id: z.string().min(1),
-  local_path: z.string().min(1),
 });
 
 export const updateLinksSchema = z.object({

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@auth/core": "^0.37.3",
+    "@bargah/shared": "workspace:*",
     "@hono/auth-js": "^1.0.15",
     "@hono/zod-validator": "^0.9.1",
     "@oslojs/crypto": "^1.0.1",

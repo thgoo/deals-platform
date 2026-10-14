@@ -1,3 +1,4 @@
+import type { AnalyzedDeal, Anomaly, CleanResult, DealVerdict, ProductAnalysis } from '@bargah/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
@@ -11,41 +12,6 @@ import { specsConflict } from '~/products/utils/spec-conflict';
 import { createTtlCache } from '../cache';
 
 const URL_IN_TEXT_RE = /(https?:\/\/[^\s\n\]"'<>]+)/g;
-
-export interface Anomaly {
-  productId: string;
-  canonicalName: string;
-  category: string | null;
-  deals: number;
-  p10: number;
-  median: number;
-  p90: number;
-  spreadRatio: number;
-}
-
-export type DealVerdict = 'keep' | 'unlink' | 'review';
-
-export interface AnalyzedDeal {
-  dealId: number;
-  price: number;
-  store: string | null;
-  product: string | null;
-  verdict: DealVerdict;
-  /** Why the verdict — 'unrelated' (no shared tokens) | 'spec_mismatch' | 'ok' | 'no_name'. */
-  reason: string;
-}
-
-export interface ProductAnalysis {
-  productId: string;
-  canonicalName: string;
-  median: number;
-  deals: AnalyzedDeal[];
-  summary: { keep: number; unlink: number; review: number };
-}
-
-export interface CleanResult {
-  unlinked: number;
-}
 
 // Products with a price band this wide are almost always contaminated.
 const SUSPECT_SPREAD_RATIO = 3;

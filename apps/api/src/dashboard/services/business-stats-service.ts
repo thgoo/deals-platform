@@ -1,17 +1,8 @@
+import type { DailyCount, NamedCount } from '@bargah/shared';
 import { and, desc, gte, isNotNull, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { createTtlCache } from '../cache';
-
-export interface NamedCount {
-  name: string;
-  count: number;
-}
-
-export interface DailyCount {
-  day: string;
-  count: number;
-}
 
 // Business aggregates change slowly. Long TTL keeps the dashboard snappy and
 // avoids running the same group-by every minute when nothing meaningful

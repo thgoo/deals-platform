@@ -1,5 +1,7 @@
+import type { AlertDto } from '@bargah/shared';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
+import { toIsoString } from '~/utils/dates';
 import { createAlertSchema, getAlertsQuerySchema } from './schemas';
 
 const ALERT_EXPIRY_DAYS = 90;
@@ -15,7 +17,8 @@ app.post('/', zValidator('json', createAlertSchema), async c => {
 
   const alert = await alertService.create({ keyword, subscription, expiresAt });
 
-  return c.json({ id: alert.id, keyword: alert.keyword, expiresAt: alert.expiresAt }, 201);
+  const body: AlertDto = { id: alert.id, keyword: alert.keyword, expiresAt: toIsoString(alert.expiresAt) };
+  return c.json(body, 201);
 });
 
 app.get('/', zValidator('query', getAlertsQuerySchema), async c => {
@@ -23,11 +26,12 @@ app.get('/', zValidator('query', getAlertsQuerySchema), async c => {
   const ids = c.req.valid('query').ids.split(',').filter(Boolean);
   const alerts = await alertService.findByIds(ids);
 
-  return c.json(alerts.map(a => ({
+  const body: AlertDto[] = alerts.map(a => ({
     id: a.id,
     keyword: a.keyword,
-    expiresAt: a.expiresAt,
-  })));
+    expiresAt: toIsoString(a.expiresAt),
+  }));
+  return c.json(body);
 });
 
 app.delete('/:id', async c => {
@@ -39,7 +43,7 @@ app.delete('/:id', async c => {
 app.post('/:id/renew', async c => {
   const alertService = c.get('alertService');
   const expiresAt = await alertService.renewExpiry(c.req.param('id'));
-  return c.json({ ok: true, expiresAt });
+  return c.json({ ok: true, expiresAt: toIsoString(expiresAt) });
 });
 
 export default app;

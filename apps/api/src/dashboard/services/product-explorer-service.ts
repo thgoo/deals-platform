@@ -1,60 +1,18 @@
+import type {
+  ExplorerProduct,
+  ExplorerSortField,
+  ProductDetail,
+  ProductPage,
+  ProductSource,
+  SortOrder,
+  TimelineEvent,
+} from '@bargah/shared';
 import { eq, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
-
-export type ExplorerSortField = 'deals' | 'p10' | 'median' | 'spread' | 'created_at';
-export type SortOrder = 'asc' | 'desc';
-
-export interface ProductRow {
-  id: string;
-  canonicalName: string;
-  category: string | null;
-  deals: number;
-  p10: number | null;
-  median: number | null;
-  p90: number | null;
-  spreadRatio: number | null;
-  createdAt: Date;
-}
-
-export interface ProductPage {
-  items: ProductRow[];
-  total: number;
-  page: number;
-  pages: number;
-}
-
-export interface TimelineEvent {
-  dealId: number;
-  ts: string;
-  price: number;
-  store: string | null;
-  chat: string | null;
-  description: string | null;
-  coupons: { code: string; discount?: string }[] | null;
-  /** True when this deal is the all-time price floor for the product. */
-  isFloor: boolean;
-}
-
-export interface ProductSource {
-  source: string;
-  externalId: string;
-  createdAt: string;
-}
-
-export interface ProductDetail {
-  id: string;
-  canonicalName: string;
-  category: string | null;
-  createdAt: string;
-  events: TimelineEvent[];  // newest first
-  sources: ProductSource[];
-  p10: number;
-  median: number;
-  p90: number;
-}
+import { toIsoString } from '~/utils/dates';
 
 interface PercRow {
   product_id: string;
@@ -157,7 +115,7 @@ export default class ProductExplorerService {
     );
 
     // Assemble in the order the IDs page gave us.
-    const items: ProductRow[] = idList.map(id => {
+    const items: ExplorerProduct[] = idList.map(id => {
       const meta = productMeta.get(id);
       const perc = percMap.get(id);
       const p10 = perc?.p10 != null ? Number(perc.p10) : null;
@@ -173,7 +131,7 @@ export default class ProductExplorerService {
         median: perc?.med != null ? Number(perc.med) : null,
         p90,
         spreadRatio,
-        createdAt: createdAtMap.get(id) ?? new Date(0),
+        createdAt: toIsoString(createdAtMap.get(id) ?? new Date(0)),
       };
     });
 
@@ -244,16 +202,14 @@ export default class ProductExplorerService {
     const sources: ProductSource[] = sourceRows.map(s => ({
       source: s.source,
       externalId: s.externalId,
-      createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+      createdAt: toIsoString(s.createdAt),
     }));
 
     return {
       id: product.id,
       canonicalName: product.canonicalName,
       category: product.category,
-      createdAt: product.createdAt instanceof Date
-        ? product.createdAt.toISOString()
-        : String(product.createdAt),
+      createdAt: toIsoString(product.createdAt),
       events,
       sources,
       p10,

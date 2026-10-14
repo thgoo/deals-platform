@@ -1,43 +1,7 @@
+import type { PriceHistory, PriceLeader, PricePoint } from '@bargah/shared';
 import { sql } from 'drizzle-orm';
 import db from '~/db';
 import { createTtlCache } from '../cache';
-
-export interface PriceLeader {
-  productId: string;
-  canonicalName: string;
-  category: string | null;
-  deals: number;
-  /** 10th percentile price in cents — robust "floor" (drops low outliers). */
-  p10: number;
-  /** Median price in cents. */
-  median: number;
-  /** 90th percentile price in cents — robust "ceiling" (drops high outliers). */
-  p90: number;
-  /** p90 / p10. Near 1 = stable price; high = wide swing or contaminated. */
-  spreadRatio: number;
-  /**
-   * True when the spread is implausibly wide. A single threshold cleanly
-   * separates clean price series (ratio ~1.2-2) from variant-collapse /
-   * mis-extraction (ratio >> 3, e.g. a polo shirt matched into "iPhone 16").
-   */
-  suspect: boolean;
-}
-
-export interface PricePoint {
-  ts: string;
-  /** Price in cents. */
-  price: number;
-  store: string | null;
-}
-
-export interface PriceHistory {
-  productId: string;
-  points: PricePoint[];
-  /** Percentiles in cents, computed over the returned points. */
-  p10: number;
-  median: number;
-  p90: number;
-}
 
 /**
  * Above this p90/p10 ratio a product's price band is treated as untrustworthy:

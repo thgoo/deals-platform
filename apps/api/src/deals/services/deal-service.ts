@@ -1,5 +1,5 @@
+import type { PriceHistoryResponse } from '@bargah/shared';
 import { and, desc, eq, gte, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
-import type { PriceHistoryResponse } from '../types';
 import type { Deal, NewDeal } from '~/db/schemas/deals';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';

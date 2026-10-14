@@ -1,9 +1,11 @@
+import type { CatalogOverview, MatchMethodStat, RecentDecision, SourceStat } from '@bargah/shared';
 import { desc, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productMatchDecisionsTable } from '~/db/schemas/product-match-decisions';
 import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
+import { toIsoString } from '~/utils/dates';
 import { createTtlCache } from '../cache';
 
 // Identifier modules that ship a store-specific URL parser (not the host
@@ -19,41 +21,6 @@ const SPECIFIC_IDENTIFIERS = new Set([
   'shopee',
   'terabyte',
 ]);
-
-export interface CatalogOverview {
-  totalProducts: number;
-  totalMappings: number;
-  productsWithMultiSource: number;
-  productsWithSingleDeal: number;
-  couponOnlyShareLast30d: number;
-}
-
-export interface MatchMethodStat {
-  method: string;
-  count: number;
-  share: number;
-}
-
-export interface RecentDecision {
-  id: number;
-  dealId: number;
-  productId: string | null;
-  /** The product name the AI extracted from the deal text (deal.product). */
-  dealProduct: string | null;
-  /** The canonical name of the product the resolver linked to, if any. */
-  productName: string | null;
-  method: string;
-  similarityScore: number | null;
-  createdAt: Date;
-}
-
-export interface SourceStat {
-  source: string;
-  mappings: number;
-  uniqueProducts: number;
-  /** 'specific' = store-specific URL parser; 'fallback' = host-fallback identifier. */
-  identifierType: 'specific' | 'fallback';
-}
 
 // TTLs picked per "how fast does this number change in practice".
 // SWR pattern means stale is served immediately while background recompute
@@ -193,7 +160,7 @@ export default class CatalogStatsService {
       productName: r.productName,
       method: r.method,
       similarityScore: r.similarityScore === null ? null : Number(r.similarityScore),
-      createdAt: r.createdAt,
+      createdAt: toIsoString(r.createdAt),
     }));
   }
 
