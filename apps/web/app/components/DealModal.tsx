@@ -7,14 +7,14 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { Item } from '../types';
+import type { DealDto } from '../types';
 import { usePriceHistory } from '../hooks/usePriceHistory';
 import { getPriceIndicator, PRICE_LEVEL } from '../utils/priceIndicator';
 import DealDetails, { type PriceIndicatorDisplay } from './DealDetails';
 import PriceHistoryPanel from './PriceHistoryPanel';
 
 interface DealModalProps {
-  deal: Item;
+  deal: DealDto;
   onClose: () => void;
 }
 

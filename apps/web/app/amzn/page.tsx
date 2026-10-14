@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import type { Item, PaginatedResponse } from '../types';
+import type { DealDto, DealsPageDto } from '../types';
 import { getApiUrl } from '@/lib/config';
 import AmazonList from '../components/AmazonList';
 import AppHeader from '../components/AppHeader';
@@ -14,14 +14,14 @@ function isAmazonLink(link: string): boolean {
   return l.includes('amazon.com.br') || l.includes('amzn.');
 }
 
-async function getAmazonDeals(limit = 50): Promise<Item[]> {
+async function getAmazonDeals(limit = 50): Promise<DealDto[]> {
   const res = await fetch(getApiUrl(`/api/deals?limit=${limit}`), {
     next: { revalidate: 300 },
   });
 
   if (!res.ok) return [];
 
-  const data: PaginatedResponse = await res.json();
+  const data: DealsPageDto = await res.json();
 
   return (data.items || [])
     .filter(

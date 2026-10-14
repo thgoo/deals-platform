@@ -1,12 +1,12 @@
 'use client';
 
-import type { Item } from '../types';
+import type { DealDto } from '../types';
 import CardGrid from './CardGrid';
 import DealCard from './DealCard';
 
 interface DealListProps {
-  items: Item[];
-  onDealClick: (item: Item) => void;
+  items: DealDto[];
+  onDealClick: (item: DealDto) => void;
 }
 
 export default function DealList({ items, onDealClick }: DealListProps) {

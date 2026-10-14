@@ -3,24 +3,24 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
 import type { SWRInfiniteKeyedMutator } from 'swr/infinite';
-import type { DealFilters, Item, PaginatedResponse } from '../types';
+import type { DealFilters, DealDto, DealsPageDto } from '../types';
 import { getApiUrl } from '@/lib/config';
 
 interface UsePaginatedDealsProps {
   filters: DealFilters;
-  initialData?: PaginatedResponse | null;
+  initialData?: DealsPageDto | null;
 }
 
 export interface UsePaginatedDealsReturn {
-  items: Item[];
+  items: DealDto[];
   hasMore: boolean;
   isInitialLoading: boolean;
   isLoadingMore: boolean;
-  mutate: SWRInfiniteKeyedMutator<PaginatedResponse[]>;
+  mutate: SWRInfiniteKeyedMutator<DealsPageDto[]>;
   loadMore: () => void;
 }
 
-const fetcher = (url: string): Promise<PaginatedResponse> =>
+const fetcher = (url: string): Promise<DealsPageDto> =>
   fetch(url).then((r) => r.json());
 
 export function usePaginatedDeals({
@@ -41,10 +41,7 @@ export function usePaginatedDeals({
     [search, stores],
   );
 
-  const getKey = (
-    pageIndex: number,
-    previousPageData: PaginatedResponse | null,
-  ) => {
+  const getKey = (pageIndex: number, previousPageData: DealsPageDto | null) => {
     if (previousPageData && !previousPageData.hasMore) return null;
     if (pageIndex === 0) return getApiUrl(`/api/deals?${buildQueryParams()}`);
     return getApiUrl(
@@ -53,7 +50,7 @@ export function usePaginatedDeals({
   };
 
   const { data, size, setSize, isLoading, mutate } =
-    useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
+    useSWRInfinite<DealsPageDto>(getKey, fetcher, {
       revalidateFirstPage: true,
       revalidateOnFocus: true,
       revalidateOnMount: true,

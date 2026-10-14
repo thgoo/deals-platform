@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bargah/shared": "workspace:*",
     "@next/third-parties": "^16.4.1",
     "@visx/xychart": "^3.12.0",
     "lucide-react": "^0.553.0",

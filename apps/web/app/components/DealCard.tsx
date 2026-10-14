@@ -1,15 +1,15 @@
 'use client';
 
 import { Tag } from 'lucide-react';
-import type { Item } from '../types';
+import type { DealDto } from '../types';
 import { formatPrice, getDealImageSrc, removeUrls } from '../utils';
 import BaseCard from './BaseCard';
 import DealImage from './DealImage';
 import { PixelBadge, StoreBadge, TimeBadge } from './PixelBadge';
 
 interface DealCardProps {
-  item: Item;
-  onClick: (item: Item) => void;
+  item: DealDto;
+  onClick: (item: DealDto) => void;
 }
 
 export default function DealCard({ item, onClick }: DealCardProps) {

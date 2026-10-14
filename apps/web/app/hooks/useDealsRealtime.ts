@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import type { SWRInfiniteKeyedMutator } from 'swr/infinite';
-import type { DealFilters, Item, PaginatedResponse } from '../types';
+import type { DealFilters, DealDto, DealsPageDto } from '../types';
 import { getApiUrl } from '@/lib/config';
 import { matchesDealFilters } from '../utils/filters/dealFilters';
 import { useEventSource } from './useEventSource';
 
 interface UseDealsRealtimeProps {
   filters: DealFilters;
-  mutate: SWRInfiniteKeyedMutator<PaginatedResponse[]>;
+  mutate: SWRInfiniteKeyedMutator<DealsPageDto[]>;
 }
 
 export function useDealsRealtime({ filters, mutate }: UseDealsRealtimeProps) {
@@ -27,7 +27,7 @@ export function useDealsRealtime({ filters, mutate }: UseDealsRealtimeProps) {
   useEffect(() => {
     const handleNewDeal = (event: MessageEvent) => {
       try {
-        const newDeal: Item = JSON.parse(event.data);
+        const newDeal: DealDto = JSON.parse(event.data);
         if (!newDeal?.id) return;
         if (!matchesDealFilters(newDeal, filtersRef.current)) return;
 

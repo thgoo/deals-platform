@@ -1,4 +1,4 @@
-import type { Item } from '../types';
+import type { DealDto } from '../types';
 import { getDealImageSrc, removeUrls } from '../utils';
 import BaseCard from './BaseCard';
 import CouponCopy from './CouponCopy';
@@ -6,7 +6,7 @@ import DealImage from './DealImage';
 import { TimeBadge } from './PixelBadge';
 
 interface AmazonCardProps {
-  item: Item;
+  item: DealDto;
   primaryLink: string;
 }
 

@@ -1,7 +1,7 @@
-import type { DealFilters, Item } from '../../types';
+import type { DealFilters, DealDto } from '../../types';
 
 export function matchesDealFilters(
-  deal: Item,
+  deal: DealDto,
   { search, stores }: DealFilters,
 ): boolean {
   if (search) {

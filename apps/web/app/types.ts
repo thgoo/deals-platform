@@ -1,60 +1,20 @@
+import type { DealsPageDto } from '@bargah/shared';
+
+// API response shapes live in @bargah/shared, next to the api code that produces them.
+export type {
+  Coupon,
+  DealDto,
+  DealsPageDto,
+  ImageUpdatedEvent,
+  PriceHistoryItem,
+  PriceHistoryResponse,
+  PriceHistoryStats,
+} from '@bargah/shared';
+
 export interface DealFilters {
   search: string;
   stores: string[];
 }
 
-export interface Coupon {
-  code: string;
-  discount?: string;
-  description?: string;
-  expiresAt?: string;
-  url?: string;
-}
-
-export interface Item {
-  id: number;
-  chat: string;
-  chatId?: number;
-  ts: string;
-  text: string;
-  product?: string;
-  description?: string;
-  store?: string;
-  links: string[];
-  price: number | null;
-  coupons?: Coupon[];
-  mediaType?: string;
-  photoId?: string;
-  localPath?: string;
-  productId?: string | null;
-  category?: string | null;
-}
-
-export interface PaginatedResponse {
-  items: Item[];
-  nextCursor: string | null;
-  hasMore: boolean;
-  availableStores?: string[];
-}
-
-export interface PriceHistoryItem {
-  price: number;
-  store: string | null;
-  ts: string;
-  dealId: number;
-}
-
-export interface PriceHistoryStats {
-  minPrice: number;
-  maxPrice: number;
-  avgPrice: number;
-  totalDeals: number;
-}
-
-export interface PriceHistoryResponse {
-  productId: string;
-  canonicalName: string | null;
-  category: string | null;
-  history: PriceHistoryItem[];
-  stats: PriceHistoryStats;
-}
+/** First page of deals rendered on the server, plus the store list for the filters. */
+export type InitialDeals = DealsPageDto & { availableStores?: string[] };

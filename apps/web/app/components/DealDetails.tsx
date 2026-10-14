@@ -2,7 +2,7 @@
 
 import { DollarSign } from 'lucide-react';
 import type { ElementType } from 'react';
-import type { Item } from '../types';
+import type { DealDto } from '../types';
 import {
   formatDateTime,
   formatPrice,
@@ -20,7 +20,7 @@ export interface PriceIndicatorDisplay {
 }
 
 interface DealDetailsProps {
-  deal: Item;
+  deal: DealDto;
   priceIndicator: PriceIndicatorDisplay | null;
 }
 

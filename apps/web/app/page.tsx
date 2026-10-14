@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
-import type { DealFilters, PaginatedResponse } from './types';
+import type { DealFilters, DealsPageDto, InitialDeals } from './types';
 import { getApiUrl } from '@/lib/config';
 import { getStores } from './api/stores';
 import DealsPage from './DealsPage';
 
 async function getInitialDeals(
   filters: DealFilters,
-): Promise<PaginatedResponse | null> {
+): Promise<InitialDeals | null> {
   try {
     const params = new URLSearchParams();
     params.set('limit', '16');
@@ -20,7 +20,7 @@ async function getInitialDeals(
         // Filtered responses are user-specific — don't cache at CDN level
         // Unfiltered default page caches for 1 minute
         ...(isFiltered ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
-      }).then((r) => (r.ok ? (r.json() as Promise<PaginatedResponse>) : null)),
+      }).then((r) => (r.ok ? (r.json() as Promise<DealsPageDto>) : null)),
       getStores(),
     ]);
 

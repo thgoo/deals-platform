@@ -5,7 +5,7 @@ import { Zap, SearchX, ArrowUp } from 'lucide-react';
 import Link from 'next/link';
 import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 import { useEffect, useMemo, useState } from 'react';
-import type { Item, PaginatedResponse } from './types';
+import type { DealDto, InitialDeals } from './types';
 import AlertBell from './components/AlertBell';
 import AppHeader from './components/AppHeader';
 import DealList from './components/DealList';
@@ -18,7 +18,7 @@ import { useInfiniteScroll } from './hooks/useInfiniteScroll';
 import { usePaginatedDeals } from './hooks/usePaginatedDeals';
 
 interface DealsPageProps {
-  initialData: PaginatedResponse | null;
+  initialData: InitialDeals | null;
 }
 
 export default function DealsPage({ initialData }: DealsPageProps) {
@@ -58,7 +58,7 @@ export default function DealsPage({ initialData }: DealsPageProps) {
     deleteAlert,
   } = useAlerts();
 
-  const [selectedDeal, setSelectedDeal] = useState<Item | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<DealDto | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const handleSearchChange = (value: string | null) => {
@@ -69,7 +69,7 @@ export default function DealsPage({ initialData }: DealsPageProps) {
     setStores(value);
   };
 
-  const handleDealClick = (deal: Item) => {
+  const handleDealClick = (deal: DealDto) => {
     sendGAEvent('event', 'deal_click', {
       deal_id: deal.id,
       deal_title: deal.product,

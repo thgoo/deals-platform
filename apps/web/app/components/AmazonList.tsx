@@ -1,9 +1,9 @@
-import type { Item } from '../types';
+import type { DealDto } from '../types';
 import AmazonCard from './AmazonCard';
 import CardGrid from './CardGrid';
 
 interface AmazonListProps {
-  items: Item[];
+  items: DealDto[];
 }
 
 export default function AmazonList({ items }: AmazonListProps) {
