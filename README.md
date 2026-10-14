@@ -49,14 +49,14 @@ Dumps contain personal data (alert push subscriptions). Keep them outside the re
 
 ### Images
 
-Deal photos live in `media/` at the repo root (gitignored; crawler writes, web serves). Locally it starts empty,
-so photos don't load. To get recent ones from production:
+Deal photos are uploaded by the crawler to the api, which stores them in `MEDIA_DIR` (locally the repo-root
+`media/`, gitignored) and serves them at `<api>/media/<file>`. Locally that folder starts empty, so photos don't
+load. To get recent ones from production (where `MEDIA_DIR` is `/var/www/bargah.com.br/_media`):
 
 ```sh
 mkdir -p media
-ssh <server> 'cd /var/www/bargah.com.br/media && find . -maxdepth 1 -type f -mtime -3' > /tmp/recent-media.txt
-rsync -av --files-from=/tmp/recent-media.txt <server>:/var/www/bargah.com.br/media/ media/
-rsync -av <server>:/var/www/bargah.com.br/media/coupon.png media/    # image used by coupon-only deals
+ssh <server> 'cd /var/www/bargah.com.br/_media && find . -maxdepth 1 -type f -mmin -1440' > /tmp/recent-media.txt
+rsync -av --files-from=/tmp/recent-media.txt <server>:/var/www/bargah.com.br/_media/ media/
 ```
 
 ### Run
