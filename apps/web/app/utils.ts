@@ -1,3 +1,4 @@
+import { API_CONFIG } from '@/lib/config';
 /**
  * Format price in BRL currency
  */
@@ -61,8 +62,7 @@ export function removeUrls(text: string): string {
 
 /**
  * Returns the image src URL for a deal's localPath.
- * - Paths starting with "media/" are dynamic images downloaded from Telegram,
- *   served through the /api/media route.
+ * - `media/<photo>.jpg` are Telegram photos, stored and served by the api.
  * - Other paths are static app assets (e.g. coupon.png) served from /images/.
  */
 export function getDealImageSrc(
@@ -70,6 +70,6 @@ export function getDealImageSrc(
 ): string | null {
   if (!localPath) return null;
   return localPath.startsWith('media/')
-    ? `/api/media?file=${localPath}`
+    ? `${API_CONFIG.BACKEND_URL}/${localPath}`
     : `/images/${localPath}`;
 }
