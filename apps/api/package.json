@@ -1,0 +1,42 @@
+{
+  "name": "hono-boilerplate",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "lint": "eslint src",
+    "test:bun": "bun test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "backfill:products": "bun run scripts/backfill-product-catalog.ts",
+    "audit:catalog": "bun run scripts/audit-catalog.ts",
+    "cleanup:catalog": "bun run scripts/cleanup-catalog.ts",
+    "split:overmerged": "bun run scripts/split-overmerged-products.ts",
+    "migrate:terabyte": "bun run scripts/migrate-terabyte-url-mappings.ts",
+    "unlink:outliers": "bun run scripts/unlink-outlier-deals.ts"
+  },
+  "dependencies": {
+    "@auth/core": "^0.37.3",
+    "@hono/auth-js": "^1.0.15",
+    "@hono/zod-validator": "^0.8.0",
+    "@oslojs/crypto": "^1.0.1",
+    "@oslojs/encoding": "^1.1.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.36.1",
+    "hono": "^4.12.0",
+    "mysql2": "^3.11.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "@stylistic/eslint-plugin": "^2.10.1",
+    "@types/bun": "latest",
+    "@types/eslint__js": "^8.42.3",
+    "@types/jest": "^29.5.14",
+    "drizzle-kit": "^0.28.0",
+    "eslint": "^9.14.0",
+    "eslint-plugin-perfectionist": "^3.9.1",
+    "tsx": "^4.19.2",
+    "typescript-eslint": "^8.13.0"
+  }
+}

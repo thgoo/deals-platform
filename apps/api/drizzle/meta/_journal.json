@@ -1,0 +1,48 @@
+{
+  "version": "0",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1762990528649,
+      "tag": "0000_loose_thundra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1764081101638,
+      "tag": "0001_cloudy_greymalkin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1765501331384,
+      "tag": "0002_thankful_pepper_potts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1779126997665,
+      "tag": "0003_redundant_firedrake",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1779818878654,
+      "tag": "0004_mute_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1779969352678,
+      "tag": "0005_polite_killmonger",
+      "breakpoints": true
+    }
+  ]
+}

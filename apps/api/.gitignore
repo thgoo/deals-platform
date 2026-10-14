@@ -1,0 +1,9 @@
+# env
+.env
+
+# deps
+.bruno
+node_modules/
+
+# os files
+.DS_STORE
