@@ -6,13 +6,12 @@ product catalog for price history, and serves them on a web app with push alerts
 | App | What it does | Port |
 |---|---|---|
 | [`apps/crawler`](apps/crawler) | Listens to Telegram channels, forwards raw messages to the api | — |
-| [`apps/api`](apps/api) | Ingestion pipeline, product catalog, feed, alerts + web push, admin API | 8000 |
-| [`apps/ai`](apps/ai) | LLM extraction, embeddings, match judge (internal) | 3003 |
+| [`apps/api`](apps/api) | Ingestion pipeline (incl. LLM extraction), product catalog, feed, alerts + web push, admin API | 8000 |
 | [`apps/web`](apps/web) | Next.js site + admin dashboard | 3000 (prod: 3004) |
 | [`packages/shared`](packages/shared) | API contracts shared by crawler, api and web (zod schemas + response types) | — |
 | [`packages/config`](packages/config) | Shared tsconfig base and ESLint config | — |
 
-`ai` is scheduled to fold into `api` — see [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md).
+See [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) for the ongoing refactor.
 
 ## Local development
 
@@ -24,8 +23,9 @@ docker compose up -d                      # MariaDB 10.11 (same as prod) on 127.
 bun scripts/setup-local-env.ts            # creates every app's .env, wired together
 ```
 
-Then fill in `OPENAI_API_KEY` (and `ABACUS_API_KEY` if `LLM_PROVIDER=abacus`) in `apps/ai/.env`.
-Without them `ai` won't start; the feed and dashboard still work, ingestion doesn't.
+Then fill in `OPENAI_API_KEY` (and `ABACUS_API_KEY` if `LLM_PROVIDER=abacus`) in `apps/api/.env`.
+Without them the feed and dashboard still work; ingesting new deals doesn't.
+Re-run the setup script after pulling: it adds settings new versions need, without touching existing values.
 
 ### Database
 
@@ -60,7 +60,6 @@ rsync -av <server>:/var/www/bargah.com.br/media/coupon.png media/    # image use
 One terminal per app:
 
 ```sh
-bun run dev:ai
 bun run dev:api
 bun run dev:web           # http://localhost:3000
 ```

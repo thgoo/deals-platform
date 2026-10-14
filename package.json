@@ -7,7 +7,6 @@
   ],
   "scripts": {
     "dev:api": "bun run --filter @bargah/api dev",
-    "dev:ai": "bun run --filter @bargah/ai dev",
     "dev:crawler": "bun run --filter @bargah/crawler dev",
     "dev:web": "bun run --filter @bargah/web dev",
     "test": "bun run --filter '*' test",
