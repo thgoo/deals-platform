@@ -27,6 +27,8 @@ import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
 import { buildRewriterRegistry } from '~/link-pipeline/rewriters/registry';
 import LinkPipelineService from '~/link-pipeline/services/link-pipeline-service';
 import { ConsoleLogger, logger } from '~/logger';
+import media from '~/media/media';
+import MediaStore from '~/media/media-store';
 import { requestLogger } from '~/middleware/request-logger';
 import CandidateSearchService from '~/products/services/candidate-search-service';
 import DecisionService from '~/products/services/decision-service';
@@ -59,6 +61,7 @@ export function createApp({
   passwordService = new PasswordService(),
   dealService = new DealService(),
   rawMessageService = new RawMessageService(),
+  mediaStore = new MediaStore(config.MEDIA_DIR),
   aiService = new InProcessAiService(),
   linkPipelineService = buildDefaultLinkPipeline(),
   productResolverService = buildDefaultProductResolver(aiService),
@@ -99,6 +102,7 @@ export function createApp({
     c.set('passwordService', passwordService);
     c.set('dealService', dealService);
     c.set('rawMessageService', rawMessageService);
+    c.set('mediaStore', mediaStore);
     c.set('aiService', aiService);
     c.set('linkPipelineService', linkPipelineService);
     c.set('productResolverService', productResolverService);
@@ -116,6 +120,7 @@ export function createApp({
   app.route('/api/auth', auth);
   app.route('/api/dashboard', dashboard);
   app.route('/api/deals', deals);
+  app.route('/media', media);
 
   app.onError(async (err, c) => {
     const appErr = c.get('logger');

@@ -1,9 +1,11 @@
 import { createDealSchema, updateImageSchema } from '@bargah/shared';
 import type { DealsPageDto, ImageUpdatedEvent, StoresResponse } from '@bargah/shared';
 import { zValidator } from '@hono/zod-validator';
-import { Hono } from 'hono';
+import { type Context, Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { streamSSE } from 'hono/streaming';
 import type { Deal } from '~/db/schemas/deals';
+import MediaStore from '~/media/media-store';
 import { toDealDto } from './dto';
 import { dealEvents } from './events';
 import { webhookAuth } from './middleware/webhook-auth';
@@ -112,25 +114,46 @@ app.get('/stream', c => {
   });
 });
 
-app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c => {
-  const dealService = c.get('dealService');
-  const rawMessages = c.get('rawMessageService');
-  const logger = c.get('logger');
-  const { photo_id, local_path } = c.req.valid('json');
-
-  // The deal may not exist yet (still queued / extracting): keep the photo on the
-  // raw message, the worker applies it when it creates the deal.
-  await rawMessages.attachPhoto(photo_id, local_path);
-  const deal = await dealService.updateImage(photo_id, local_path);
+/**
+ * A deal photo finished downloading: attach it to the queued message (if the deal
+ * doesn't exist yet the worker applies it on creation) and to the deal (if it does).
+ */
+async function applyPhoto(c: Context, photoId: string, localPath: string) {
+  await c.get('rawMessageService').attachPhoto(photoId, localPath);
+  const deal = await c.get('dealService').updateImage(photoId, localPath);
 
   if (deal) {
-    logger.info('Image updated', { photoId: photo_id, path: local_path, dealId: deal.id });
+    c.get('logger').info('Image updated', { photoId, path: localPath, dealId: deal.id });
     dealEvents.imageUpdated({ id: deal.id, localPath: deal.localPath });
     return c.json({ ok: true, updated: true, dealId: deal.id });
   }
 
-  logger.info('Photo stored for a deal not created yet', { photoId: photo_id });
+  c.get('logger').info('Photo stored for a deal not created yet', { photoId });
   return c.json({ ok: true, updated: false });
+}
+
+/** Crawler uploads a deal photo (raw image bytes); the api stores and serves it. */
+app.put(
+  '/photos/:photoId',
+  webhookAuth,
+  bodyLimit({ maxSize: 10 * 1024 * 1024 }),
+  async c => {
+    const photoId = c.req.param('photoId');
+    if (!MediaStore.isValidPhotoId(photoId)) {
+      return c.json({ message: 'Invalid photo id' }, 400);
+    }
+    const bytes = new Uint8Array(await c.req.arrayBuffer());
+    if (bytes.length === 0) return c.json({ message: 'Empty body' }, 400);
+
+    const localPath = await c.get('mediaStore').savePhoto(photoId, bytes);
+    return applyPhoto(c, photoId, localPath);
+  },
+);
+
+/** Older crawlers wrote the file themselves and only notify the path. */
+app.post('/image', webhookAuth, zValidator('json', updateImageSchema), async c => {
+  const { photo_id, local_path } = c.req.valid('json');
+  return applyPhoto(c, photo_id, local_path);
 });
 
 app.get('/price-history/:productId', async c => {

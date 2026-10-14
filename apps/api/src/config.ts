@@ -10,6 +10,10 @@ const envSchema = z.object({
   DASHBOARD_SECRET: z.string().min(16, 'DASHBOARD_SECRET must be at least 16 characters long'),
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
   // Web Push (alerts). Generate a pair with: bunx web-push generate-vapid-keys
+  // Deal photos (uploaded by the crawler, served at /media/<file>).
+  // Production: the existing photo folder, e.g. /var/www/bargah.com.br/_media.
+  MEDIA_DIR: z.string().default('./media'),
+
   VAPID_EMAIL: z.string().min(1),
   VAPID_PUBLIC_KEY: z.string().min(1),
   VAPID_PRIVATE_KEY: z.string().min(1),

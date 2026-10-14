@@ -14,6 +14,7 @@ import type DealService from '~/deals/services/deal-service';
 import type RawMessageService from '~/ingest/raw-message-service';
 import type LinkPipelineService from '~/link-pipeline/services/link-pipeline-service';
 import type { Logger } from '~/logger';
+import type MediaStore from '~/media/media-store';
 import type ProductResolverService from '~/products/services/product-resolver-service';
 
 declare module 'hono' {
@@ -24,6 +25,7 @@ declare module 'hono' {
     passwordService: PasswordService;
     dealService: DealService;
     rawMessageService: RawMessageService;
+    mediaStore: MediaStore;
     aiService: AiService;
     linkPipelineService: LinkPipelineService;
     productResolverService: ProductResolverService;
