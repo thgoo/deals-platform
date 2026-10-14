@@ -19,7 +19,7 @@ Requirements: [Bun](https://bun.sh) 1.3+, Docker with Compose.
 
 ```sh
 bun install
-docker compose up -d                      # MariaDB 10.11 (same as prod) on 127.0.0.1:3306
+docker compose up -d                      # Postgres 18 + pgvector (same as prod) on 127.0.0.1:5432
 bun scripts/setup-local-env.ts            # creates every app's .env, wired together
 ```
 
@@ -29,10 +29,14 @@ Re-run the setup script after pulling: it adds settings new versions need, witho
 
 ### Database
 
-Either load a production dump (recommended — real data, ~20s):
+PostgreSQL 18 with pgvector (`docker compose up -d` starts it on 127.0.0.1:5432).
+MariaDB is still in the compose file only to read old dumps.
+
+Load a production dump (recommended — real data, ~1 min):
 
 ```sh
-scripts/db-restore.sh path/to/prod-YYYY-MM-DD.sql.gz
+scripts/db-restore.sh path/to/prod.dump            # Postgres backup (scripts/pg-backup.sh output)
+scripts/db-restore.sh path/to/prod-YYYY-MM-DD.sql.gz  # old MariaDB dump: imported, then copied into Postgres
 ```
 
 or start empty:

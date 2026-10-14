@@ -34,7 +34,7 @@ MySQL                                   ├── packages/
 | 2 | Unified tooling + CI ✅ | low | 0.5–1 d | 1 |
 | 3 | `packages/shared` contracts ✅ | low | 1 d | 2 |
 | 4 | Fold messaging + ai into `api` ✅ | low–med | 1–2 d | 3 |
-| 5 | MariaDB → Postgres | **high** | 3–5 d | 4 |
+| 5 | MariaDB → Postgres ✅ | **high** | 3–5 d | 4 |
 | 6 | pgvector replaces in-memory search | med | 1 d | 5 |
 | 7 | Durable ingestion (raw messages + queue + worker) | med | 3–4 d | 5 (6 recommended) |
 | 8 | Media stored and served by api | low–med | 1 d | 7 |
@@ -176,65 +176,37 @@ Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-4--messaging-and-a
 
 ---
 
-## Phase 5 — MariaDB → Postgres
+## Phase 5 — MariaDB → PostgreSQL ✅ (tag `phase-5`)
 
-**Goal:** same behavior on Postgres. **Not** in this phase: pgvector search, queue, schema redesign.
+**Goal:** same behavior on Postgres. Not in this phase: pgvector search, queue, schema redesign.
 
-### 5a. Upgrade drizzle on MySQL first
-- [ ] `drizzle-orm` 0.36 → current, `drizzle-kit` to match, **still on MySQL**. Fix any API changes and deploy.
-  This isolates "drizzle changed" from "database changed".
+- [x] 5a. drizzle-orm 0.36 → 0.45 / drizzle-kit 0.28 → 0.31 **on MariaDB first** (JSON verified identical).
+- [x] Postgres **18** + pgvector (`pgvector/pgvector:pg18`) locally and in `deploy/postgres/` for production.
+      18 is required: human-text columns (store, product, description, text, category, canonical_name) use a
+      nondeterministic ICU collation `ci_ai`, which reproduces MariaDB's case- and accent-insensitive `=`,
+      `LIKE` and `GROUP BY` ("Amazon" = "AMAZON", "Você" = "Voce"); `LIKE` on it needs PG 18. Ids/URLs stay exact.
+- [x] Schema: uuid ids for products/alerts, `bigint` identity for the rest, `timestamptz`, `jsonb`, pg enums,
+      `vector(1536)` embeddings. New: **`UNIQUE (chat, message_id)`** on deals (ingestion is idempotent; a racing
+      duplicate POST returns `deduped`), **`ON DELETE CASCADE`** for match decisions, index on decisions.created_at.
+      Fresh migration baseline (`drizzle/0000_setup.sql` creates the extension + collation).
+- [x] Code: `RETURNING` instead of insert-then-select and `affectedRows`; `onConflictDoNothing` instead of
+      `INSERT IGNORE`; percentiles as ordered-set aggregates; MariaDB JSON-string workarounds removed.
+      Malformed uuids from requests behave as "not found" (`isUuid`), like before.
+- [x] **Fixed on the way:** admin product explorer sorting by p10 / median / spread (failed with
+      `Unknown column` in production); dashboard timestamps that weren't ISO 8601.
+- [x] `scripts/mariadb-to-postgres.ts` (`bun run db:copy-from-mariadb`): FK-ordered keyset copy, drops the
+      2 duplicate deals (repointing their decisions), sets identity sequences, verifies counts / sums / timestamps /
+      store grouping. Rehearsed locally: 304k rows in ~23 s, all checks pass.
+- [x] Verified: JSON identical to `phase-4` on MariaDB for 19/30 endpoints; every difference explained
+      (see DEPLOY_NOTES "Known, accepted differences"). Write paths, concurrency dedupe, cascade delete, alerts,
+      SSE exercised against Postgres.
+- [x] `scripts/pg-backup.sh` (daily `pg_dump -Fc`, 14-day retention) — backup → restore round trip verified.
+- [x] One-off scripts not ported (cleanup-catalog, unlink-outlier-deals, split-overmerged-products,
+      migrate-terabyte-url-mappings); still in git history.
+- Found on the way: locally (TZ America/Sao_Paulo) mysql2 read MariaDB timestamps 3 h off; production (UTC) was fine.
+  The copy reads them as UTC regardless.
 
-### 5b. Port schema + code (on a branch, against local Postgres)
-- [ ] Add Postgres 16+ with the `vector`, `pg_trgm` and `unaccent` extensions to `docker-compose.yml` (image `pgvector/pgvector:pg16` or newer).
-- [ ] Schema files `mysqlTable` → `pgTable`:
-
-  | MySQL | Postgres |
-  |---|---|
-  | `bigint unsigned autoincrement` | `bigint().generatedAlwaysAsIdentity()` |
-  | `varchar(36)` ids | `uuid()` |
-  | `timestamp` | `timestamp({ withTimezone: true })` |
-  | `json` | `jsonb` |
-  | `mysqlEnum` | `pgEnum` |
-  | `embedding json` | `vector(1536)` (search stays in-memory until Phase 6) |
-  | FULLTEXT `search_idx` | GIN `pg_trgm` index on the searched columns |
-
-- [ ] **Fresh baseline migration** (`drizzle/` restarts at `0000`). Don't port the MySQL history; archive the old migration folder.
-- [ ] Add constraints you want anyway while the schema is fresh:
-  - `UNIQUE (chat, message_id)` on `deals` (the copy script must remove duplicates first)
-  - `ON DELETE CASCADE` on `product_match_decisions.deal_id` (then `deleteDeal` no longer needs to delete decision rows by hand)
-- [ ] Fix the MySQL-specific code (counted 2026-10-14):
-  - `insertId` + re-select (2) → `.returning()`
-  - `affectedRows` / `drizzleAffectedRows` (22 hits, 4 files) → `.returning({ id })` length or `rowCount`
-  - `COLLATE utf8mb4_unicode_ci` LIKE (5) → `unaccent(col) ILIKE unaccent($1)`
-  - `.ignore()` (1) → `.onConflictDoNothing()`
-  - MySQL date/JSON functions (12 hits, 6 files) → `date_trunc`, `now() - interval`, `->>`
-  - Raw `` sql` `` fragments (42 hits, 11 files): review each. Watch for backtick quoting and `GROUP BY` differences (Postgres is strict about non-aggregated columns).
-  - Delete the `parseDeal` / `parse` / `parseAlert` JSON-string workarounds.
-- [ ] `scripts/`: port `backfill-product-catalog` and `audit-catalog`. The one-off scripts (`migrate-terabyte-url-mappings`, `split-overmerged-products`, `unlink-outlier-deals`, `cleanup-catalog`) are done — don't port them; git history keeps them.
-- [ ] All tests green against Postgres.
-
-### 5c. Data copy script
-- [ ] `apps/api/scripts/mysql-to-pg.ts`: reads MySQL in batches and writes Postgres in FK order:
-  `users → sessions → products → deals → product_url_mappings → product_match_decisions → alerts`.
-- [ ] Gotchas to handle:
-  - **Identity sequences:** after copying explicit ids, `SELECT setval(pg_get_serial_sequence('deals','id'), max(id)) FROM deals;` (per table) or inserts will collide.
-  - **Timezones:** check how mysql2 returns `timestamp` (server/session TZ) and store UTC. Spot-check a few `ts` values in both databases.
-  - **JSON stored as strings:** parse before inserting into `jsonb`.
-  - **Embeddings:** JSON array → `vector`.
-  - **Duplicate deals:** keep the lowest id per `(chat, message_id)` and repoint `product_match_decisions` to it.
-- [ ] Verification query set: row counts per table, `sum(price)`, a few price histories, and product counts per category. Compare MySQL vs Postgres.
-- [ ] **Rehearse the full copy at least twice** on the Phase 0 dump and time it.
-
-### 5d. Cutover runbook
-1. Announce nothing (single operator) — but pick a quiet hour.
-2. Stop the **crawler** (Telegram buffers channel updates; confirm in rehearsal that mtcute catches up on restart, or accept losing a few minutes of deals).
-3. Stop `api` writes (stop the process).
-4. Run the copy script → run the verification queries.
-5. Switch `DATABASE_URL` → start `api` → smoke test: feed loads, dashboard loads, post a test deal.
-6. Start the crawler.
-7. Keep MySQL running read-only for 2 weeks, then dump and shut it down.
-
-**Rollback:** before step 6, point `DATABASE_URL` back to MySQL and restart. After new deals land in Postgres, rollback means losing them — so do the smoke test properly in step 5.
+Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-5--mariadb--postgresql).
 
 ---
 
