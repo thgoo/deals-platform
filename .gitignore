@@ -1,0 +1,23 @@
+# dependencies
+node_modules
+
+# build output
+dist
+out
+.next
+*.tsbuildinfo
+
+# env files (each app keeps its own .env next to its package.json)
+.env
+.env.*
+!.env.example
+
+# runtime data shared by crawler and web (symlinked from apps/)
+/media
+/sessions
+
+# misc
+.DS_Store
+.idea
+.eslintcache
+coverage
