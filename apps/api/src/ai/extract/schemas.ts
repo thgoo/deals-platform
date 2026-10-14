@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { Category } from '~/constants/categories';
-import { CATEGORIES } from '~/constants/categories';
+import type { Category } from '~/ai/categories';
+import { CATEGORIES } from '~/ai/categories';
 
 export const extractRequestSchema = z.object({
   text: z.string().min(1, 'Text is required'),
@@ -31,4 +31,4 @@ export const extractionSchema = z.object({
 export type ExtractRequest = z.infer<typeof extractRequestSchema>;
 export type ExtractResponse = z.infer<typeof extractionSchema>;
 export type Coupon = z.infer<typeof couponSchema>;
-export type { Category } from '~/constants/categories';
+export type { Category } from '~/ai/categories';

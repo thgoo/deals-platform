@@ -1,4 +1,4 @@
-import type { ChatMessage } from '~/shared/types';
+import type { ChatMessage } from '~/ai/types';
 
 export interface ChatOptions {
   responseFormat?: 'json_object';

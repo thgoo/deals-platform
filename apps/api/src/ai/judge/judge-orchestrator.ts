@@ -1,10 +1,10 @@
-import type { JudgeCandidate, JudgeRequest, JudgeResponse } from '../schemas';
+import type { JudgeCandidate, JudgeRequest, JudgeResponse } from './schemas';
+import type { LLMProvider } from '~/ai/providers/llm/types';
+import type { ChatMessage } from '~/ai/types';
 import type { Logger } from '~/logger';
-import type { LLMProvider } from '~/providers/llm/types';
-import type { ChatMessage } from '~/shared/types';
-import { AIParsingError } from '~/shared/errors';
-import { JUDGE_SYSTEM_PROMPT } from '../prompts/system-prompt';
-import { judgeResponseSchema } from '../schemas';
+import { AIParsingError } from '~/ai/errors';
+import { judgeResponseSchema } from './schemas';
+import { JUDGE_SYSTEM_PROMPT } from './system-prompt';
 
 const CACHE_KEY = 'bargah-judge';
 

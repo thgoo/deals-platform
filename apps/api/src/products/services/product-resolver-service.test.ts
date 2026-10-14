@@ -5,8 +5,7 @@ import type { RecordDecisionInput } from './decision-service';
 import type { CreateProductInput } from './product-service';
 import type ProductService from './product-service';
 import type UrlMappingService from './url-mapping-service';
-import type { EmbedResponse, JudgeCandidate, JudgeResponse } from '~/ai-service-client';
-import type AiServiceClient from '~/ai-service-client';
+import type { AiService, EmbedResponse, JudgeCandidate, JudgeResponse } from '~/ai/ai-service';
 import type { ProductUrlMapping, UrlMappingConfidence } from '~/db/schemas/product-url-mappings';
 import type { Product } from '~/db/schemas/products';
 import type { Candidate, ResolveInput } from '~/products/types';
@@ -135,7 +134,7 @@ describe('ProductResolverService', () => {
       urlMappings as unknown as UrlMappingService,
       decisions as unknown as DecisionService,
       candidateSearch as unknown as CandidateSearchService,
-      ai as unknown as AiServiceClient,
+      ai as unknown as AiService,
       silentLogger,
     );
   });

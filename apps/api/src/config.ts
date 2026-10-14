@@ -13,7 +13,21 @@ const envSchema = z.object({
   VAPID_EMAIL: z.string().min(1),
   VAPID_PUBLIC_KEY: z.string().min(1),
   VAPID_PRIVATE_KEY: z.string().min(1),
-  AI_SERVICE_URL: z.string().url().default('http://localhost:3003'),
+
+  // AI (extraction, embeddings, match judge). Keys are checked when a provider is
+  // first used, so processes that never call the AI (tests, most scripts) don't need them.
+  LLM_PROVIDER: z.enum(['abacus', 'openai']).default('abacus'),
+  ABACUS_API_KEY: z.string().optional(),
+  ABACUS_MODEL: z.string().default('claude-3-7-sonnet-20250219'),
+  ABACUS_TIMEOUT_MS: z.coerce.number().default(30000),
+  ABACUS_BASE_URL: z.url().default('https://routellm.abacus.ai/v1/chat/completions'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_LLM_MODEL: z.string().default('gpt-4.1-nano'),
+  OPENAI_LLM_TIMEOUT_MS: z.coerce.number().default(30000),
+  OPENAI_LLM_BASE_URL: z.url().default('https://api.openai.com/v1/chat/completions'),
+  OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
+  OPENAI_EMBEDDING_TIMEOUT_MS: z.coerce.number().default(30000),
+  OPENAI_EMBEDDING_BASE_URL: z.url().default('https://api.openai.com/v1/embeddings'),
 
   // Affiliate programs — all optional. Absent key = that store's rewriter is a no-op.
   AMAZON_AFFILIATE_TAG: z.string().optional(),

@@ -1,9 +1,9 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { AIAPIError } from '~/shared/errors';
+import { AIAPIError } from '~/ai/errors';
 
 // Disable retry delays for tests — execute the operation once with no backoff.
 beforeAll(() => {
-  mock.module('~/shared/retry', () => ({
+  mock.module('~/ai/retry', () => ({
     withRetry: async (op: () => Promise<unknown>) => op(),
     RETRY_PRESETS: { AGGRESSIVE: {}, STANDARD: {}, FAST: {} },
   }));

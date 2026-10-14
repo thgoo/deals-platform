@@ -22,7 +22,7 @@ dealEvents.setMaxListeners(10000);
 app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
   const dealService = c.get('dealService');
   const linkPipeline = c.get('linkPipelineService');
-  const aiService = c.get('aiServiceClient');
+  const aiService = c.get('aiService');
   const productResolver = c.get('productResolverService');
   const alertService = c.get('alertService');
   const logger = c.get('logger');

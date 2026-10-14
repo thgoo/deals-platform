@@ -2,7 +2,7 @@ import type CandidateSearchService from './candidate-search-service';
 import type DecisionService from './decision-service';
 import type ProductService from './product-service';
 import type UrlMappingService from './url-mapping-service';
-import type AiServiceClient from '~/ai-service-client';
+import type { AiService } from '~/ai/ai-service';
 import type { ExternalId } from '~/link-pipeline/types';
 import type { Logger } from '~/logger';
 import type { Candidate, ResolveInput, ResolveResult } from '~/products/types';
@@ -43,7 +43,7 @@ export default class ProductResolverService {
     private readonly urlMappings: UrlMappingService,
     private readonly decisions: DecisionService,
     private readonly candidateSearch: CandidateSearchService,
-    private readonly ai: AiServiceClient,
+    private readonly ai: AiService,
     private readonly logger: Logger,
   ) {}
 

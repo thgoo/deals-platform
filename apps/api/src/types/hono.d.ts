@@ -1,4 +1,4 @@
-import type AiServiceClient from '~/ai-service-client';
+import type { AiService } from '~/ai/ai-service';
 import type AlertService from '~/alerts/services/alert-service';
 import type PasswordService from '~/auth/services/password-service';
 import type SessionService from '~/auth/services/session-service';
@@ -22,7 +22,7 @@ declare module 'hono' {
     sessionService: SessionService;
     passwordService: PasswordService;
     dealService: DealService;
-    aiServiceClient: AiServiceClient;
+    aiService: AiService;
     linkPipelineService: LinkPipelineService;
     productResolverService: ProductResolverService;
     heartbeatService: HeartbeatService;

@@ -1,8 +1,8 @@
 import type { EmbeddingProvider, EmbeddingResult } from './types';
-import type { EmbeddingRequest, EmbeddingResponse } from '~/shared/types';
+import type { EmbeddingRequest, EmbeddingResponse } from '~/ai/types';
+import { AIAPIError } from '~/ai/errors';
+import { RETRY_PRESETS, withRetry } from '~/ai/retry';
 import { logger } from '~/logger';
-import { AIAPIError } from '~/shared/errors';
-import { RETRY_PRESETS, withRetry } from '~/shared/retry';
 
 export interface OpenAIEmbeddingConfig {
   apiKey: string;

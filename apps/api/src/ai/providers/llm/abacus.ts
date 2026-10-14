@@ -1,29 +1,24 @@
 import type { ChatOptions, LLMProvider } from './types';
-import type { ChatCompletionRequest, ChatCompletionResponse, ChatMessage } from '~/shared/types';
-import { logger } from '~/logger';
-import { AIAPIError } from '~/shared/errors';
-import { RETRY_PRESETS, withRetry } from '~/shared/retry';
+import type { ChatCompletionRequest, ChatCompletionResponse, ChatMessage } from '~/ai/types';
+import { AIAPIError } from '~/ai/errors';
+import { RETRY_PRESETS, withRetry } from '~/ai/retry';
 
-export interface OpenAIProviderConfig {
+export interface AbacusProviderConfig {
   apiKey: string;
   model: string;
   baseUrl: string;
   timeoutMs: number;
 }
 
-interface OpenAIChatCompletionRequest extends ChatCompletionRequest {
-  prompt_cache_key?: string;
-}
-
-export default class OpenAIProvider implements LLMProvider {
-  readonly name = 'openai';
+export default class AbacusProvider implements LLMProvider {
+  readonly name = 'abacus';
   readonly model: string;
 
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
 
-  constructor(config: OpenAIProviderConfig) {
+  constructor(config: AbacusProviderConfig) {
     this.apiKey = config.apiKey;
     this.model = config.model;
     this.baseUrl = config.baseUrl;
@@ -35,13 +30,12 @@ export default class OpenAIProvider implements LLMProvider {
   }
 
   private async callAPI(messages: ChatMessage[], options: ChatOptions): Promise<string> {
-    const payload: OpenAIChatCompletionRequest = {
+    const payload: ChatCompletionRequest = {
       model: this.model,
       messages,
       temperature: options.temperature ?? 0,
       max_tokens: options.maxTokens ?? 1024,
       ...(options.responseFormat && { response_format: { type: options.responseFormat } }),
-      ...(options.cacheKey && { prompt_cache_key: options.cacheKey }),
     };
 
     const controller = new AbortController();
@@ -62,7 +56,7 @@ export default class OpenAIProvider implements LLMProvider {
         const errorBody = await response.text();
         const suffix = errorBody ? ` - ${errorBody}` : '';
         throw new AIAPIError(
-          `OpenAI API error (${response.status}): ${response.statusText}${suffix}`,
+          `Abacus API error (${response.status}): ${response.statusText}${suffix}`,
           response.status,
         );
       }
@@ -71,11 +65,7 @@ export default class OpenAIProvider implements LLMProvider {
       const content = data.choices[0]?.message?.content;
 
       if (!content) {
-        throw new AIAPIError('Empty response from OpenAI API', 500);
-      }
-
-      if (data.usage) {
-        logger.debug('OpenAI token usage', { usage: data.usage });
+        throw new AIAPIError('Empty response from Abacus API', 500);
       }
 
       return content;

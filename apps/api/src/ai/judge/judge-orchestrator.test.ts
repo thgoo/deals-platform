@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatOptions, LLMProvider } from '~/providers/llm/types';
-import type { ChatMessage } from '~/shared/types';
-import { AIParsingError } from '~/shared/errors';
+import type { ChatOptions, LLMProvider } from '~/ai/providers/llm/types';
+import type { ChatMessage } from '~/ai/types';
+import { AIParsingError } from '~/ai/errors';
 import JudgeOrchestrator from './judge-orchestrator';
 
 const silentLogger = {

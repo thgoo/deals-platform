@@ -1,10 +1,10 @@
-import type { ExtractRequest, ExtractResponse } from '../schemas';
+import type { ExtractRequest, ExtractResponse } from './schemas';
+import type { LLMProvider } from '~/ai/providers/llm/types';
+import type { ChatMessage } from '~/ai/types';
 import type { Logger } from '~/logger';
-import type { LLMProvider } from '~/providers/llm/types';
-import type { ChatMessage } from '~/shared/types';
-import { AIParsingError } from '~/shared/errors';
-import { EXTRACTION_SYSTEM_PROMPT } from '../prompts/system-prompt';
-import { extractionSchema } from '../schemas';
+import { AIParsingError } from '~/ai/errors';
+import { extractionSchema } from './schemas';
+import { EXTRACTION_SYSTEM_PROMPT } from './system-prompt';
 
 const CACHE_KEY = 'bargah-extraction';
 

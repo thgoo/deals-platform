@@ -19,7 +19,7 @@ import type { Deal } from '~/db/schemas/deals';
 import type { MatchMethod } from '~/db/schemas/product-match-decisions';
 import type { ExternalId } from '~/link-pipeline/types';
 import type { Candidate } from '~/products/types';
-import AiServiceClient from '~/ai-service-client';
+import { type AiService, InProcessAiService } from '~/ai/ai-service';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { EMBEDDING_MODEL_VERSIONS } from '~/db/schemas/products';
@@ -27,11 +27,11 @@ import { extractExternalIds } from '~/link-pipeline/identifiers/identifier-extra
 import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
 import { logger } from '~/logger';
 import { AUTO_MATCH_THRESHOLD, CANDIDATE_TOP_K, LLM_JUDGE_THRESHOLD } from '~/products/matching-config';
-import { specsConflict } from '~/products/utils/spec-conflict';
 import CandidateSearchService from '~/products/services/candidate-search-service';
 import DecisionService from '~/products/services/decision-service';
 import ProductService from '~/products/services/product-service';
 import UrlMappingService from '~/products/services/url-mapping-service';
+import { specsConflict } from '~/products/utils/spec-conflict';
 
 const BATCH_SIZE = 100;
 const CANONICAL_NAME_MAX = 500;
@@ -114,7 +114,7 @@ class Backfill {
     private readonly urlMappings: UrlMappingService,
     private readonly decisions: DecisionService,
     private readonly candidateSearch: CandidateSearchService,
-    private readonly ai: AiServiceClient,
+    private readonly ai: AiService,
   ) {}
 
   async run(limit?: number): Promise<void> {
@@ -355,7 +355,7 @@ async function main(): Promise<void> {
   const urlMappingService = new UrlMappingService();
   const decisionService = new DecisionService();
   const candidateSearch = new CandidateSearchService(productService, logger);
-  const aiClient = new AiServiceClient();
+  const aiClient = new InProcessAiService();
 
   const backfill = new Backfill(
     productService,

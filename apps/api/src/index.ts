@@ -1,6 +1,6 @@
 process.title = 'bargah-api';
 
-import AiServiceClient from '~/ai-service-client';
+import { InProcessAiService } from '~/ai/ai-service';
 import { createApp } from '~/app';
 import { config } from '~/config';
 import { logger } from '~/logger';
@@ -15,7 +15,7 @@ import UrlMappingService from '~/products/services/url-mapping-service';
 // bootstrap separate from `createApp` (in app.ts) lets tests import the factory
 // without paying for `loadAll()` against a real database.
 
-const aiServiceClient = new AiServiceClient();
+const aiService = new InProcessAiService();
 const productService = new ProductService();
 const candidateSearchService = new CandidateSearchService(productService, logger);
 await candidateSearchService.loadAll();
@@ -25,11 +25,11 @@ const productResolverService = new ProductResolverService(
   new UrlMappingService(),
   new DecisionService(),
   candidateSearchService,
-  aiServiceClient,
+  aiService,
   logger,
 );
 
-const app = createApp({ aiServiceClient, productResolverService });
+const app = createApp({ aiService, productResolverService });
 
 export default {
   port: config.PORT,

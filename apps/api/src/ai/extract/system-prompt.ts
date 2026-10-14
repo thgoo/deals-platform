@@ -1,5 +1,5 @@
 /* eslint-disable @stylistic/max-len, no-useless-escape */
-import { CATEGORIES } from '~/constants/categories';
+import { CATEGORIES } from '~/ai/categories';
 
 export const EXTRACTION_SYSTEM_PROMPT = `You are a data extraction assistant specialized in Brazilian e-commerce promotions.
 Task: Extract structured information from promotional messages posted in Telegram groups (pt-BR language).

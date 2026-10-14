@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import AiServiceClient from '~/ai-service-client';
+import { type AiService, InProcessAiService } from '~/ai/ai-service';
 import alerts from '~/alerts/alerts';
 import AlertService from '~/alerts/services/alert-service';
 import auth from '~/auth';
@@ -41,7 +41,7 @@ import { HttpError } from '~/utils/errors';
  * production code in `index.ts` calls `loadAll()` explicitly before serving traffic.
  * This default exists so that tests (which inject mocks) and ad-hoc usage compile cleanly.
  */
-function buildDefaultProductResolver(aiClient: AiServiceClient): ProductResolverService {
+function buildDefaultProductResolver(aiService: AiService): ProductResolverService {
   const products = new ProductService();
   const candidateSearch = new CandidateSearchService(products, logger);
   return new ProductResolverService(
@@ -49,7 +49,7 @@ function buildDefaultProductResolver(aiClient: AiServiceClient): ProductResolver
     new UrlMappingService(),
     new DecisionService(),
     candidateSearch,
-    aiClient,
+    aiService,
     logger,
   );
 }
@@ -66,9 +66,9 @@ export function createApp({
   sessionService = new SessionService(),
   passwordService = new PasswordService(),
   dealService = new DealService(),
-  aiServiceClient = new AiServiceClient(),
+  aiService = new InProcessAiService(),
   linkPipelineService = buildDefaultLinkPipeline(),
-  productResolverService = buildDefaultProductResolver(aiServiceClient),
+  productResolverService = buildDefaultProductResolver(aiService),
   heartbeatService = new HeartbeatService(),
   catalogStatsService = new CatalogStatsService(),
   businessStatsService = new BusinessStatsService(),
@@ -105,7 +105,7 @@ export function createApp({
     c.set('sessionService', sessionService);
     c.set('passwordService', passwordService);
     c.set('dealService', dealService);
-    c.set('aiServiceClient', aiServiceClient);
+    c.set('aiService', aiService);
     c.set('linkPipelineService', linkPipelineService);
     c.set('productResolverService', productResolverService);
     c.set('heartbeatService', heartbeatService);

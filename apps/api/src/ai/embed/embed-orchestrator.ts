@@ -1,6 +1,6 @@
-import type { EmbedRequest, EmbedResponse } from '../schemas';
+import type { EmbedRequest, EmbedResponse } from './schemas';
+import type { EmbeddingProvider } from '~/ai/providers/embedding/types';
 import type { Logger } from '~/logger';
-import type { EmbeddingProvider } from '~/providers/embedding/types';
 
 export default class EmbedOrchestrator {
   constructor(
