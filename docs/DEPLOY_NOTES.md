@@ -218,3 +218,22 @@ After an AI outage longer than ~30 min, failed messages can be retried: `bun run
 
 Rollback: stop the crawler, wait until `SELECT count(*) FROM raw_messages WHERE step <> 'done'` is 0 (or accept
 losing those), checkout `phase-6`, restart api and crawler. The new tables can stay.
+
+## Phase 8 — photos served by the api
+
+Order matters: **api first** (it accepts both the new upload and the old notification), then crawler, then web.
+
+1. In `apps/api/.env` add the existing photo folder:
+   ```sh
+   echo 'MEDIA_DIR=/var/www/bargah.com.br/_media' >> apps/api/.env
+   ```
+2. Checkout `phase-8`, `bun install --frozen-lockfile`, `pm2 restart api.bargah.com.br`. Check a photo is served by
+   the api through its public domain, e.g. `curl -sI https://<api domain>/media/<some existing file>.jpg` → 200 and
+   `Cache-Control: … immutable`. (If nginx only forwards `/api/*` to the api, add `/media/` too.)
+3. `pm2 restart crawler.bargah.com.br`. New photos log `Photo uploaded`; the file appears in `_media`.
+4. Web: `NEXT_PUBLIC_BACKEND_URL` in `apps/web/.env*` must be the api's **public** URL (it's used in image URLs and
+   `next/image` allows that origin). Build and restart web; photos on the site now come from the api domain.
+5. Once all is well: `rm` the old symlinks on the server if any remain (`bargah/media`), and the crawler's
+   `MEDIA_DIR` line in its `.env` (unused now). `pm2 save`.
+
+Rollback: checkout `phase-7` for web + crawler + api (the old crawler path still works with either api).

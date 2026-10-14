@@ -37,7 +37,7 @@ MySQL                                   ├── packages/
 | 5 | MariaDB → Postgres ✅ | **high** | 3–5 d | 4 |
 | 6 | pgvector replaces in-memory search ✅ | med | 1 d | 5 |
 | 7 | Durable ingestion (raw messages + queue + worker) ✅ | med | 3–4 d | 5 (6 recommended) |
-| 8 | Media stored and served by api | low–med | 1 d | 7 |
+| 8 | Media stored and served by api ✅ | low–med | 1 d | 7 |
 | 9 | Admin auth | low | 0.5 d | 1 |
 
 \* Focused days for one person. Expect roughly 2–3× calendar time part-time. Total: roughly 2–3 focused weeks.
@@ -252,14 +252,20 @@ Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-7--durable-ingesti
 
 ---
 
-## Phase 8 — Media → object storage
+## Phase 8 — Photos stored and served by the api ✅ (tag `phase-8`)
 
-Today crawler and web share `../media` via symlinks, which ties them to one machine.
+Decision (2026-10-14): single host, so the api keeps photos on local disk — no S3/R2.
 
-- [ ] Choose: Cloudflare R2 (no egress fees) or S3. Or, simplest: the crawler POSTs image bytes to the api, the api stores them, and a CDN sits in front.
-- [ ] Crawler uploads after download; the image endpoint stores the **object key**, not a local path.
-- [ ] Web renders a CDN URL. Delete `apps/web/app/api/media/route.ts` and the symlinks.
-- [ ] One-off: upload the existing `media/` folder and rewrite the `local_path` values.
+- [x] Crawler downloads photos into memory and `PUT /api/deals/photos/:photoId` (after the message POST).
+      No `MEDIA_DIR`, no `media` symlink: crawler and web no longer need to share a host.
+- [x] api writes atomically to `MEDIA_DIR` and serves `GET /media/<file>` (immutable caching, strict file names).
+      `local_path` keeps the `media/<file>` format → **no data or file migration** (production points `MEDIA_DIR` at
+      the existing `_media`).
+- [x] Web loads `<backend>/media/<file>` through `next/image` (`remotePatterns`); `/api/media` route and the
+      `public/media` symlink removed. `POST /api/deals/image` kept for old crawlers during rollout.
+- Moving to S3 later = replace `MediaStore` (one class).
+
+Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-8--photos-served-by-the-api).
 
 ---
 
