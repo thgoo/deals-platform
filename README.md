@@ -10,6 +10,8 @@ product catalog for price history, and serves them on a web app with push alerts
 | [`apps/ai`](apps/ai) | LLM extraction, embeddings, match judge (internal) | 3003 |
 | [`apps/messaging`](apps/messaging) | Web push delivery (internal) | 3002 |
 | [`apps/web`](apps/web) | Next.js site + admin dashboard | 3000 (prod: 3004) |
+| [`packages/shared`](packages/shared) | API contracts shared by crawler, api and web (zod schemas + response types) | — |
+| [`packages/config`](packages/config) | Shared tsconfig base and ESLint config | — |
 
 `ai` and `messaging` are scheduled to fold into `api` — see [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md).
 
@@ -86,8 +88,7 @@ For most work, `scripts/send-test-deal.ts` is enough.
 ### Checks
 
 ```sh
-bun run test
-bun run lint
+bun run check        # typecheck + lint + test, all workspaces (same as CI)
 ```
 
 ## Production

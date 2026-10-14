@@ -32,7 +32,7 @@ MySQL                                   ├── packages/
 | 0 | Safety net | none | 0.5–1 d | — |
 | 1 | Monorepo (pure move) | low | 1 d | 0 |
 | 2 | Unified tooling + CI ✅ | low | 0.5–1 d | 1 |
-| 3 | `packages/shared` contracts | low | 1 d | 2 |
+| 3 | `packages/shared` contracts ✅ | low | 1 d | 2 |
 | 4 | Fold messaging + ai into `api` | low–med | 1–2 d | 3 |
 | 5 | MySQL → Postgres | **high** | 3–5 d | 4 |
 | 6 | pgvector replaces in-memory search | med | 1 d | 5 |
@@ -142,18 +142,17 @@ the `/api/media` route goes away in Phase 8).
 
 ---
 
-## Phase 3 — `packages/shared` contracts
+## Phase 3 — `packages/shared` contracts ✅ (tag `phase-3`)
 
-**Goal:** stop defining the same shapes twice. Only share what has ≥ 2 consumers.
+**Goal:** stop defining the same shapes twice.
 
-- [ ] `packages/shared/src/ingest.ts`: the crawler → api payload as a zod schema (move `createDealSchema` + `mediaSchema` out of `apps/api/src/deals/schemas.ts`). The crawler builds its payload from `z.infer<…>`; the api validates with the same schema.
-- [ ] `packages/shared/src/deals.ts`: the response types `web` consumes (`Deal`, `Coupon`, `PaginatedResponse`, `PriceHistoryResponse`), replacing `apps/web/app/types.ts`.
-  - This already fixes a real mismatch: web has `chatId?: number`, the DB has `chat_id varchar`.
-  - Define them as **API response types**, not as `InferSelectModel` from drizzle. Web must not depend on the DB schema.
-- [ ] Dashboard types (`apps/web/app/[secret]/admin/_lib/types.ts`) → `packages/shared/src/dashboard.ts`.
-- [ ] Leave the logger and retry code per app for now. Unify them in Phase 4 once only two apps remain.
-
-**Done when:** a change to the deal shape fails type-checking in every app it affects.
+- [x] `@bargah/shared/ingest`: crawler → api zod schemas (`createDealSchema`, `updateImageSchema`, `mediaSchema`);
+      api validates with them, crawler types its payloads from them. The media schema now matches what the crawler sends.
+- [x] `@bargah/shared` deals / alerts / dashboard response types (`DealDto`, `DealsPageDto`, `AlertDto`, …),
+      dates as ISO strings. The api returns these types (Date → `toIsoString`), web imports them.
+      JSON verified identical to `phase-2` on 12 endpoints.
+- [x] Fixed on the way: web typed `chatId` as a number (api sends a string).
+- Logger/retry stay per app until Phase 4 leaves only api + crawler.
 
 ---
 
