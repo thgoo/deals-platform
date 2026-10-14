@@ -1,6 +1,9 @@
 import type { DealFilters, Item } from '../../types';
 
-export function matchesDealFilters(deal: Item, { search, stores }: DealFilters): boolean {
+export function matchesDealFilters(
+  deal: Item,
+  { search, stores }: DealFilters,
+): boolean {
   if (search) {
     const searchLower = search.toLowerCase();
     const text = [deal.product, deal.description, deal.text, deal.store]

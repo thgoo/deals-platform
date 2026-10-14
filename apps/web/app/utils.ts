@@ -65,7 +65,9 @@ export function removeUrls(text: string): string {
  *   served through the /api/media route.
  * - Other paths are static app assets (e.g. coupon.png) served from /images/.
  */
-export function getDealImageSrc(localPath: string | undefined | null): string | null {
+export function getDealImageSrc(
+  localPath: string | undefined | null,
+): string | null {
   if (!localPath) return null;
   return localPath.startsWith('media/')
     ? `/api/media?file=${localPath}`

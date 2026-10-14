@@ -118,11 +118,7 @@ export interface ProductAnalysis {
 }
 
 export type ExplorerSortField =
-  | 'deals'
-  | 'p10'
-  | 'median'
-  | 'spread'
-  | 'created_at';
+  'deals' | 'p10' | 'median' | 'spread' | 'created_at';
 export type SortOrder = 'asc' | 'desc';
 
 export interface ExplorerProduct {
@@ -156,11 +152,7 @@ export interface TimelineEvent {
 }
 
 export type TimelineMarkerKind =
-  | 'debut'
-  | 'new-store'
-  | 'drop'
-  | 'rise'
-  | 'normal';
+  'debut' | 'new-store' | 'drop' | 'rise' | 'normal';
 
 export interface TimelineRichEvent {
   event: TimelineEvent;

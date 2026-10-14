@@ -5,12 +5,17 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array([...raw].map((c) => c.charCodeAt(0)));
 }
 
-async function waitForActivation(reg: ServiceWorkerRegistration): Promise<void> {
+async function waitForActivation(
+  reg: ServiceWorkerRegistration,
+): Promise<void> {
   if (reg.active) return;
   const sw = reg.installing ?? reg.waiting;
   if (!sw) return;
   await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Service worker activation timeout')), 5000);
+    const timer = setTimeout(
+      () => reject(new Error('Service worker activation timeout')),
+      5000,
+    );
     sw.addEventListener('statechange', function handler() {
       if (this.state === 'activated') {
         clearTimeout(timer);
@@ -27,7 +32,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   return reg;
 }
 
-export async function subscribeToPush(vapidPublicKey: string): Promise<PushSubscriptionJSON> {
+export async function subscribeToPush(
+  vapidPublicKey: string,
+): Promise<PushSubscriptionJSON> {
   const reg = await registerServiceWorker();
   const existing = await reg.pushManager.getSubscription();
   if (existing) return existing.toJSON();

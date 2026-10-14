@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import type { SWRInfiniteKeyedMutator } from 'swr/infinite';
-import { getApiUrl } from '@/lib/config';
 import type { DealFilters, Item, PaginatedResponse } from '../types';
+import { getApiUrl } from '@/lib/config';
 import { matchesDealFilters } from '../utils/filters/dealFilters';
 import { useEventSource } from './useEventSource';
 

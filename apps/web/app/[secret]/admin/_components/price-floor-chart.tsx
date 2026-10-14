@@ -162,8 +162,7 @@ export default function PriceFloorChart({
             style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}
             renderTooltip={({ tooltipData }) => {
               const nearest = tooltipData?.nearestDatum?.datum as
-                | ChartPoint
-                | undefined;
+                ChartPoint | undefined;
               if (!nearest) return null;
               return (
                 <div className="mono border border-cyan-500 bg-white px-2 py-1 text-xs text-zinc-800 shadow-sm">

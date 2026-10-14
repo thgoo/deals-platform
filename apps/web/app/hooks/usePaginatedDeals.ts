@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
 import type { SWRInfiniteKeyedMutator } from 'swr/infinite';
-import { getApiUrl } from '@/lib/config';
 import type { DealFilters, Item, PaginatedResponse } from '../types';
+import { getApiUrl } from '@/lib/config';
 
 interface UsePaginatedDealsProps {
   filters: DealFilters;

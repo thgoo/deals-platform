@@ -1,9 +1,9 @@
 import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
-import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import './globals.css';
-import ServiceWorkerRegistrar from './components/ServiceWorkerRegistrar';
 import { Geist_Mono, Inter } from 'next/font/google';
+import './globals.css';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import ServiceWorkerRegistrar from './components/ServiceWorkerRegistrar';
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
@@ -35,7 +35,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth">
       <head>
-        <link rel="icon" href="/icons/favicon-96x96.png" sizes="96x96" type="image/png" />
+        <link
+          rel="icon"
+          href="/icons/favicon-96x96.png"
+          sizes="96x96"
+          type="image/png"
+        />
         <link rel="icon" href="/icons/favicon.ico" sizes="32x32 16x16" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -43,9 +48,7 @@ export default function RootLayout({
       </head>
       <GoogleTagManager gtmId="GTM-KWSXXTV4" />
       <GoogleAnalytics gaId="G-5CE7FZ2TYX" />
-      <body
-        className={`${geistMono.variable} ${inter.variable}`}
-      >
+      <body className={`${geistMono.variable} ${inter.variable}`}>
         <ServiceWorkerRegistrar />
         <NuqsAdapter>{children}</NuqsAdapter>
       </body>
