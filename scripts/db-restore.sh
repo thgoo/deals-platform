@@ -1,23 +1,45 @@
 #!/usr/bin/env bash
-# Load a production dump (.sql or .sql.gz) into the local MariaDB container.
-# Replaces the local `deals` database entirely.
+# Load a production dump into the local databases.
 #
-#   scripts/db-restore.sh ../prod-2026-10-14.sql.gz
+#   scripts/db-restore.sh ../prod-2026-10-14.sql.gz     # MariaDB dump (.sql/.sql.gz) → MariaDB → Postgres
+#   scripts/db-restore.sh ../prod-2026-11-01.dump       # Postgres dump (pg_dump -Fc) → Postgres
+#
+# Replaces the local `deals` database(s) entirely.
 set -euo pipefail
 
-dump="${1:?usage: scripts/db-restore.sh <dump.sql[.gz]>}"
+dump="${1:?usage: scripts/db-restore.sh <dump>}"
 [ -f "$dump" ] || { echo "file not found: $dump" >&2; exit 1; }
+dump=$(cd "$(dirname "$dump")" && pwd)/$(basename "$dump")
 
 cd "$(dirname "$0")/.."
+PG_URL=postgres://deals:deals@127.0.0.1:5432/deals
 
+reset_postgres() {
+  docker compose up -d --wait postgres
+  docker compose exec -T postgres psql -q -U deals -d postgres \
+    -c "DROP DATABASE IF EXISTS deals WITH (FORCE)" -c "CREATE DATABASE deals"
+}
+
+if [[ "$dump" == *.dump ]]; then
+  # ── Postgres custom-format dump (production after the phase 5 cutover) ──────
+  reset_postgres
+  echo "Restoring $dump into Postgres..."
+  docker compose exec -T postgres pg_restore -U deals -d deals --no-owner < "$dump"
+  docker compose exec -T postgres psql -U deals -d deals -c "
+    SELECT 'deals' AS tbl, COUNT(*) FROM deals UNION ALL SELECT 'products', COUNT(*) FROM products
+    UNION ALL SELECT 'product_url_mappings', COUNT(*) FROM product_url_mappings
+    UNION ALL SELECT 'product_match_decisions', COUNT(*) FROM product_match_decisions"
+  exit 0
+fi
+
+# ── MariaDB dump (production before the cutover) ─────────────────────────────
 docker compose up -d --wait mariadb
-
 sql() { docker compose exec -T mariadb mariadb -uroot -proot "$@"; }
 
-echo "Recreating database 'deals'..."
+echo "Recreating MariaDB database 'deals'..."
 sql -e "DROP DATABASE IF EXISTS deals; CREATE DATABASE deals CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON deals.* TO 'deals'@'%';"
 
-echo "Importing $dump (this takes a few minutes)..."
+echo "Importing $dump (this takes a minute)..."
 start=$(date +%s)
 case "$dump" in
   *.gz) gunzip -c "$dump" ;;
@@ -25,22 +47,8 @@ case "$dump" in
 esac | sql --max-allowed-packet=512M deals
 echo "Imported in $(( $(date +%s) - start ))s."
 
-sql -e "
-  SELECT 'deals' AS tbl, COUNT(*) AS \`rows\` FROM deals.deals
-  UNION ALL SELECT 'products', COUNT(*) FROM deals.products
-  UNION ALL SELECT 'product_url_mappings', COUNT(*) FROM deals.product_url_mappings
-  UNION ALL SELECT 'product_match_decisions', COUNT(*) FROM deals.product_match_decisions
-  UNION ALL SELECT 'alerts', COUNT(*) FROM deals.alerts
-  UNION ALL SELECT 'users', COUNT(*) FROM deals.users;"
-
-# The dump excludes `sessions` (live login tokens), but __drizzle_migrations says it
-# exists, so migrations won't recreate it. Same DDL as drizzle/0000_loose_thundra.sql.
-sql deals -e "
-  CREATE TABLE IF NOT EXISTS sessions (
-    id varchar(255) NOT NULL,
-    user_id bigint unsigned NOT NULL,
-    expires_at datetime NOT NULL,
-    CONSTRAINT sessions_id PRIMARY KEY (id),
-    CONSTRAINT sessions_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users (id)
-  );"
-echo "Done."
+echo "Creating the Postgres schema and copying the data..."
+reset_postgres
+(cd apps/api \
+  && DATABASE_URL=$PG_URL bun run db:migrate \
+  && MARIADB_URL=mysql://deals:deals@127.0.0.1:3306/deals DATABASE_URL=$PG_URL bun run db:copy-from-mariadb)

@@ -68,6 +68,19 @@ const retiredSettings = Object.fromEntries(
 
 const hex = (bytes: number) => randomBytes(bytes).toString('hex');
 
+const LOCAL_DATABASE_URL = 'postgres://deals:deals@127.0.0.1:5432/deals';
+
+// The one value this script does change: the api moved from MariaDB to Postgres
+// (phase 5), so a local mysql:// URL is pointed at the compose Postgres.
+const apiEnvPath = join(root, ENV_FILES.api);
+if (existing.api.DATABASE_URL?.startsWith('mysql://')) {
+  const content = readFileSync(apiEnvPath, 'utf8')
+    .replace(/^(\s*DATABASE_URL\s*=\s*)"?mysql:\/\/[^"\s#]*"?/m, `$1"${LOCAL_DATABASE_URL}"`);
+  writeFileSync(apiEnvPath, content);
+  existing.api.DATABASE_URL = LOCAL_DATABASE_URL;
+  console.log(`update  ${ENV_FILES.api} (DATABASE_URL: MariaDB → local Postgres)`);
+}
+
 // Reuse secrets from files that already exist, so regenerating one file keeps the others valid.
 const webhookSecret = existing.api.WEBHOOK_SECRET || existing.crawler.BACKEND_SECRET || hex(16);
 const dashboardSecret = existing.api.DASHBOARD_SECRET || existing.web.DASHBOARD_SECRET || hex(16);
@@ -88,7 +101,7 @@ if (!vapidPublic || !vapidPrivate) {
 const values: Record<App, Record<string, string>> = {
   api: {
     NODE_ENV: 'development',
-    DATABASE_URL: 'mysql://deals:deals@127.0.0.1:3306/deals',
+    DATABASE_URL: LOCAL_DATABASE_URL,
     SESSION_SECRET: existing.api.SESSION_SECRET || hex(32),
     WEBHOOK_SECRET: webhookSecret,
     DASHBOARD_SECRET: dashboardSecret,
