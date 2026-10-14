@@ -31,7 +31,7 @@ MySQL                                   ├── packages/
 |---|-------|------|---------|-----------|
 | 0 | Safety net | none | 0.5–1 d | — |
 | 1 | Monorepo (pure move) | low | 1 d | 0 |
-| 2 | Unified tooling + CI | low | 0.5–1 d | 1 |
+| 2 | Unified tooling + CI ✅ | low | 0.5–1 d | 1 |
 | 3 | `packages/shared` contracts | low | 1 d | 2 |
 | 4 | Fold messaging + ai into `api` | low–med | 1–2 d | 3 |
 | 5 | MySQL → Postgres | **high** | 3–5 d | 4 |
@@ -119,21 +119,26 @@ Local work done 2026-10-14 in `bargah.com.br/bargah`:
 
 ---
 
-## Phase 2 — Unified tooling + CI
+## Phase 2 — Unified tooling + CI ✅ (tag `phase-2`)
 
 **Goal:** one way to type-check, lint and test.
 
-- [ ] `packages/config/tsconfig.base.json`. Each app extends it. Fix the `baseUrl` + `paths` setup (newer TypeScript rejects `baseUrl`; use `"paths": { "~/*": ["./src/*"] }`).
-- [ ] `packages/config/eslint.config.mjs` holding the rules you already repeat in 4 places; apps extend it (`web` keeps its Next.js additions).
-- [ ] Crawler: drop `tsc` → `node dist` and run it with Bun like everything else (it already depends on `@mtcute/bun`).
-- [ ] Pin `@types/bun` to a version instead of `latest`.
-- [ ] Add `typescript` as a devDependency of api and ai (today they have none, so `bunx tsc` silently downloads
-      TypeScript 6, which rejects their `baseUrl` config).
-- [ ] Remove the root `overrides` one package at a time (Next, React, hono, zod, mtcute), testing each upgrade.
-- [ ] Fix or delete the 5 pre-existing failing api tests, so CI starts green.
-- [ ] GitHub Actions: on every PR, `bun install --frozen-lockfile` → type-check → lint → test for all workspaces.
+- [x] `packages/config` (`@bargah/config`): `tsconfig.base.json` + one ESLint config for the bun apps. `baseUrl` replaced
+      by relative `paths` (TypeScript 6 compatible). Web keeps its own Next.js config.
+- [x] Every bun app declares `typescript`, `eslint`, `@types/bun ^1.3.14`, `@bargah/config`; scripts `lint`, `typecheck`, `test`.
+      Unused `tsx`, `@types/jest`, `@types/node` removed. Crawler's dead `tsc` / `node dist` scripts removed.
+- [x] Lint clean everywhere. Web: Prettier owns formatting (the overlapping @stylistic rules made `--fix` loop);
+      `react-hooks/set-state-in-effect` is a warning for `useAlerts` / `usePriceHistory` (revisit with SWR).
+      Messaging has no lint/test: it's deleted in Phase 4.
+- [x] The 5 failing api tests fixed (stub missing `findByProductAndSource`; `.env.test` for suites that import config).
+- [x] Overrides removed; explicit upgrades: hono 4.13, zod 4.6, @hono/zod-validator 0.9, next 16.4, react 19.3.
+      **mtcute stays at 0.27.5** until it can be tested against Telegram.
+- [x] `bun run check` = typecheck + lint + test across workspaces. GitHub Actions runs the same on push/PR (bun 1.3.14),
+      verified in a clean checkout without `.env` files.
+- [ ] **Production:** upgrade bun 1.3.9 → 1.3.14 on the server before deploying this phase (see CUTOVER.md).
 
-**Done when:** CI passes on `main`, and one command type-checks the whole repo.
+Known gap: `next build` isn't in CI (it prerenders `/amzn` against a live api, and needs `media/` to exist —
+the `/api/media` route goes away in Phase 8).
 
 ---
 

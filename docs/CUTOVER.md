@@ -50,6 +50,10 @@ for a in ai api crawler messaging web; do
 done
 ls -la apps/*/.env*        # every app should have its env file(s)
 
+# bun: the repo pins 1.3.14 (prod had 1.3.9). Installs that exact version:
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.14"
+bun --version
+
 bun install --frozen-lockfile
 (cd apps/web && bun run build)   # api must be up (it is — the old one)
 ```
