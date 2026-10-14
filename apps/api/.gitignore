@@ -7,3 +7,4 @@ node_modules/
 
 # os files
 .DS_STORE
+!.env.test

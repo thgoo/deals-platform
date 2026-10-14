@@ -52,6 +52,9 @@ class StubUrlMappingService {
   async findByExternalId(source: string, externalId: string): Promise<ProductUrlMapping | null> {
     return this.mappings[`${source}:${externalId}`] ?? null;
   }
+  async findByProductAndSource(productId: string, source: string): Promise<ProductUrlMapping[]> {
+    return Object.values(this.mappings).filter(m => m.productId === productId && m.source === source);
+  }
   async saveAll(
     externalIds: { source: string; externalId: string }[],
     productId: string,
