@@ -6,14 +6,13 @@ product catalog for price history, and serves them on a web app with push alerts
 | App | What it does | Port |
 |---|---|---|
 | [`apps/crawler`](apps/crawler) | Listens to Telegram channels, forwards raw messages to the api | — |
-| [`apps/api`](apps/api) | Ingestion pipeline, product catalog, feed, alerts, admin API | 8000 |
+| [`apps/api`](apps/api) | Ingestion pipeline, product catalog, feed, alerts + web push, admin API | 8000 |
 | [`apps/ai`](apps/ai) | LLM extraction, embeddings, match judge (internal) | 3003 |
-| [`apps/messaging`](apps/messaging) | Web push delivery (internal) | 3002 |
 | [`apps/web`](apps/web) | Next.js site + admin dashboard | 3000 (prod: 3004) |
 | [`packages/shared`](packages/shared) | API contracts shared by crawler, api and web (zod schemas + response types) | — |
 | [`packages/config`](packages/config) | Shared tsconfig base and ESLint config | — |
 
-`ai` and `messaging` are scheduled to fold into `api` — see [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md).
+`ai` is scheduled to fold into `api` — see [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md).
 
 ## Local development
 
@@ -62,7 +61,6 @@ One terminal per app:
 
 ```sh
 bun run dev:ai
-bun run dev:messaging
 bun run dev:api
 bun run dev:web           # http://localhost:3000
 ```

@@ -1,7 +1,0 @@
-{
-  "extends": "@bargah/config/tsconfig.base.json",
-  "compilerOptions": {
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true
-  }
-}

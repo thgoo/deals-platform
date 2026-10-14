@@ -24,7 +24,6 @@ const app = (name, dir, args) => ({
 module.exports = {
   apps: [
     app('ai.bargah.com.br', 'ai', 'run src/index.ts'),
-    app('messaging.bargah.com.br', 'messaging', 'run src/index.ts'),
     app('api.bargah.com.br', 'api', 'run src/index.ts'),
     app('crawler.bargah.com.br', 'crawler', 'run src/index.ts'),
     app('bargah.com.br', 'web', 'run start -- -p 3004'),
