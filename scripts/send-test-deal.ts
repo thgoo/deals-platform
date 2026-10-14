@@ -4,8 +4,8 @@
 //   bun scripts/send-test-deal.ts
 //   bun scripts/send-test-deal.ts "SSD Kingston NV2 1TB por R$ 399,90 https://www.amazon.com.br/dp/B0BBWH1R8H"
 //
-// Needs api + ai running (and ai needs real LLM/embedding keys), otherwise the
-// api answers { skipped: 'extraction_failed' }.
+// The api answers 202 at once; its worker extracts and matches the deal a few
+// seconds later (needs the AI keys in apps/api/.env) — watch the api log or the feed.
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
