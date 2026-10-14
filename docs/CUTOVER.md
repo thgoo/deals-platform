@@ -1,5 +1,8 @@
 # Phase 1 cutover — old repos → monorepo (production)
 
+> Deploy the **`phase-1` tag** with this runbook (`git checkout phase-1` after cloning). Later phases:
+> [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md).
+
 Moves the 5 bargah PM2 processes from `/var/www/bargah.com.br/<app>` to the monorepo, **one process at a time**,
 with the same PM2 names, commands and ports. Nothing else on the host is touched.
 

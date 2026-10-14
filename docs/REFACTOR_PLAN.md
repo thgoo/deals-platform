@@ -29,15 +29,15 @@ MySQL                                   ├── packages/
 
 | # | Phase | Risk | Effort* | Depends on |
 |---|-------|------|---------|-----------|
-| 0 | Safety net | none | 0.5–1 d | — |
-| 1 | Monorepo (pure move) | low | 1 d | 0 |
+| 0 | Safety net ✅ | none | 0.5–1 d | — |
+| 1 | Monorepo (pure move) ✅ local | low | 1 d | 0 |
 | 2 | Unified tooling + CI ✅ | low | 0.5–1 d | 1 |
 | 3 | `packages/shared` contracts ✅ | low | 1 d | 2 |
-| 4 | Fold messaging + ai into `api` | low–med | 1–2 d | 3 |
-| 5 | MySQL → Postgres | **high** | 3–5 d | 4 |
+| 4 | Fold messaging + ai into `api` ✅ | low–med | 1–2 d | 3 |
+| 5 | MariaDB → Postgres | **high** | 3–5 d | 4 |
 | 6 | pgvector replaces in-memory search | med | 1 d | 5 |
 | 7 | Durable ingestion (raw messages + queue + worker) | med | 3–4 d | 5 (6 recommended) |
-| 8 | Media → object storage | low–med | 1 d | 7 |
+| 8 | Media stored and served by api | low–med | 1 d | 7 |
 | 9 | Admin auth | low | 0.5 d | 1 |
 
 \* Focused days for one person. Expect roughly 2–3× calendar time part-time. Total: roughly 2–3 focused weeks.
@@ -156,28 +156,23 @@ the `/api/media` route goes away in Phase 8).
 
 ---
 
-## Phase 4 — Fold `messaging` and `ai` into `api`
+## Phase 4 — Fold `messaging` and `ai` into `api` ✅ (tag `phase-4`)
 
 **Goal:** 5 deployables → 3. Behavior unchanged.
 
-### 4a. Messaging (small)
-- [ ] Move `apps/messaging/src/channels/web-push.ts` → `apps/api/src/notifications/web-push.ts`. Drop the dispatcher/channel registry; one function `sendWebPush(subscription, message): Promise<SendResult>`.
-- [ ] `AlertService.sendNotification` calls it directly instead of `fetch(MESSAGING_SERVICE_URL/notify)`.
-- [ ] Move `VAPID_*` env vars into api's zod config; delete `MESSAGING_SERVICE_URL`.
-- [ ] Deploy, verify that a push arrives, delete `apps/messaging`.
+- [x] Messaging: `WebPushSender` (`apps/api/src/notifications`) replaces the HTTP call; VAPID keys in api config,
+      applied lazily on the first send. Unit-tested (VAPID once, 404/410 → `recipient_gone`).
+- [x] AI: orchestrators, prompts, schemas and providers moved to `apps/api/src/ai` with `git mv` (history kept).
+      `AiService` interface + `InProcessAiService` replace `AiServiceClient` everywhere. Providers are created on
+      first use; requests are validated with the same schemas the HTTP routes used. The 120 s client timeout layer
+      is gone. Verified end to end (extract → embed → judge → resolved) against the real providers.
+- [x] `apps/messaging` and `apps/ai` removed; PM2 ecosystem, deploy script, README updated.
+- [x] `scripts/setup-local-env.ts` appends new keys to existing env files and carries settings over from the
+      retired apps' env files.
+- Logger/retry: api now has one copy of each; the crawler keeps its own (different retry semantics on purpose).
+- Deferred: removing the `HttpAiService` rollback path wasn't needed — rollback is "deploy `phase-3`".
 
-### 4b. AI
-- [ ] Move `apps/ai/src/{capabilities,providers,shared/errors.ts,shared/retry.ts}` → `apps/api/src/ai/`.
-- [ ] Turn `AiServiceClient` into an interface (`embed`, `judge`, `extract`) with two implementations:
-  `HttpAiService` (the current one) and `InProcessAiService` (calls the orchestrators directly).
-  Deploy with the in-process one selected in `index.ts`. Callers and tests don't change.
-- [ ] Move `OPENAI_*` / `ABACUS_*` / `LLM_PROVIDER` into api's config. Delete `AI_SERVICE_URL`.
-- [ ] Remove the 120s client timeout layer; the provider timeouts and retries are the only ones left.
-- [ ] Merge the copies of the logger and retry code into one in `api` (crawler keeps its own or imports from `shared`, your call).
-- [ ] Deploy, watch extraction/match logs for a day, then delete `HttpAiService` and `apps/ai`.
-
-**Done when:** production runs `crawler`, `api`, `web` only.
-**Rollback:** select `HttpAiService` again and redeploy `apps/ai` (keep it around until stable).
+Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-4--messaging-and-ai-folded-into-api).
 
 ---
 
