@@ -70,6 +70,13 @@ bun run dev:web           # http://localhost:3000
 
 Admin dashboard: `http://localhost:3000/<DASHBOARD_SECRET>/admin` (the setup script prints the URL).
 
+### How ingestion works
+
+`POST /api/deals` (from the crawler) stores the raw message in `raw_messages` and answers immediately. A worker
+inside the api drains that table: **extract** (link pipeline + LLM → deal) → **resolve** (product matching, one at a
+time) → **notify** (keyword alerts). Failed steps retry with backoff; a crash mid-step is picked up again after a
+5-minute lease. See [`apps/api/src/ingest`](apps/api/src/ingest).
+
 ### Test ingestion without Telegram
 
 ```sh
@@ -77,7 +84,8 @@ bun scripts/send-test-deal.ts
 bun scripts/send-test-deal.ts "SSD Kingston NV2 1TB por R\$ 399,90 https://www.amazon.com.br/dp/B0BBWH1R8H"
 ```
 
-Posts a fake message to `POST /api/deals` exactly like the crawler. It shows up live in the web feed.
+Posts a fake message to `POST /api/deals` exactly like the crawler; the worker processes it a few seconds later and
+it shows up live in the web feed.
 
 ### ⚠️ Running the crawler locally
 

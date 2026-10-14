@@ -186,3 +186,35 @@ Apps restarted: api. One migration: the HNSW index on `products.embedding`.
    ~100 MB of memory instead of ~400–500 MB. First deals: `Deal resolved to product` as usual.
 
 Rollback: checkout `phase-5`, restart api. The index can stay (it's only used by the new code).
+
+## Phase 7 — durable ingestion
+
+The api's `POST /api/deals` keeps its URL and payload, so the current crawler works with the new api;
+deploy api first, crawler after.
+
+1. Checkout `phase-7`, `bun install --frozen-lockfile`, run the migration (new tables `raw_messages`,
+   `alert_product_notifications`; nothing existing changes):
+   ```sh
+   cd apps/api && bun run db:migrate
+   ```
+2. `pm2 restart api.bargah.com.br`. Log shows `Ingestion worker started lanes=extract×3, resolve×1`. New messages
+   log `Message queued` then, from the worker, `Deal created` / `Deal resolved to product`.
+3. `pm2 restart crawler.bargah.com.br` (15 s timeout instead of 180 s). `pm2 save`.
+
+Watching the queue (psql into the Postgres container, or any client):
+
+```sql
+-- what's pending / how messages ended up, last 24 h
+SELECT step, outcome, skip_reason, count(*) FROM raw_messages
+WHERE received_at > now() - interval '1 day' GROUP BY 1, 2, 3 ORDER BY 4 DESC;
+
+-- recent failures
+SELECT id, chat, message_id, attempts, last_error FROM raw_messages
+WHERE outcome = 'failed' ORDER BY id DESC LIMIT 20;
+```
+
+After an AI outage longer than ~30 min, failed messages can be retried: `bun run ingest:requeue-failed 2026-10-14`
+(from `apps/api`; only messages received since that date).
+
+Rollback: stop the crawler, wait until `SELECT count(*) FROM raw_messages WHERE step <> 'done'` is 0 (or accept
+losing those), checkout `phase-6`, restart api and crawler. The new tables can stay.

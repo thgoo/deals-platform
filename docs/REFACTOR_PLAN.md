@@ -36,7 +36,7 @@ MySQL                                   ├── packages/
 | 4 | Fold messaging + ai into `api` ✅ | low–med | 1–2 d | 3 |
 | 5 | MariaDB → Postgres ✅ | **high** | 3–5 d | 4 |
 | 6 | pgvector replaces in-memory search ✅ | med | 1 d | 5 |
-| 7 | Durable ingestion (raw messages + queue + worker) | med | 3–4 d | 5 (6 recommended) |
+| 7 | Durable ingestion (raw messages + queue + worker) ✅ | med | 3–4 d | 5 (6 recommended) |
 | 8 | Media stored and served by api | low–med | 1 d | 7 |
 | 9 | Admin auth | low | 0.5 d | 1 |
 
@@ -225,53 +225,30 @@ Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-6--pgvector-search
 
 ---
 
-## Phase 7 — Durable ingestion
+## Phase 7 — Durable ingestion ✅ (tag `phase-7`)
 
 **Goal:** the crawler gets an instant answer; processing is retryable, survives restarts, and is idempotent.
 
-### Data
-```
-raw_messages
-  id            bigint identity
-  chat          text            ┐ UNIQUE
-  message_id    bigint          ┘
-  payload       jsonb           (exact crawler payload, validated by packages/shared)
-  photo_path    text null       (filled by the image endpoint, whatever order things arrive in)
-  status        enum(pending, processed, skipped, failed)
-  skip_reason   text null
-  deal_id       bigint null → deals.id
-  attempts      int
-  received_at   timestamptz
-```
-`deals` gets `raw_message_id UNIQUE` → a retried job cannot create a second deal.
+Built simpler than first planned: **no pg-boss and no separate worker process.** `raw_messages` already is a
+durable queue, so a small worker claims rows with `FOR UPDATE SKIP LOCKED` + a lease. It runs inside the api
+process, which keeps the SSE stream in-process (no `LISTEN/NOTIFY` needed) and the deployment unchanged.
+`SKIP LOCKED` makes several api processes safe should that ever happen.
 
-### Flow
-```
-crawler ── POST /api/ingest/messages ──► INSERT raw_messages ON CONFLICT DO NOTHING
-                                         enqueue process-message(raw_id) ──► 202 (~10 ms)
+- [x] `raw_messages`: unique `(chat, message_id)`, payload, photo id/path, `step` (extract → resolve → notify → done),
+      outcome / skip reason, attempts, backoff (`available_at`), lease (`locked_until`), stored external ids.
+- [x] `POST /api/deals` (same URL and payload) stores and answers **202** in ~5 ms; a resend answers `deduped`.
+      The crawler's timeout went from 180 s to 15 s.
+- [x] Worker lanes: extract ×3, resolve+notify ×1 → **product matching is serialized** (3 simultaneous messages for a
+      brand-new product → 1 product). Retries 30 s → 15 min, 6 attempts (≈30 min: rides out an AI outage);
+      validation errors fail at once. Graceful stop on SIGINT/SIGTERM.
+- [x] Photos that arrive before/while the deal is created are kept on the raw message and applied.
+- [x] **Alerts gated per (alert, product)** (`alert_product_notifications`), after resolution.
+      `alerts.last_notified_price` is no longer used (left in place for rollback; drop it later).
+- [x] `bun run ingest:requeue-failed [since]`.
+- Not done: queue stats on the admin dashboard (use the SQL in DEPLOY_NOTES for now); reprocessing deals that
+  already exist (re-extraction would need an update path, not just a requeue).
 
-worker (apps/api/src/worker.ts, pg-boss):
-  process-message(raw_id)    links → extract → create deal (idempotent on raw_message_id)
-                             → NOTIFY deal_created → enqueue resolve-product(deal_id)
-  resolve-product(deal_id)   concurrency = 1  → no duplicate products from concurrent deals
-                             → enqueue notify-alerts(deal_id)
-  notify-alerts(deal_id)     runs after resolution → price gate per (alert, product_id)
-
-api (apps/api/src/index.ts):
-  LISTEN deal_created / image_updated → SSE to browsers
-```
-
-### Steps
-- [ ] Add pg-boss; `worker.ts` entry point; `bun run worker` script; run it as its own process.
-- [ ] New ingest endpoint + `raw_messages`. **Keep `POST /api/deals` working** until the crawler is switched.
-- [ ] Image endpoint writes `photo_path` on `raw_messages` (and on the deal if it already exists). Arrival order no longer matters → delete the "wait for deal POST before sending the media notification" gating in the crawler.
-- [ ] Crawler: point at the new endpoint and drop the timeout from 180s to ~10s. Retries are now safe.
-- [ ] SSE via `LISTEN/NOTIFY` (the in-process `EventEmitter` can't see events from the worker process).
-- [ ] Reprocessing = `UPDATE raw_messages SET status='pending'` + enqueue. Retire the reprocess scripts.
-- [ ] Sweep job (cron in pg-boss): re-enqueue `pending` older than 10 min and deals with no match decision.
-- [ ] Remove `POST /api/deals` once the crawler has run on the new path for a week.
-
-**Done when:** you can kill the api or worker mid-flight and nothing is lost or duplicated.
+Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-7--durable-ingestion).
 
 ---
 
