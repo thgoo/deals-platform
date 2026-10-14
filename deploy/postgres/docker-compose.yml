@@ -1,0 +1,37 @@
+# Production Postgres for the api, on the same host as the apps.
+#
+#   cd deploy/postgres
+#   cp .env.example .env && $EDITOR .env      # set POSTGRES_PASSWORD
+#   docker compose up -d
+#
+# Bound to 127.0.0.1 only: reachable by the apps on this host, never from outside.
+# Backups: scripts/pg-backup.sh (see docs/DEPLOY_NOTES.md).
+
+name: deals-postgres
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-deals}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/postgres/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-deals}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"
+
+volumes:
+  pgdata:
