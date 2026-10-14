@@ -6,10 +6,19 @@ import type { Logger } from '~/logger';
 import { config } from '~/config';
 import db from '~/db';
 import { alertsTable } from '~/db/schemas/alerts';
+import { WebPushSender } from '~/notifications/web-push';
 
 const ALERT_EXPIRY_DAYS = 90;
 
 export class AlertService {
+  constructor(
+    private readonly push = new WebPushSender({
+      email: config.VAPID_EMAIL,
+      publicKey: config.VAPID_PUBLIC_KEY,
+      privateKey: config.VAPID_PRIVATE_KEY,
+    }),
+  ) {}
+
   async create(data: {
     keyword: string;
     subscription: PushSubscription;
@@ -116,26 +125,17 @@ export class AlertService {
       ? `R$ ${(deal.price / 100).toFixed(2).replace('.', ',')}`
       : 'Check out this deal';
 
-    const response = await fetch(`${config.MESSAGING_SERVICE_URL}/notify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipient: { type: 'web-push', subscription: alert.subscription },
-        message: {
-          title,
-          body,
-          url: `/?search=${encodeURIComponent(alert.keyword)}`,
-          tag: `bargah-alert-${alert.keyword}`,
-          renotify: true,
-          actions: [
-            { action: 'view', title: 'Ver promoção' },
-            { action: 'dismiss', title: 'Dispensar' },
-          ],
-        },
-      }),
+    const result = await this.push.send(alert.subscription, {
+      title,
+      body,
+      url: `/?search=${encodeURIComponent(alert.keyword)}`,
+      tag: `bargah-alert-${alert.keyword}`,
+      renotify: true,
+      actions: [
+        { action: 'view', title: 'Ver promoção' },
+        { action: 'dismiss', title: 'Dispensar' },
+      ],
     });
-
-    const result = await response.json() as { ok: boolean; reason?: string };
 
     if (result.ok) {
       await db

@@ -16,7 +16,7 @@ Designed as a **set of focused modules behind one Hono app**: each feature (deal
 
 - **Deal intake pipeline** — link normalization + affiliate rewriting + AI extraction + product resolution, all triggered by `POST /api/deals`
 - **Product catalog** with embedding-based deduplication (URL anchor → embedding similarity → LLM judge)
-- **Alerts** — keyword-based push notifications delegated to messaging-service
+- **Alerts** — keyword-based Web Push notifications (VAPID), sent directly by the api
 - **Auth** — session-based authentication (cookie-driven)
 - **SSE stream** of new deals for the web client
 - **Drizzle migrations** generated from the schema files

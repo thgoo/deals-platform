@@ -9,7 +9,10 @@ const envSchema = z.object({
   WEBHOOK_SECRET: z.string().min(8, 'WEBHOOK_SECRET must be at least 8 characters long'),
   DASHBOARD_SECRET: z.string().min(16, 'DASHBOARD_SECRET must be at least 16 characters long'),
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
-  MESSAGING_SERVICE_URL: z.string().url().default('http://localhost:3002'),
+  // Web Push (alerts). Generate a pair with: bunx web-push generate-vapid-keys
+  VAPID_EMAIL: z.string().min(1),
+  VAPID_PUBLIC_KEY: z.string().min(1),
+  VAPID_PRIVATE_KEY: z.string().min(1),
   AI_SERVICE_URL: z.string().url().default('http://localhost:3003'),
 
   // Affiliate programs — all optional. Absent key = that store's rewriter is a no-op.
