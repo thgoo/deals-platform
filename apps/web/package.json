@@ -6,16 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@next/third-parties": "^16.0.5",
+    "@next/third-parties": "^16.4.1",
     "@visx/xychart": "^3.12.0",
     "lucide-react": "^0.553.0",
-    "next": "^16.0.7",
+    "next": "^16.4.1",
     "nuqs": "^2.8.9",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "sass": "^1.94.2",
     "swr": "^2.3.6"
   },
@@ -27,7 +28,7 @@
     "@types/react-dom": "^19",
     "baseline-browser-mapping": "^2.10.27",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.0.7",
+    "eslint-config-next": "^16.4.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-perfectionist": "^4.15.1",
     "eslint-plugin-prettier": "^5.5.4",

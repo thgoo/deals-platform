@@ -12,20 +12,8 @@
     "dev:crawler": "bun run --filter @bargah/crawler dev",
     "dev:web": "bun run --filter @bargah/web dev",
     "test": "bun run --filter '*' test",
-    "lint": "bun run --filter '*' lint"
-  },
-  "overrides": {
-    "next": "16.2.5",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "hono": "4.12.23",
-    "zod": "4.4.3",
-    "@mtcute/core": "0.27.5",
-    "@mtcute/bun": "0.27.5",
-    "@mtcute/dispatcher": "0.27.5",
-    "@mtcute/file-id": "0.27.0",
-    "@mtcute/html-parser": "0.27.5",
-    "@mtcute/markdown-parser": "0.27.5",
-    "@mtcute/wasm": "0.27.0"
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "check": "bun run typecheck && bun run lint && bun run test"
   }
 }
