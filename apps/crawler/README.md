@@ -14,7 +14,7 @@ Designed to be **backend-agnostic** at the Telegram protocol layer: switching th
 - Telegram client wrapper behind a `TelegramGateway` interface (default impl: `mtcute`)
 - Channel-only message filter (silently drops DMs / groups)
 - Async photo downloader with a bounded download queue
-- Webhook client with retry that ships each deal to core-api (`POST /api/deals`) and media notifications (`POST /api/deals/image`)
+- Webhook client with retry that ships each message to the api (`POST /api/deals`) and uploads photos (`PUT /api/deals/photos/:photoId`)
 - Graceful shutdown that drains the download queue before exiting
 - Structured logging (development: colored console, production: JSON)
 - One-shot interactive setup script to create the Telegram session
@@ -81,7 +81,7 @@ src/
 │   ├── queue.ts                       # bounded async download queue
 │   └── downloader.ts                  # photo download via the gateway
 ├── webhook/
-│   └── client.ts                      # core-api client (sendDeal + sendMediaNotification)
+│   └── client.ts                      # api client (sendDeal + uploadPhoto)
 ├── shared/
 │   ├── errors.ts                      # ProcessingError + handleError
 │   ├── retry.ts                       # withRetry + presets
@@ -127,25 +127,24 @@ interface TelegramGateway {
 
 The currently registered backend is `mtcute`, selected via the `TELEGRAM_BACKEND` env var. Adding a new one is a self-contained change in `src/telegram/gateways/`.
 
-### Photo download is async; the notification is gated on the deal POST
+### Photos are uploaded to the api, after the message POST
 
-A photo arriving from Telegram CDN can be downloaded faster than core-api can finish processing the parent deal. If we sent the media notification right after the download, it would arrive **before** the deal exists in the DB — and the `UPDATE deals SET local_path = ?` would silently match zero rows.
-
-The fix: the photo download still happens in parallel with the deal POST, but the notification call is gated on the deal-send Promise resolving successfully.
+The crawler never writes photos to disk: it downloads them into memory (bounded queue, in parallel with the message
+POST) and uploads the bytes to the api, which stores and serves them. The upload waits for the message POST, so the
+api always knows the message the photo belongs to — the api then attaches it to the deal whenever its ingestion
+worker creates it.
 
 ```typescript
 const dealSent = this.sendDealSafely(payload);   // Promise<boolean>
 
-mediaDownloader.enqueuePhotoDownload(photoId, ..., async filePath => {
-  const ok = await dealSent;                      // wait here until the deal lands
+mediaDownloader.enqueuePhotoDownload(photoId, ..., async bytes => {
+  const ok = await dealSent;                      // the api must have the message first
   if (!ok) return;                                // and skip if the POST failed
-  await webhookClient.sendMediaNotification(photoId, filePath);
+  await webhookClient.uploadPhoto(photoId, bytes);
 });
 
 await dealSent;                                   // handler doesn't return until POST done
 ```
-
-This is invisible to core-api — it just sees the notification arrive after the deal exists.
 
 ### Failure model
 
@@ -155,8 +154,9 @@ Two layers retry transparently:
 | ------------------------------ | --------------------------------------------- | ---------------------------------------------------------- |
 | `webhook/client.ts` (HTTP)     | Exponential backoff, transient errors only    | Throws — caught by message-handler, logged, message dropped |
 | `media/queue.ts` (download)    | Internal queue retry                          | Photo skipped, deal still goes through without local_path  |
+| `uploadPhoto` (HTTP PUT)       | Exponential backoff, transient errors only    | Logged; the deal shows the default image                    |
 
-The crawler **never blocks the Telegram event loop on retries** — if core-api is unhealthy, deals are lost but the crawler keeps reading messages so we don't fall behind.
+The crawler **never blocks the Telegram event loop on retries**. The api answers a message POST as soon as it's stored (processing is queued on the api side), so a POST only fails if the api is down.
 
 ## How to Add a New Telegram Backend
 

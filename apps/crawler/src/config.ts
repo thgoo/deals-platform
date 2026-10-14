@@ -13,11 +13,8 @@ export interface Config {
     secret: string;
     endpoints: {
       deals: string;
-      dealsImage: string;
+      photos: string;
     };
-  };
-  media: {
-    dir: string;
   };
   targetChats: string[];
 }
@@ -35,11 +32,8 @@ export const config: Config = {
     secret: process.env.BACKEND_SECRET || 'devsecret',
     endpoints: {
       deals: '/api/deals',
-      dealsImage: '/api/deals/image',
+      photos: '/api/deals/photos',
     },
-  },
-  media: {
-    dir: process.env.MEDIA_DIR || './media',
   },
   targetChats: (process.env.TARGET_CHATS || '')
     .split(',')

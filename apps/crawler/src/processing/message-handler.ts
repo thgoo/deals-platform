@@ -1,6 +1,5 @@
 import type { DealPayload } from '../shared/types';
 import type { TelegramIncomingMessage } from '../telegram';
-import { config } from '../config';
 import { logger } from '../logger';
 import { mediaDownloader } from '../media/downloader';
 import { ProcessingError } from '../shared/errors';
@@ -48,23 +47,20 @@ class MessageHandler {
         payload.media = message.media;
       }
 
-      // Fire-and-forget the deal POST; we hand its promise to the media callback
-      // so the media notification can only land *after* the deal exists in the DB.
-      // (Before this gating, the photo download often beat the deal POST — which
-      //  now takes 2-20s because core-api runs the link pipeline and AI extract
-      //  synchronously — and UPDATE found no row to attach the photo to.)
+      // The photo download runs in parallel with the message POST, but the upload
+      // waits for the POST: the api attaches a photo to the message it already
+      // received (or to its deal, once the ingestion worker created it).
       const dealSentSuccessfully = this.sendDealSafely(payload, chatAlias, id);
 
       if (message.media?.type === 'photo' && message.media.photo_id) {
         const photoId = message.media.photo_id;
-        mediaDownloader.enqueuePhotoDownload(photoId, id, chatId, config.media.dir, async filePath => {
+        mediaDownloader.enqueuePhotoDownload(photoId, id, chatId, async bytes => {
           const ok = await dealSentSuccessfully;
           if (!ok) {
-            logger.debug('Skipping media notification because deal POST failed', { photoId });
+            logger.debug('Skipping photo upload because the message POST failed', { photoId });
             return;
           }
-          const filename = filePath.split('/').pop() || '';
-          await webhookClient.sendMediaNotification(photoId, `media/${filename}`);
+          await webhookClient.uploadPhoto(photoId, bytes);
         });
       }
 
