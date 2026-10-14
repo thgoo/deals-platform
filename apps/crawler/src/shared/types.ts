@@ -1,21 +1,10 @@
-export interface DealPayload {
-  message_id: number;
-  chat: string;
-  chat_id: string;
-  ts: string;
-  text: string;
-  links: string[];
-  media?: MediaInfo;
-}
+import type { DealPayload as DealPayloadContract, MediaPayload } from '@bargah/shared';
 
-export interface MediaInfo {
+/** What the crawler POSTs to the api — the contract lives in @bargah/shared. */
+export type DealPayload = DealPayloadContract;
+
+/** Media as the crawler produces it: a narrower version of the shared MediaPayload. */
+export interface MediaInfo extends MediaPayload {
   type: 'photo' | 'document' | 'webpage' | 'unknown';
   photo_id?: string;
-  document_id?: string;
-  mime_type?: string;
-  file_name?: string;
-  webpage_url?: string;
-  webpage_title?: string;
-  webpage_description?: string;
-  local_path?: string;
 }

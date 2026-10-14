@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bargah/shared": "workspace:*",
     "@mtcute/bun": "^0.27.5",
     "@mtcute/core": "^0.27.5",
     "@mtcute/dispatcher": "^0.27.5",

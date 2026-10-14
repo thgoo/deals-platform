@@ -1,3 +1,4 @@
+import type { ImagePayload } from '@bargah/shared';
 import type { DealPayload } from '../shared/types';
 import { config } from '../config';
 import { logger } from '../logger';
@@ -39,7 +40,7 @@ class WebhookClient {
 
   async sendMediaNotification(photoId: string, localPath: string): Promise<void> {
     const url = `${config.backend.baseUrl}${config.backend.endpoints.dealsImage}`;
-    const payload = { photo_id: photoId, local_path: localPath };
+    const payload: ImagePayload = { photo_id: photoId, local_path: localPath };
 
     try {
       const response = await this.post(url, payload, 5_000);
