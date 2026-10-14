@@ -10,17 +10,17 @@ with the same PM2 names, commands and ports. Nothing else on the host is touched
 ├── ai/ api/ crawler/ messaging/ web/   old checkouts — keep untouched until Phase 2 (rollback)
 ├── _media/                             LIVE photos (crawler/media and web/public/media point here)
 ├── media/                              old photos, last written Feb 2026 — not used by the apps
-├── sessions/                           Telegram session (verify: see below)
+├── _sessions/                          LIVE Telegram session (mtcute SQLite db + WAL; crawler/sessions points here)
 └── bargah/                             NEW: monorepo clone
     ├── media    -> ../_media           symlinks created by hand (gitignored)
-    ├── sessions -> ../sessions
+    ├── sessions -> ../_sessions
     └── apps/<app>/.env*                copied from the old checkouts
 ```
 
 No data moves: the monorepo's `media/` and `sessions/` are symlinks to the directories in use today.
 
 **Use the targets the old checkouts actually use**, not the ones in git: on the server the symlinks were changed in place
-(git says `../media`, the server uses `../_media`). Check before linking:
+(git says `../media` and `../sessions`, the server uses `../_media` and `../_sessions`). Check before linking:
 
 ```sh
 ls -la /var/www/bargah.com.br/crawler/media /var/www/bargah.com.br/crawler/sessions /var/www/bargah.com.br/web/public/media
@@ -28,6 +28,8 @@ ls -la /var/www/bargah.com.br/crawler/media /var/www/bargah.com.br/crawler/sessi
 
 ## ⚠️ Rules
 
+- **Never copy the session, only symlink it.** It's a live SQLite database with a write-ahead log; a copy taken
+  while the crawler runs can be corrupt or stale.
 - **Never run two crawlers at once.** Two clients on the same Telegram session can get the session revoked
   (and you'd have to redo `bun run setup` with your phone). Always `pm2 delete` the old crawler *before* starting the new one.
 - Switch one process, check its logs, then go to the next.
@@ -41,7 +43,7 @@ git clone git@github.com:thgoo/bargah.git bargah
 cd bargah
 
 ln -s ../_media media          # same target as crawler/media today
-ln -s ../sessions sessions     # adjust if crawler/sessions points elsewhere
+ln -s ../_sessions sessions    # same target as crawler/sessions today
 
 for a in ai api crawler messaging web; do
   cp -a ../$a/.env* apps/$a/ 2>/dev/null || echo "no .env files in $a"
@@ -57,7 +59,7 @@ Sanity checks:
 ```sh
 ls -t media | head -3                   # newest photos = today's (if they're from Feb, the link is wrong)
 ls apps/web/public/media | head -3      # same files
-ls sessions                             # the Telegram session file
+ls sessions                             # telegram_crawler_session.mtcute.db (+ -wal/-shm while running)
 ```
 
 ## 2. Switch processes (order: lowest risk first)
@@ -117,5 +119,5 @@ If you ran `pm2 save` already, run it again after rolling back.
 ## After a week of stability
 
 - Archive the old GitHub repos (`deals-backend`, `deals-crawler`, `deals-client-web`, `deals-ai-service`, `deals-messaging-service`).
-- Remove the old checkouts from `/var/www/bargah.com.br/` (keep `_media/` and `sessions/`!).
+- Remove the old checkouts from `/var/www/bargah.com.br/` (keep `_media/` and `_sessions/`!).
   The old `media/` (Feb 2026) can go too once you've confirmed nothing points to it — `coupon.png` already exists in `_media/`.
