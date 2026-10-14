@@ -8,15 +8,23 @@ with the same PM2 names, commands and ports. Nothing else on the host is touched
 ```
 /var/www/bargah.com.br/
 ├── ai/ api/ crawler/ messaging/ web/   old checkouts — keep untouched until Phase 2 (rollback)
-├── media/                              existing data (crawler writes, web serves)
-├── sessions/                           existing Telegram session
+├── _media/                             LIVE photos (crawler/media and web/public/media point here)
+├── media/                              old photos, last written Feb 2026 — not used by the apps
+├── sessions/                           Telegram session (verify: see below)
 └── bargah/                             NEW: monorepo clone
-    ├── media    -> ../media            symlinks created by hand (gitignored)
+    ├── media    -> ../_media           symlinks created by hand (gitignored)
     ├── sessions -> ../sessions
     └── apps/<app>/.env*                copied from the old checkouts
 ```
 
 No data moves: the monorepo's `media/` and `sessions/` are symlinks to the directories in use today.
+
+**Use the targets the old checkouts actually use**, not the ones in git: on the server the symlinks were changed in place
+(git says `../media`, the server uses `../_media`). Check before linking:
+
+```sh
+ls -la /var/www/bargah.com.br/crawler/media /var/www/bargah.com.br/crawler/sessions /var/www/bargah.com.br/web/public/media
+```
 
 ## ⚠️ Rules
 
@@ -32,8 +40,8 @@ cd /var/www/bargah.com.br
 git clone git@github.com:thgoo/bargah.git bargah
 cd bargah
 
-ln -s ../media media
-ln -s ../sessions sessions
+ln -s ../_media media          # same target as crawler/media today
+ln -s ../sessions sessions     # adjust if crawler/sessions points elsewhere
 
 for a in ai api crawler messaging web; do
   cp -a ../$a/.env* apps/$a/ 2>/dev/null || echo "no .env files in $a"
@@ -47,7 +55,7 @@ bun install --frozen-lockfile
 Sanity checks:
 
 ```sh
-ls media | head -3                      # existing photos visible through the symlink
+ls -t media | head -3                   # newest photos = today's (if they're from Feb, the link is wrong)
 ls apps/web/public/media | head -3      # same files
 ls sessions                             # the Telegram session file
 ```
@@ -109,4 +117,5 @@ If you ran `pm2 save` already, run it again after rolling back.
 ## After a week of stability
 
 - Archive the old GitHub repos (`deals-backend`, `deals-crawler`, `deals-client-web`, `deals-ai-service`, `deals-messaging-service`).
-- Remove the old checkouts from `/var/www/bargah.com.br/` (keep `media/` and `sessions/`!).
+- Remove the old checkouts from `/var/www/bargah.com.br/` (keep `_media/` and `sessions/`!).
+  The old `media/` (Feb 2026) can go too once you've confirmed nothing points to it — `coupon.png` already exists in `_media/`.
