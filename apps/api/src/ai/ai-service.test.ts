@@ -14,7 +14,8 @@ describe('InProcessAiService', () => {
 
   it('validates extract input before touching a provider', async () => {
     await expect(ai().extract({ text: '', chat: 'c', messageId: 1, links: [] })).rejects.toBeInstanceOf(ZodError);
-    await expect(ai().extract({ text: 't', chat: 'c', messageId: 1, links: ['not a url'] })).rejects.toBeInstanceOf(ZodError);
+    const badLink = { text: 't', chat: 'c', messageId: 1, links: ['not a url'] };
+    await expect(ai().extract(badLink)).rejects.toBeInstanceOf(ZodError);
   });
 
   it('validates embed and judge input before touching a provider', async () => {
