@@ -170,3 +170,19 @@ Keep MariaDB running (read-only, untouched) for two weeks, then take a last dump
   read it as local time); everything is ISO 8601 UTC now.
 - Percentiles on an exact .5 midpoint can differ by 1 cent (floating point in `percentile_cont`).
 - The 2 duplicate deals in the data are dropped by the copy; `(chat, message_id)` is unique now.
+
+## Phase 6 — pgvector search
+
+Apps restarted: api. One migration: the HNSW index on `products.embedding`.
+
+1. Checkout `phase-6`, `bun install --frozen-lockfile`.
+2. Run the migration **before** restarting the api (the old api keeps working meanwhile):
+   ```sh
+   cd apps/api && bun run db:migrate
+   ```
+   Builds the index: ~10–30 s for ~30k products, using up to 256 MB of RAM for that one session. Inserts into
+   `products` wait for it (only new products — at most a few deals' resolution is delayed by seconds).
+3. `pm2 restart api.bargah.com.br`. Expect a much faster start (no `Candidate cache loaded` line anymore) and
+   ~100 MB of memory instead of ~400–500 MB. First deals: `Deal resolved to product` as usual.
+
+Rollback: checkout `phase-5`, restart api. The index can stay (it's only used by the new code).

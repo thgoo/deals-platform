@@ -35,7 +35,7 @@ MySQL                                   ├── packages/
 | 3 | `packages/shared` contracts ✅ | low | 1 d | 2 |
 | 4 | Fold messaging + ai into `api` ✅ | low–med | 1–2 d | 3 |
 | 5 | MariaDB → Postgres ✅ | **high** | 3–5 d | 4 |
-| 6 | pgvector replaces in-memory search | med | 1 d | 5 |
+| 6 | pgvector replaces in-memory search ✅ | med | 1 d | 5 |
 | 7 | Durable ingestion (raw messages + queue + worker) | med | 3–4 d | 5 (6 recommended) |
 | 8 | Media stored and served by api | low–med | 1 d | 7 |
 | 9 | Admin auth | low | 0.5 d | 1 |
@@ -61,7 +61,7 @@ MySQL                                   ├── packages/
 - PM2 restart counters are high (api 167, crawler 196) but both report 0 unstable restarts and long uptimes, so
   they're most likely deploys or old crash loops, not an ongoing problem. Still worth a look at `pm2 logs`, since every
   api restart drops in-flight product resolution / alerts (fire-and-forget until Phase 7).
-  `api` sits at ~510 MB, mostly the in-memory embedding cache (gone in Phase 6).
+  `api` sits at ~510 MB, mostly the in-memory embedding cache (gone in Phase 6: ~110 MB).
 - Database: **MariaDB 10.11.19** (not MySQL) on the same host, `127.0.0.1:3306`, database `bargah_db`. Server is aarch64.
   Size on 2026-10-14: 105k deals, 30k products, 27k URL mappings, 104k match decisions; dump ≈ 255 MB gzipped / 1 GB raw.
   MariaDB's `JSON` is an alias for `LONGTEXT`, which is why the code parses JSON columns by hand (`parseDeal` etc.).
@@ -210,17 +210,18 @@ Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-5--mariadb--postgr
 
 ---
 
-## Phase 6 — pgvector replaces the in-memory search
+## Phase 6 — pgvector replaces the in-memory search ✅ (tag `phase-6`)
 
-- [ ] HNSW index: `CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops);`
-- [ ] New `CandidateSearchService.findSimilar` = one query:
-  `SELECT id, canonical_name, 1 - (embedding <=> $1) AS score FROM products ORDER BY embedding <=> $1 LIMIT 5`.
-  It becomes `async`; the resolver awaits it.
-- [ ] Remove `loadAll()` from startup, `addProduct()`, and the cache. Renames/cleanups are now visible immediately.
-- [ ] Before switching, run both implementations side by side on ~200 recent deals and compare the top-5. Scores should match to ~3 decimals; HNSW is approximate, so small ordering differences are fine.
-- [ ] `updateProductName` should re-embed the new name (now trivial: one `embed` call + update).
+- [x] HNSW index `products_embedding_hnsw_idx` (`vector_cosine_ops`); migration sets `maintenance_work_mem = 256MB`
+      for the build (11 s locally for 30k products, 232 MB index).
+- [x] `CandidateSearchService.findSimilar` is one query (`ORDER BY embedding <=> $1 LIMIT k`) with
+      `hnsw.ef_search = 100`. Parity with the in-memory search on 300 products: identical top-1 score every time;
+      id differences are ties between the 480 products that share an identical embedding (catalog duplicates).
+- [x] `loadAll()` / `addProduct()` / the cache are gone: api ready in 0.5 s (was 6.6 s), RSS 108 MB (was 403 MB).
+- [x] Renaming a product re-embeds the new name.
+- Exact scan would also work today (~200 ms per query) but grows with the catalog; HNSW stays ~2–5 ms.
 
-**Done when:** the api starts instantly and holds no catalog state in memory.
+Production steps: [`DEPLOY_NOTES.md`](./DEPLOY_NOTES.md#phase-6--pgvector-search).
 
 ---
 
