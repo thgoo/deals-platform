@@ -1,0 +1,102 @@
+import 'dotenv/config';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as readline from 'readline';
+import { getTelegramAuthProvider } from './telegram/auth';
+
+const API_ID = parseInt(process.env.TG_API_ID || '0');
+const API_HASH = process.env.TG_API_HASH || '';
+const SESSION_DIR = process.env.SESSION_DIR || './sessions';
+const SESSION_NAME = process.env.SESSION_NAME || 'promo_session';
+const TELEGRAM_BACKEND = process.env.TELEGRAM_BACKEND || 'gramjs';
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+function question(prompt: string): Promise<string> {
+  return new Promise(resolve => {
+    rl.question(prompt, resolve);
+  });
+}
+
+async function main() {
+  console.log('╔════════════════════════════════════════════════════════════╗');
+  console.log('║     Telegram Crawler - Authentication Setup               ║');
+  console.log('╚════════════════════════════════════════════════════════════╝\n');
+
+  if (!API_ID || !API_HASH) {
+    console.error('❌ Error: TG_API_ID and TG_API_HASH must be set in .env');
+    console.error('\nCreate a .env file with:');
+    console.error('  TG_API_ID=your_api_id');
+    console.error('  TG_API_HASH=your_api_hash');
+    rl.close();
+    process.exit(1);
+  }
+
+  console.log(`✓ API_ID: ${API_ID}`);
+  console.log(`✓ API_HASH: ${API_HASH.substring(0, 10)}...`);
+  console.log(`✓ Telegram Backend: ${TELEGRAM_BACKEND}`);
+  console.log(`✓ Session Dir: ${SESSION_DIR}\n`);
+
+  await fs.mkdir(SESSION_DIR, { recursive: true });
+
+  const sessionPath = path.join(SESSION_DIR, `${SESSION_NAME}.${TELEGRAM_BACKEND}.session`);
+  const legacySessionPath = path.join(SESSION_DIR, `${SESSION_NAME}.session`);
+  let sessionString = '';
+
+  try {
+    sessionString = await fs.readFile(sessionPath, 'utf-8');
+    console.log('✓ Existing session found. Reusing...\n');
+  } catch {
+    if (TELEGRAM_BACKEND === 'gramjs') {
+      try {
+        sessionString = await fs.readFile(legacySessionPath, 'utf-8');
+        console.log('✓ Existing legacy session found. Reusing...\n');
+      } catch {
+        console.log('ℹ Creating new session...\n');
+      }
+    } else {
+      console.log('ℹ Creating new session...\n');
+    }
+  }
+
+  try {
+    const authProvider = getTelegramAuthProvider(TELEGRAM_BACKEND);
+    const { sessionString: newSessionString } = await authProvider.authenticate(
+      {
+        apiId: API_ID,
+        apiHash: API_HASH,
+        sessionString,
+      },
+      {
+        phoneNumber: async () => await question('Enter phone number: '),
+        password: async () => await question('Enter password: '),
+        phoneCode: async () => await question('Enter code: '),
+        onError: err => console.error(err),
+      },
+    );
+
+    await fs.writeFile(sessionPath, newSessionString, 'utf-8');
+    console.log(`✓ Session saved to ${sessionPath}\n`);
+
+    console.log('╔════════════════════════════════════════════════════════════╗');
+    console.log('║     ✓ Setup Complete!                                     ║');
+    console.log('║     You can now run: bun run dev                          ║');
+    console.log('╚════════════════════════════════════════════════════════════╝\n');
+
+    rl.close();
+    process.exit(0);
+  } catch (error) {
+    console.error('\n❌ Error:', error);
+    rl.close();
+    process.exit(1);
+  }
+}
+
+main().catch(error => {
+  console.error('❌ Fatal error:', error);
+  rl.close();
+  process.exit(1);
+});
