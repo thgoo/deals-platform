@@ -11,6 +11,7 @@ import type PriceStatsService from '~/dashboard/services/price-stats-service';
 import type ProductExplorerService from '~/dashboard/services/product-explorer-service';
 import type { Session, User } from '~/db/schemas';
 import type DealService from '~/deals/services/deal-service';
+import type RawMessageService from '~/ingest/raw-message-service';
 import type LinkPipelineService from '~/link-pipeline/services/link-pipeline-service';
 import type { Logger } from '~/logger';
 import type ProductResolverService from '~/products/services/product-resolver-service';
@@ -22,6 +23,7 @@ declare module 'hono' {
     sessionService: SessionService;
     passwordService: PasswordService;
     dealService: DealService;
+    rawMessageService: RawMessageService;
     aiService: AiService;
     linkPipelineService: LinkPipelineService;
     productResolverService: ProductResolverService;

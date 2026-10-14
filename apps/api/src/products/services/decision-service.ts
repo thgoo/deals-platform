@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import type { CandidateSnapshot, MatchMethod, NewProductMatchDecision } from '~/db/schemas/product-match-decisions';
 import type { Candidate } from '~/products/types';
 import db from '~/db';
@@ -24,6 +25,15 @@ export default class DecisionService {
     };
 
     await db.insert(productMatchDecisionsTable).values(row);
+  }
+
+  /** Whether the resolver already decided this deal (makes a retried resolve step a no-op). */
+  async exists(dealId: number): Promise<boolean> {
+    const [row] = await db.select({ id: productMatchDecisionsTable.id })
+      .from(productMatchDecisionsTable)
+      .where(eq(productMatchDecisionsTable.dealId, dealId))
+      .limit(1);
+    return !!row;
   }
 }
 

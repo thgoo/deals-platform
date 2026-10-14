@@ -10,7 +10,8 @@
     "backfill:products": "bun run scripts/backfill-product-catalog.ts",
     "audit:catalog": "bun run scripts/audit-catalog.ts",
     "typecheck": "tsc --noEmit",
-    "db:copy-from-mariadb": "bun run scripts/mariadb-to-postgres.ts"
+    "db:copy-from-mariadb": "bun run scripts/mariadb-to-postgres.ts",
+    "ingest:requeue-failed": "bun run scripts/requeue-failed.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",

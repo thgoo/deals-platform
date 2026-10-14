@@ -80,6 +80,15 @@ export class DealService {
     return deal ?? null;
   }
 
+  /** The deal created from a given Telegram message, if any. */
+  async findByMessage(chat: string, messageId: number): Promise<Deal | null> {
+    const [deal] = await db.select()
+      .from(dealsTable)
+      .where(and(eq(dealsTable.chat, chat), eq(dealsTable.messageId, messageId)))
+      .limit(1);
+    return deal ?? null;
+  }
+
   /**
    * Check if deal already exists (deduplication)
    */

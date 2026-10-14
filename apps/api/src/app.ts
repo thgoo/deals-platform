@@ -21,6 +21,7 @@ import PriceStatsService from '~/dashboard/services/price-stats-service';
 import ProductExplorerService from '~/dashboard/services/product-explorer-service';
 import deals from '~/deals/deals';
 import DealService from '~/deals/services/deal-service';
+import RawMessageService from '~/ingest/raw-message-service';
 import { getAffiliateConfig } from '~/link-pipeline/config';
 import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
 import { buildRewriterRegistry } from '~/link-pipeline/rewriters/registry';
@@ -57,6 +58,7 @@ export function createApp({
   sessionService = new SessionService(),
   passwordService = new PasswordService(),
   dealService = new DealService(),
+  rawMessageService = new RawMessageService(),
   aiService = new InProcessAiService(),
   linkPipelineService = buildDefaultLinkPipeline(),
   productResolverService = buildDefaultProductResolver(aiService),
@@ -96,6 +98,7 @@ export function createApp({
     c.set('sessionService', sessionService);
     c.set('passwordService', passwordService);
     c.set('dealService', dealService);
+    c.set('rawMessageService', rawMessageService);
     c.set('aiService', aiService);
     c.set('linkPipelineService', linkPipelineService);
     c.set('productResolverService', productResolverService);
