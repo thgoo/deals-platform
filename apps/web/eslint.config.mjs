@@ -1,4 +1,3 @@
-import stylistic from '@stylistic/eslint-plugin';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
 import perfectionist from 'eslint-plugin-perfectionist';
@@ -17,33 +16,18 @@ const eslintConfig = defineConfig([
     'build/**',
     'next-env.d.ts',
   ]),
-  // Override the @typescript-eslint/no-explicit-any rule to warning instead of error
   {
+    // Formatting is Prettier's job (.prettierrc.json); ESLint only keeps the
+    // import order, which Prettier doesn't handle. Mixing @stylistic formatting
+    // rules with Prettier made `eslint --fix` loop on conflicting fixes.
     plugins: {
-      '@stylistic': stylistic,
       perfectionist,
     },
     rules: {
-      // indent: ['error', 2],
-      '@next/next/no-html-link-for-pages': ['error', 'client/src/pages'],
-      '@stylistic/indent': ['error', 2],
-      '@stylistic/comma-dangle': ['error', 'always-multiline'],
-      '@stylistic/eol-last': ['error', 'always'],
-      '@stylistic/linebreak-style': ['error', 'unix'],
-      '@stylistic/quotes': ['error', 'single'],
-      '@stylistic/semi': 'error',
-      '@stylistic/jsx-wrap-multilines': [
-        'error',
-        {
-          declaration: 'parens-new-line',
-          assignment: 'parens-new-line',
-          return: 'parens-new-line',
-          arrow: 'parens-new-line',
-          condition: 'parens-new-line',
-          logical: 'parens-new-line',
-          prop: 'parens-new-line',
-        },
-      ],
+      // Flags useAlerts / usePriceHistory, which set state in effects on purpose
+      // (localStorage read on mount, reset on key change). Kept visible as a
+      // warning; worth revisiting with SWR (already a dependency) later.
+      'react-hooks/set-state-in-effect': 'warn',
       'perfectionist/sort-imports': [
         'error',
         {
