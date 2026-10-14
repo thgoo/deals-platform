@@ -1,4 +1,4 @@
-# Local infrastructure only. The apps run natively with `bun` (hot reload, easy debugging).
+# Local infrastructure only. MariaDB stays until the Postgres cutover (phase 5). The apps run natively with `bun` (hot reload, easy debugging).
 #
 #   docker compose up -d        # start
 #   docker compose down         # stop (data is kept in the named volume)
@@ -30,5 +30,25 @@ services:
       timeout: 5s
       retries: 20
 
+  postgres:
+    # Same image as production (pgvector on Postgres 18). 18 is required for LIKE
+    # on the case/accent-insensitive ICU collation the text columns use.
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: deals
+      POSTGRES_PASSWORD: deals
+      POSTGRES_DB: deals
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deals -d deals"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
 volumes:
   mariadb-data:
+  postgres-data:
