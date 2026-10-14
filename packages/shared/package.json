@@ -1,0 +1,21 @@
+{
+  "name": "@bargah/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@bargah/config": "workspace:*",
+    "@types/bun": "^1.3.14",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3"
+  }
+}
