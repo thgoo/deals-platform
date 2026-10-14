@@ -1,8 +1,5 @@
 import type { AiService } from '~/ai/ai-service';
 import type AlertService from '~/alerts/services/alert-service';
-import type PasswordService from '~/auth/services/password-service';
-import type SessionService from '~/auth/services/session-service';
-import type UserService from '~/auth/services/user-service';
 import type BusinessStatsService from '~/dashboard/services/business-stats-service';
 import type CatalogCleanupService from '~/dashboard/services/catalog-cleanup-service';
 import type CatalogStatsService from '~/dashboard/services/catalog-stats-service';
@@ -20,9 +17,6 @@ import type ProductResolverService from '~/products/services/product-resolver-se
 declare module 'hono' {
   interface ContextVariableMap {
     alertService: AlertService;
-    userService: UserService;
-    sessionService: SessionService;
-    passwordService: PasswordService;
     dealService: DealService;
     rawMessageService: RawMessageService;
     mediaStore: MediaStore;

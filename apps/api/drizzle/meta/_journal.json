@@ -29,6 +29,13 @@
       "when": 1792010051247,
       "tag": "0003_ingestion_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792017708494,
+      "tag": "0004_drop_user_accounts",
+      "breakpoints": true
     }
   ]
 }

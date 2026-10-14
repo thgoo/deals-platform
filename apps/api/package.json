@@ -14,12 +14,8 @@
     "ingest:requeue-failed": "bun run scripts/requeue-failed.ts"
   },
   "dependencies": {
-    "@auth/core": "^0.37.3",
     "@bargah/shared": "workspace:*",
-    "@hono/auth-js": "^1.0.15",
     "@hono/zod-validator": "^0.9.1",
-    "@oslojs/crypto": "^1.0.1",
-    "@oslojs/encoding": "^1.1.0",
     "cheerio": "^1.2.0",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.45.4",

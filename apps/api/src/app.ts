@@ -6,10 +6,6 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { type AiService, InProcessAiService } from '~/ai/ai-service';
 import alerts from '~/alerts/alerts';
 import AlertService from '~/alerts/services/alert-service';
-import auth from '~/auth';
-import PasswordService from '~/auth/services/password-service';
-import SessionService from '~/auth/services/session-service';
-import UserService from '~/auth/services/user-service';
 import { config } from '~/config';
 import { HTTP_STATUS_CODE } from '~/constants/http';
 import dashboard from '~/dashboard/dashboard';
@@ -56,9 +52,6 @@ function buildDefaultLinkPipeline(): LinkPipelineService {
 
 export function createApp({
   alertService = new AlertService(),
-  userService = new UserService(),
-  sessionService = new SessionService(),
-  passwordService = new PasswordService(),
   dealService = new DealService(),
   rawMessageService = new RawMessageService(),
   mediaStore = new MediaStore(config.MEDIA_DIR),
@@ -97,9 +90,6 @@ export function createApp({
 
   app.use('*', async (c, next) => {
     c.set('alertService', alertService);
-    c.set('userService', userService);
-    c.set('sessionService', sessionService);
-    c.set('passwordService', passwordService);
     c.set('dealService', dealService);
     c.set('rawMessageService', rawMessageService);
     c.set('mediaStore', mediaStore);
@@ -117,7 +107,6 @@ export function createApp({
   });
 
   app.route('/api/alerts', alerts);
-  app.route('/api/auth', auth);
   app.route('/api/dashboard', dashboard);
   app.route('/api/deals', deals);
   app.route('/media', media);

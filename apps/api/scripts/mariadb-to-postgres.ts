@@ -35,8 +35,8 @@ const dst = postgres(postgresUrl, { max: 4, connection: { TimeZone: 'UTC' }, onn
 
 type Row = Record<string, unknown>;
 
-const TABLES = ['users', 'sessions', 'products', 'deals', 'product_url_mappings', 'product_match_decisions', 'alerts'];
-const IDENTITY_TABLES = ['users', 'deals', 'product_url_mappings', 'product_match_decisions'];
+const TABLES = ['products', 'deals', 'product_url_mappings', 'product_match_decisions', 'alerts'];
+const IDENTITY_TABLES = ['deals', 'product_url_mappings', 'product_match_decisions'];
 
 function json(value: unknown): unknown {
   if (value === null || value === undefined) return null;
@@ -52,14 +52,6 @@ function embeddingLiteral(value: unknown): string {
     throw new Error(`Embedding with ${Array.isArray(parsed) ? parsed.length : typeof parsed} dimensions`);
   }
   return `[${parsed.join(',')}]`;
-}
-
-async function sourceHas(table: string): Promise<boolean> {
-  const [rows] = await src.query<mysql.RowDataPacket[]>(
-    'SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
-    [table],
-  );
-  return Number(rows[0]?.['n']) > 0;
 }
 
 /** Streams a table in keyset-paginated batches ordered by `key`. */
@@ -126,16 +118,7 @@ const [dupRows] = await src.query<mysql.RowDataPacket[]>(`
 const duplicateOf = new Map<number, number>(dupRows.map(r => [Number(r['id']), Number(r['keep_id'])]));
 
 // ── Copy, in foreign-key order ───────────────────────────────────────────────
-report['users'] = await copy('users', 'id', r => ({
-  id: Number(r['id']), name: r['name'], document: r['document'], email: r['email'], password: r['password'],
-}));
-
-report['sessions'] = await sourceHas('sessions')
-  ? await copy('sessions', 'id', r => ({
-    id: r['id'], user_id: Number(r['user_id']), expires_at: r['expires_at'],
-  }))
-  : { read: 0, written: 0 };
-
+// users / sessions are not copied: the api has no user accounts (admin login lives in web).
 report['products'] = await copy('products', 'id', r => ({
   id: r['id'],
   canonical_name: r['canonical_name'],

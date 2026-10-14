@@ -17,7 +17,6 @@ Designed as a **set of focused modules behind one Hono app**: each feature (deal
 - **Deal intake pipeline** — link normalization + affiliate rewriting + AI extraction + product resolution, all triggered by `POST /api/deals`
 - **Product catalog** with embedding-based deduplication (URL anchor → embedding similarity → LLM judge)
 - **Alerts** — keyword-based Web Push notifications (VAPID), sent directly by the api
-- **Auth** — session-based authentication (cookie-driven)
 - **SSE stream** of new deals for the web client
 - **Drizzle migrations** generated from the schema files
 - **Backfill script** to populate the product catalog from historical deals
@@ -38,7 +37,8 @@ Copy the template and fill in the required keys (see `.env.example` for the full
 cp .env.example .env
 ```
 
-At minimum you need: `DATABASE_URL`, `SESSION_SECRET`, `WEBHOOK_SECRET`, `AI_SERVICE_URL`.
+At minimum you need: `DATABASE_URL` (PostgreSQL 18 + pgvector), `WEBHOOK_SECRET`, `DASHBOARD_SECRET`, the `VAPID_*` keys,
+and `OPENAI_API_KEY` for ingestion. The root `scripts/setup-local-env.ts` fills these in for local development.
 
 ### 3. Apply Database Migrations
 
@@ -72,10 +72,7 @@ The server listens on `PORT` (default `8000`). On boot it loads the entire produ
 src/
 ├── alerts/                       # keyword → push notification matching
 │   └── services/alert-service.ts
-├── auth/                         # session-based authentication
-│   ├── services/                 # user / session / password
-│   └── middleware/               # isAuthorized, isGuest
-├── constants/                    # HTTP codes, session config
+├── constants/                    # HTTP codes
 ├── db/
 │   ├── index.ts                  # Drizzle client
 │   └── schemas/                  # one file per table — alerts, deals, products, ...

@@ -68,7 +68,8 @@ bun run dev:api
 bun run dev:web           # http://localhost:3000
 ```
 
-Admin dashboard: `http://localhost:3000/<DASHBOARD_SECRET>/admin` (the setup script prints the URL).
+Admin dashboard: `http://localhost:3000/admin` — log in with the password the setup script printed
+(or set your own: `bun scripts/hash-admin-password.ts '<password>'` → `ADMIN_PASSWORD_HASH` in `apps/web/.env.local`).
 
 ### How ingestion works
 

@@ -106,7 +106,6 @@ const values: Record<App, Record<string, string>> = {
   api: {
     NODE_ENV: 'development',
     DATABASE_URL: LOCAL_DATABASE_URL,
-    SESSION_SECRET: existing.api.SESSION_SECRET || hex(32),
     WEBHOOK_SECRET: webhookSecret,
     DASHBOARD_SECRET: dashboardSecret,
     VAPID_EMAIL: retired.VAPID_EMAIL || 'dev@localhost',
