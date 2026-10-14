@@ -34,21 +34,12 @@ import ProductService from '~/products/services/product-service';
 import UrlMappingService from '~/products/services/url-mapping-service';
 import { HttpError } from '~/utils/errors';
 
-/**
- * Builds a ProductResolverService wired with default in-memory dependencies.
- *
- * NOTE: the returned resolver is usable but its candidate cache is empty —
- * production code in `index.ts` calls `loadAll()` explicitly before serving traffic.
- * This default exists so that tests (which inject mocks) and ad-hoc usage compile cleanly.
- */
 function buildDefaultProductResolver(aiService: AiService): ProductResolverService {
-  const products = new ProductService();
-  const candidateSearch = new CandidateSearchService(products, logger);
   return new ProductResolverService(
-    products,
+    new ProductService(),
     new UrlMappingService(),
     new DecisionService(),
-    candidateSearch,
+    new CandidateSearchService(),
     aiService,
     logger,
   );
@@ -73,7 +64,7 @@ export function createApp({
   catalogStatsService = new CatalogStatsService(),
   businessStatsService = new BusinessStatsService(),
   priceStatsService = new PriceStatsService(),
-  catalogCleanupService = new CatalogCleanupService(),
+  catalogCleanupService = new CatalogCleanupService(aiService),
   productExplorerService = new ProductExplorerService(),
   appLogger = new ConsoleLogger(),
   enableLogger = true,

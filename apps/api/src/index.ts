@@ -10,21 +10,17 @@ import ProductResolverService from '~/products/services/product-resolver-service
 import ProductService from '~/products/services/product-service';
 import UrlMappingService from '~/products/services/url-mapping-service';
 
-// Bootstrap: build the product resolver once, pre-warm the in-memory candidate
-// cache before accepting traffic, then hand control over to Hono. Keeping this
-// bootstrap separate from `createApp` (in app.ts) lets tests import the factory
-// without paying for `loadAll()` against a real database.
+// Bootstrap: wire the services that need shared instances, then hand control
+// to Hono. Kept separate from `createApp` (app.ts) so tests can import the
+// factory without connecting to anything.
 
 const aiService = new InProcessAiService();
-const productService = new ProductService();
-const candidateSearchService = new CandidateSearchService(productService, logger);
-await candidateSearchService.loadAll();
 
 const productResolverService = new ProductResolverService(
-  productService,
+  new ProductService(),
   new UrlMappingService(),
   new DecisionService(),
-  candidateSearchService,
+  new CandidateSearchService(),
   aiService,
   logger,
 );

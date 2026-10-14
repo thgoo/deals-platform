@@ -27,6 +27,8 @@ export const productsTable = pgTable('products', {
 }, table => [
   index('products_model_key_idx').on(table.modelKey),
   index('products_category_idx').on(table.category),
+  // Nearest-neighbour search for product matching (CandidateSearchService).
+  index('products_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
 ]);
 
 export type Product = InferSelectModel<typeof productsTable>;

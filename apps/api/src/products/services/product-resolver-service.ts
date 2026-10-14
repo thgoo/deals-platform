@@ -90,7 +90,7 @@ export default class ProductResolverService {
       return SKIPPED_RESULT;
     }
 
-    const candidates = this.candidateSearch.findSimilar(queryEmbedding, {
+    const candidates = await this.candidateSearch.findSimilar(queryEmbedding, {
       topK: CANDIDATE_TOP_K,
     });
 
@@ -184,7 +184,6 @@ export default class ProductResolverService {
       embeddingModelVersion: EMBEDDING_MODEL_VERSIONS.OPENAI_TEXT_EMBEDDING_3_SMALL,
     });
 
-    this.candidateSearch.addProduct(product);
     await this.urlMappings.saveAll(input.externalIds, product.id, mappingConfidence);
     await this.decisions.record({
       dealId: input.dealId,

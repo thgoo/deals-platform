@@ -72,12 +72,8 @@ class StubDecisionService {
 
 class StubCandidateSearch {
   results: Candidate[] = [];
-  added: Product[] = [];
-  findSimilar(): Candidate[] {
+  async findSimilar(): Promise<Candidate[]> {
     return this.results;
-  }
-  addProduct(product: Product): void {
-    this.added.push(product);
   }
 }
 
@@ -279,11 +275,12 @@ describe('ProductResolverService', () => {
       expect(result.method).toBe('created_new');
     });
 
-    test('adds the newly created product to the candidate search cache', async () => {
+    test('stores the new product with the query embedding, so later deals find it', async () => {
       candidateSearch.results = [];
       await resolver.resolve(makeInput());
-      expect(candidateSearch.added).toHaveLength(1);
-      expect(candidateSearch.added[0]?.canonicalName).toBe('PlayStation 5 Slim Digital 1TB');
+      expect(products.created).toHaveLength(1);
+      expect(products.created[0]?.canonicalName).toBe('PlayStation 5 Slim Digital 1TB');
+      expect(products.created[0]?.embedding).toEqual(QUERY_EMBEDDING);
     });
   });
 

@@ -118,13 +118,10 @@ class Backfill {
   ) {}
 
   async run(limit?: number): Promise<void> {
-    await this.candidateSearch.loadAll();
-
     const totalToProcess = await this.countUnresolved(limit);
     logger.info('Backfill starting', {
       totalToProcess,
       batchSize: BATCH_SIZE,
-      cachedProducts: this.candidateSearch.size(),
     });
 
     const overallStart = Date.now();
@@ -200,7 +197,7 @@ class Backfill {
       if (!deal || !embedding) continue;
 
       const externalIds = extractExternalIds(parseLinks(deal.links), this.identifierRegistry);
-      const candidates = this.candidateSearch.findSimilar(embedding, {
+      const candidates = await this.candidateSearch.findSimilar(embedding, {
         topK: CANDIDATE_TOP_K,
       });
       await this.decide(deal, embedding, externalIds, candidates);
@@ -290,7 +287,6 @@ class Backfill {
       embeddingModelVersion: EMBEDDING_MODEL_VERSIONS.OPENAI_TEXT_EMBEDDING_3_SMALL,
     });
 
-    this.candidateSearch.addProduct(product);
     await this.urlMappings.saveAll(externalIds, product.id, mappingConfidence);
     await this.applyResolution(deal, product.id, 'created_new', candidates, topScore);
   }
@@ -354,7 +350,7 @@ async function main(): Promise<void> {
   const productService = new ProductService();
   const urlMappingService = new UrlMappingService();
   const decisionService = new DecisionService();
-  const candidateSearch = new CandidateSearchService(productService, logger);
+  const candidateSearch = new CandidateSearchService();
   const aiClient = new InProcessAiService();
 
   const backfill = new Backfill(

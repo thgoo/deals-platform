@@ -1,11 +1,13 @@
 import type { AnalyzedDeal, Anomaly, CleanResult, DealVerdict, ProductAnalysis } from '@bargah/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { type AiService, InProcessAiService } from '~/ai/ai-service';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
 import { extractExternalIds } from '~/link-pipeline/identifiers/identifier-extractor';
 import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
+import { type Logger, logger as defaultLogger } from '~/logger';
 import { sharedTokenCount } from '~/products/utils/product-name-tokens';
 import { specsConflict } from '~/products/utils/spec-conflict';
 import { isUuid } from '~/utils/ids';
@@ -19,6 +21,11 @@ const ANOMALIES_TTL_MS = 60_000;
 
 export default class CatalogCleanupService {
   private anomaliesCache = createTtlCache<Anomaly[]>(ANOMALIES_TTL_MS);
+
+  constructor(
+    private readonly ai: AiService = new InProcessAiService(),
+    private readonly logger: Logger = defaultLogger,
+  ) {}
 
   /**
    * Suspect products: enough deals to have a stable median, but a p90/p10 band
@@ -221,12 +228,28 @@ export default class CatalogCleanupService {
     return { unlinked };
   }
 
-  /** Renames a product's canonical name (curation after over-merge splits). */
+  /**
+   * Renames a product's canonical name (curation after over-merge splits) and
+   * re-embeds it, so product matching compares new deals against the new name.
+   * If embedding fails the rename still happens; the old vector stays until the
+   * next rename.
+   */
   async updateProductName(productId: string, canonicalName: string): Promise<{ ok: boolean }> {
     if (!isUuid(productId)) return { ok: false };
+
+    let embedding: number[] | undefined;
+    try {
+      embedding = (await this.ai.embed([canonicalName])).embeddings[0];
+    } catch (err) {
+      this.logger.warn('Re-embedding renamed product failed; keeping the old embedding', {
+        productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     const updated = await db
       .update(productsTable)
-      .set({ canonicalName })
+      .set(embedding ? { canonicalName, embedding } : { canonicalName })
       .where(eq(productsTable.id, productId))
       .returning({ id: productsTable.id });
     return { ok: updated.length > 0 };
