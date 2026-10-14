@@ -368,7 +368,7 @@ async function main(): Promise<void> {
   await backfill.run(limit);
 }
 
-// Explicit exit on success — the mysql2 pool keeps TCP sockets warm, which
+// Explicit exit on success — the postgres pool keeps TCP sockets warm, which
 // holds the Bun event loop alive even after work is done. For a one-shot CLI
 // script there's nothing to gracefully shut down, so force-exit is the right
 // call: in-flight writes are already awaited before main() returns.

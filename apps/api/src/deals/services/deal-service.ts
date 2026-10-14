@@ -1,22 +1,12 @@
 import type { PriceHistoryResponse } from '@bargah/shared';
-import { and, desc, eq, gte, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, like, lt, or, sql } from 'drizzle-orm';
 import type { Deal, NewDeal } from '~/db/schemas/deals';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productsTable } from '~/db/schemas/products';
+import { isUuid } from '~/utils/ids';
 
 export class DealService {
-  /**
-   * Parse JSON fields that may come as string from MySQL
-   */
-  private parseDeal(deal: Deal): Deal {
-    return {
-      ...deal,
-      links: typeof deal.links === 'string' ? JSON.parse(deal.links) : deal.links,
-      coupons: deal.coupons && typeof deal.coupons === 'string' ? JSON.parse(deal.coupons) : deal.coupons,
-    };
-  }
-
   /**
    * List all available stores for filtering
    */
@@ -57,29 +47,26 @@ export class DealService {
   }
 
   /**
-   * Create a new deal
+   * Create a new deal. Returns null when a deal for the same Telegram message
+   * already exists (chat + message_id is unique) — e.g. a retried crawler POST
+   * that raced the first one past the exists() check.
    */
-  async create(data: NewDeal): Promise<Deal> {
-    const [result] = await db.insert(dealsTable).values(data);
-    const insertId = Number(result.insertId);
-
-    const [deal] = await db.select()
-      .from(dealsTable)
-      .where(eq(dealsTable.id, insertId));
-
-    return this.parseDeal(deal);
+  async create(data: NewDeal): Promise<Deal | null> {
+    const [deal] = await db.insert(dealsTable)
+      .values(data)
+      .onConflictDoNothing({ target: [dealsTable.chat, dealsTable.messageId] })
+      .returning();
+    return deal ?? null;
   }
 
   /**
    * List deals ordered by timestamp (most recent first)
    */
   async findAll(limit = 32): Promise<Deal[]> {
-    const deals = await db.select()
+    return db.select()
       .from(dealsTable)
       .orderBy(desc(dealsTable.ts))
       .limit(limit);
-
-    return deals.map(deal => this.parseDeal(deal));
   }
 
   /**
@@ -90,7 +77,7 @@ export class DealService {
       .from(dealsTable)
       .where(eq(dealsTable.id, id));
 
-    return deal ? this.parseDeal(deal) : null;
+    return deal ?? null;
   }
 
   /**
@@ -118,42 +105,33 @@ export class DealService {
    * from being overwritten by the late-arriving Telegram photo notification.
    */
   async updateImage(photoId: string, localPath: string): Promise<Deal | null> {
-    const result = await db.update(dealsTable)
+    const [deal] = await db.update(dealsTable)
       .set({ localPath })
       .where(and(
         eq(dealsTable.photoId, photoId),
         isNull(dealsTable.localPath),
-      ));
+      ))
+      .returning();
 
-    if (result[0].affectedRows === 0) {
-      return null;
-    }
-
-    const [deal] = await db.select()
-      .from(dealsTable)
-      .where(eq(dealsTable.photoId, photoId));
-
-    return deal ? this.parseDeal(deal) : null;
+    return deal ?? null;
   }
 
   /**
    * Find deals by chat channel
    */
   async findByChat(chat: string, limit = 100): Promise<Deal[]> {
-    const deals = await db.select()
+    return db.select()
       .from(dealsTable)
       .where(eq(dealsTable.chat, chat))
       .orderBy(desc(dealsTable.ts))
       .limit(limit);
-
-    return deals.map(deal => this.parseDeal(deal));
   }
 
   /**
    * Count total deals
    */
   async count(): Promise<number> {
-    const [result] = await db.select({ count: dealsTable.id })
+    const [result] = await db.select({ count: sql<string>`COUNT(*)` })
       .from(dealsTable);
 
     return Number(result?.count || 0);
@@ -163,17 +141,11 @@ export class DealService {
    * List deals with cursor-based pagination
    */
   async findAllPaginated(limit: number, cursor?: Date): Promise<Deal[]> {
-    const query = db.select()
+    return db.select()
       .from(dealsTable)
+      .where(cursor ? lt(dealsTable.ts, cursor) : undefined)
       .orderBy(desc(dealsTable.ts))
       .limit(limit);
-
-    if (cursor) {
-      query.where(lt(dealsTable.ts, cursor));
-    }
-
-    const deals = await query;
-    return deals.map(deal => this.parseDeal(deal));
   }
 
   /**
@@ -184,32 +156,23 @@ export class DealService {
       ? and(eq(dealsTable.chat, chat), lt(dealsTable.ts, cursor))
       : eq(dealsTable.chat, chat);
 
-    const deals = await db.select()
+    return db.select()
       .from(dealsTable)
       .where(conditions)
       .orderBy(desc(dealsTable.ts))
       .limit(limit);
-
-    return deals.map(deal => this.parseDeal(deal));
   }
 
   /**
    * Update deal links
    */
   async updateLinks(id: number, links: string[]): Promise<Deal | null> {
-    const result = await db.update(dealsTable)
+    const [deal] = await db.update(dealsTable)
       .set({ links })
-      .where(eq(dealsTable.id, id));
+      .where(eq(dealsTable.id, id))
+      .returning();
 
-    if (result[0].affectedRows === 0) {
-      return null;
-    }
-
-    const [deal] = await db.select()
-      .from(dealsTable)
-      .where(eq(dealsTable.id, id));
-
-    return deal ? this.parseDeal(deal) : null;
+    return deal ?? null;
   }
 
   /**
@@ -224,19 +187,12 @@ export class DealService {
     coupons: Deal['coupons'];
     category: string | null;
   }): Promise<Deal | null> {
-    const result = await db.update(dealsTable)
+    const [deal] = await db.update(dealsTable)
       .set(data)
-      .where(eq(dealsTable.id, id));
+      .where(eq(dealsTable.id, id))
+      .returning();
 
-    if (result[0].affectedRows === 0) {
-      return null;
-    }
-
-    const [deal] = await db.select()
-      .from(dealsTable)
-      .where(eq(dealsTable.id, id));
-
-    return deal ? this.parseDeal(deal) : null;
+    return deal ?? null;
   }
 
   /**
@@ -255,6 +211,7 @@ export class DealService {
    * rather than whatever any one deal text happened to say.
    */
   async getPriceHistory(productId: string): Promise<PriceHistoryResponse | null> {
+    if (!isUuid(productId)) return null;
     const deals = await db.select({
       id: dealsTable.id,
       price: dealsTable.price,
@@ -327,23 +284,23 @@ export class DealService {
       conditions.push(lt(dealsTable.ts, params.to));
     }
 
+    // text/product/description/store use the case- and accent-insensitive
+    // ci_ai collation, so a plain LIKE matches "café" against "CAFE".
     if (params.search) {
       const searchPattern = `%${params.search}%`;
       conditions.push(
         or(
-          sql`${dealsTable.text} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
-          sql`${dealsTable.product} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
-          sql`${dealsTable.description} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
-          sql`${dealsTable.store} LIKE ${searchPattern} COLLATE utf8mb4_unicode_ci`,
+          like(dealsTable.text, searchPattern),
+          like(dealsTable.product, searchPattern),
+          like(dealsTable.description, searchPattern),
+          like(dealsTable.store, searchPattern),
         ),
       );
     }
 
     if (params.stores && params.stores.length > 0) {
       conditions.push(
-        or(...params.stores.map(store =>
-          sql`${dealsTable.store} LIKE ${`%${store}%`} COLLATE utf8mb4_unicode_ci`,
-        )),
+        or(...params.stores.map(store => like(dealsTable.store, `%${store}%`))),
       );
     }
 
@@ -355,13 +312,11 @@ export class DealService {
       }
     }
 
-    const deals = await db.select()
+    return db.select()
       .from(dealsTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(dealsTable.ts))
       .limit(params.limit);
-
-    return deals.map(deal => this.parseDeal(deal));
   }
 }
 

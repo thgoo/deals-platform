@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { EmbeddingModelVersion, NewProduct, Product } from '~/db/schemas/products';
 import db from '~/db';
 import { productsTable } from '~/db/schemas/products';
+import { isUuid } from '~/utils/ids';
 
 export interface CreateProductInput {
   canonicalName: string;
@@ -13,13 +14,6 @@ export interface CreateProductInput {
 }
 
 export default class ProductService {
-  private parse(row: Product): Product {
-    return {
-      ...row,
-      embedding: typeof row.embedding === 'string' ? JSON.parse(row.embedding) : row.embedding,
-    };
-  }
-
   async create(input: CreateProductInput): Promise<Product> {
     const newProduct: NewProduct = {
       id: randomUUID(),
@@ -30,25 +24,21 @@ export default class ProductService {
       embeddingModelVersion: input.embeddingModelVersion,
     };
 
-    await db.insert(productsTable).values(newProduct);
-
-    const [row] = await db.select()
-      .from(productsTable)
-      .where(eq(productsTable.id, newProduct.id));
-
-    return this.parse(row);
+    const [row] = await db.insert(productsTable).values(newProduct).returning();
+    if (!row) throw new Error('Insert returned no product row');
+    return row;
   }
 
   async findById(id: string): Promise<Product | null> {
+    if (!isUuid(id)) return null;
     const [row] = await db.select()
       .from(productsTable)
       .where(eq(productsTable.id, id));
 
-    return row ? this.parse(row) : null;
+    return row ?? null;
   }
 
   async findAll(): Promise<Product[]> {
-    const rows = await db.select().from(productsTable);
-    return rows.map(row => this.parse(row));
+    return db.select().from(productsTable);
   }
 }

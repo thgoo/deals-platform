@@ -25,7 +25,7 @@ const SPECIFIC_IDENTIFIERS = new Set([
 // TTLs picked per "how fast does this number change in practice".
 // SWR pattern means stale is served immediately while background recompute
 // runs, so longer TTLs don't make the UI feel old — they just reduce how
-// often we hit MySQL with the same query.
+// often we hit the database with the same query.
 const OVERVIEW_TTL_MS = 60_000;
 const MATCH_METHODS_TTL_MS = 5 * 60_000;
 const RECENT_DECISIONS_TTL_MS = 10_000;
@@ -78,16 +78,17 @@ export default class CatalogStatsService {
       `),
       db.execute<{ share: string | number | null }>(sql`
         SELECT
-          100.0 * SUM(CASE WHEN product IS NULL AND coupons IS NOT NULL AND JSON_LENGTH(coupons) > 0 THEN 1 ELSE 0 END)
-          / NULLIF(COUNT(*), 0) AS share
+          -- 5 decimals: the precision MariaDB's decimal division produced.
+          round(100.0 * SUM(CASE WHEN product IS NULL AND jsonb_array_length(coupons) > 0 THEN 1 ELSE 0 END)
+          / NULLIF(COUNT(*), 0), 5) AS share
         FROM deals
-        WHERE ts > NOW() - INTERVAL 30 DAY
+        WHERE ts > now() - interval '30 days'
       `),
     ]);
 
-    const multiSourceCount = readScalar(multiSourceRows, 'count');
-    const singleDealCount = readScalar(singleDealRows, 'count');
-    const couponShare = readScalar(couponRows, 'share');
+    const multiSourceCount = multiSourceRows[0]?.count ?? null;
+    const singleDealCount = singleDealRows[0]?.count ?? null;
+    const couponShare = couponRows[0]?.share ?? null;
 
     return {
       totalProducts: Number(productsRow?.count ?? 0),
@@ -111,12 +112,12 @@ export default class CatalogStatsService {
     const rows = await db.execute<{ method: string; count: number | string }>(sql`
       SELECT method, COUNT(*) AS count
       FROM product_match_decisions
-      WHERE created_at > NOW() - INTERVAL ${sql.raw(String(days))} DAY
+      WHERE created_at > now() - make_interval(days => ${days})
       GROUP BY method
       ORDER BY count DESC
     `);
 
-    const list = readRows<{ method: string; count: number | string }>(rows);
+    const list = [...rows];
     const total = list.reduce((sum, r) => sum + Number(r.count), 0);
 
     return list.map(r => ({
@@ -192,18 +193,4 @@ export default class CatalogStatsService {
       identifierType: SPECIFIC_IDENTIFIERS.has(r.source) ? 'specific' : 'fallback',
     }));
   }
-}
-
-// mysql2 may return either a plain rows array or `{ rows, fields }` depending on the call.
-// Both shapes show up across drizzle versions — normalize once at the boundary.
-function readRows<T>(result: unknown): T[] {
-  if (Array.isArray(result)) {
-    return Array.isArray(result[0]) ? (result[0] as T[]) : (result as T[]);
-  }
-  return [];
-}
-
-function readScalar<K extends string>(result: unknown, key: K): unknown {
-  const rows = readRows<Record<K, unknown>>(result);
-  return rows[0]?.[key] ?? null;
 }

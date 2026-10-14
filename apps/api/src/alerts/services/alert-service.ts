@@ -7,6 +7,7 @@ import { config } from '~/config';
 import db from '~/db';
 import { alertsTable } from '~/db/schemas/alerts';
 import { WebPushSender } from '~/notifications/web-push';
+import { isUuid } from '~/utils/ids';
 
 const ALERT_EXPIRY_DAYS = 90;
 
@@ -26,7 +27,6 @@ export class AlertService {
   }): Promise<Alert> {
     const rows = await db.select().from(alertsTable);
     const existing = rows
-      .map(a => this.parseAlert(a))
       .find(
         a =>
           a.subscription.endpoint === data.subscription.endpoint &&
@@ -41,39 +41,25 @@ export class AlertService {
       expiresAt: data.expiresAt,
     };
 
-    await db.insert(alertsTable).values(newAlert);
-
-    const [alert] = await db
-      .select()
-      .from(alertsTable)
-      .where(eq(alertsTable.id, newAlert.id));
-
+    const [alert] = await db.insert(alertsTable).values(newAlert).returning();
+    if (!alert) throw new Error('Insert returned no alert row');
     return alert;
   }
 
-  private parseAlert(alert: Alert): Alert {
-    return {
-      ...alert,
-      subscription: typeof alert.subscription === 'string'
-        ? JSON.parse(alert.subscription)
-        : alert.subscription,
-    };
-  }
-
   async findByIds(ids: string[]): Promise<Alert[]> {
-    if (ids.length === 0) return [];
-    const rows = await db.select().from(alertsTable).where(inArray(alertsTable.id, ids));
-    return rows.map(a => this.parseAlert(a));
+    const valid = ids.filter(isUuid);
+    if (valid.length === 0) return [];
+    return db.select().from(alertsTable).where(inArray(alertsTable.id, valid));
   }
 
   async deleteById(id: string): Promise<void> {
+    if (!isUuid(id)) return;
     await db.delete(alertsTable).where(eq(alertsTable.id, id));
   }
 
   async deleteByEndpoint(endpoint: string): Promise<void> {
     const alerts = await db.select().from(alertsTable);
     const toDelete = alerts
-      .map(a => this.parseAlert(a))
       .filter(a => a.subscription.endpoint === endpoint);
     await Promise.all(toDelete.map(a => this.deleteById(a.id)));
   }
@@ -81,7 +67,9 @@ export class AlertService {
   async renewExpiry(id: string): Promise<Date> {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + ALERT_EXPIRY_DAYS);
-    await db.update(alertsTable).set({ expiresAt }).where(eq(alertsTable.id, id));
+    if (isUuid(id)) {
+      await db.update(alertsTable).set({ expiresAt }).where(eq(alertsTable.id, id));
+    }
     return expiresAt;
   }
 
@@ -91,7 +79,7 @@ export class AlertService {
       .select()
       .from(alertsTable)
       .where(gt(alertsTable.expiresAt, now));
-    const alerts = rows.map(a => this.parseAlert(a));
+    const alerts = rows;
 
     const normalize = (str: string) =>
       str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

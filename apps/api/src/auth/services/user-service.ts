@@ -23,7 +23,7 @@ class UserService {
   }
 
   async createUser(user: NewUser): Promise<{ id: number }[]> {
-    return await db.insert(usersTable).values(user).$returningId();
+    return await db.insert(usersTable).values(user).returning({ id: usersTable.id });
   }
 }
 

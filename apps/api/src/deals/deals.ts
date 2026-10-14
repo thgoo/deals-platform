@@ -130,6 +130,15 @@ app.post('/', webhookAuth, zValidator('json', createDealSchema), async c => {
     localPath,
   });
 
+  // Lost the race against a concurrent POST for the same message (crawler retry).
+  if (!deal) {
+    logger.info('Deal already exists (deduped on insert)', {
+      chat: body.chat,
+      messageId: body.message_id,
+    });
+    return c.json({ ok: true, deduped: true });
+  }
+
   logger.info('Deal created', {
     dealId: deal.id,
     chat: body.chat,

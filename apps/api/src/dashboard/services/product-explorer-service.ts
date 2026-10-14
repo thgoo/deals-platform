@@ -12,15 +12,11 @@ import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
 import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
+import { isoTimestamp } from '~/db/sql';
 import { toIsoString } from '~/utils/dates';
+import { isUuid } from '~/utils/ids';
 
-interface PercRow {
-  product_id: string;
-  p10: number | string | null;
-  med: number | string | null;
-  p90: number | string | null;
-}
-
+// Whitelisted ORDER BY expressions (sort comes from a validated enum).
 const SORT_SQL: Record<ExplorerSortField, string> = {
   deals: 'deals',
   p10: 'p10',
@@ -41,97 +37,72 @@ export default class ProductExplorerService {
     const { q, category, sort, order, page, limit } = params;
     const offset = (page - 1) * limit;
 
-    // Pattern is sanitised (no user-controlled interpolation) — the LIKE
-    // wildcard is added server-side; the value itself is a bound parameter.
+    // The LIKE wildcard is added server-side; the value itself is a bound parameter.
+    // canonical_name and category are case/accent-insensitive (ci_ai).
     const pattern = `%${q}%`;
+    const filter = sql`p.canonical_name LIKE ${pattern} ${category ? sql`AND p.category = ${category}` : sql``}`;
 
-    const countRows = await db.execute<{ total: number | string }>(sql`
-      SELECT COUNT(*) AS total
-      FROM products p
-      WHERE p.canonical_name LIKE ${pattern}
-        ${category ? sql`AND p.category = ${category}` : sql``}
+    const [countRow] = await db.execute<{ total: string }>(sql`
+      SELECT COUNT(*) AS total FROM products p WHERE ${filter}
     `);
-    const total = Number(readScalar(countRows, 'total') ?? 0);
+    const total = Number(countRow?.total ?? 0);
     const pages = Math.max(1, Math.ceil(total / limit));
 
     if (total === 0) {
       return { items: [], total: 0, page, pages: 1 };
     }
 
-    // Step 1: resolve the page's product IDs cheaply (no window functions).
-    const idsRows = await db.execute<{ id: string; deals: number | string; created_at: Date }>(sql`
-      SELECT p.id, COUNT(d.id) AS deals, p.created_at
-      FROM products p
-      LEFT JOIN deals d ON d.product_id = p.id AND d.price IS NOT NULL
-      WHERE p.canonical_name LIKE ${pattern}
-        ${category ? sql`AND p.category = ${category}` : sql``}
-      GROUP BY p.id, p.created_at
-      ORDER BY ${sql.raw(SORT_SQL[sort])} ${sql.raw(order.toUpperCase())}, p.id ASC
-      LIMIT ${sql.raw(String(limit))} OFFSET ${sql.raw(String(offset))}
-    `);
-
-    const pageIds = readRows<{ id: string; deals: number | string; created_at: Date }>(idsRows);
-    if (pageIds.length === 0) {
-      return { items: [], total, page, pages };
-    }
-
-    const idList = pageIds.map(r => r.id);
-    const dealCountMap = new Map(pageIds.map(r => [r.id, Number(r.deals)]));
-    const createdAtMap = new Map(pageIds.map(r => [r.id, r.created_at]));
-
-    // Step 2: names + categories.
-    const productRows = await db
-      .select({
-        id: productsTable.id,
-        canonicalName: productsTable.canonicalName,
-        category: productsTable.category,
-      })
-      .from(productsTable)
-      .where(sql`${productsTable.id} IN (${sql.join(idList.map(id => sql`${id}`), sql`, `)})`);
-
-    const productMeta = new Map(productRows.map(p => [p.id, p]));
-
-    // Step 3: percentiles, but ONLY for this page's products.
-    const percRows = await db.execute<{
-      product_id: string;
-      p10: number | string | null;
-      med: number | string | null;
-      p90: number | string | null;
+    // Deal count and price band per product, so the page can be sorted by any of
+    // them. Products without priced deals have NULL percentiles and sort last.
+    const rows = await db.execute<{
+      id: string;
+      canonical_name: string;
+      category: string | null;
+      created_at: string;
+      deals: string;
+      p10: string | null;
+      median: string | null;
+      p90: string | null;
     }>(sql`
-      SELECT product_id, p10, med, p90 FROM (
-        SELECT DISTINCT
-          p.id AS product_id,
-          ROUND(PERCENTILE_CONT(0.1) WITHIN GROUP (ORDER BY d.price) OVER (PARTITION BY p.id)) AS p10,
-          ROUND(MEDIAN(d.price)      OVER (PARTITION BY p.id))                                 AS med,
-          ROUND(PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY d.price) OVER (PARTITION BY p.id)) AS p90
+      WITH stats AS (
+        SELECT
+          p.id,
+          p.canonical_name,
+          p.category,
+          p.created_at,
+          COUNT(d.id) AS deals,
+          round(percentile_cont(0.1) WITHIN GROUP (ORDER BY d.price)) AS p10,
+          round(percentile_cont(0.5) WITHIN GROUP (ORDER BY d.price)) AS median,
+          round(percentile_cont(0.9) WITHIN GROUP (ORDER BY d.price)) AS p90
         FROM products p
-        JOIN deals d ON d.product_id = p.id AND d.price IS NOT NULL
-        WHERE p.id IN (${sql.join(idList.map(id => sql`${id}`), sql`, `)})
-      ) t
+        LEFT JOIN deals d ON d.product_id = p.id AND d.price IS NOT NULL
+        WHERE ${filter}
+        GROUP BY p.id
+      )
+      SELECT
+        id, canonical_name, category, deals, p10, median, p90,
+        ${isoTimestamp(sql`created_at`)} AS created_at,
+        p90 / NULLIF(p10, 0) AS spread_ratio
+      FROM stats
+      ORDER BY ${sql.raw(SORT_SQL[sort])} ${sql.raw(order === 'asc' ? 'ASC' : 'DESC')} NULLS LAST, id ASC
+      LIMIT ${limit} OFFSET ${offset}
     `);
 
-    const percMap = new Map(
-      readRows<PercRow>(percRows).map(r => [r.product_id, r]),
-    );
-
-    // Assemble in the order the IDs page gave us.
-    const items: ExplorerProduct[] = idList.map(id => {
-      const meta = productMeta.get(id);
-      const perc = percMap.get(id);
-      const p10 = perc?.p10 != null ? Number(perc.p10) : null;
-      const p90 = perc?.p90 != null ? Number(perc.p90) : null;
+    const items: ExplorerProduct[] = rows.map(r => {
+      const p10 = r.p10 !== null ? Number(r.p10) : null;
+      const p90 = r.p90 !== null ? Number(r.p90) : null;
       const spreadRatio = p10 && p90 && p10 > 0 ? Number((p90 / p10).toFixed(2)) : null;
 
       return {
-        id,
-        canonicalName: meta?.canonicalName ?? '',
-        category: meta?.category ?? null,
-        deals: dealCountMap.get(id) ?? 0,
+        id: r.id,
+        canonicalName: r.canonical_name,
+        category: r.category,
+        deals: Number(r.deals),
         p10,
-        median: perc?.med != null ? Number(perc.med) : null,
+        median: r.median !== null ? Number(r.median) : null,
         p90,
         spreadRatio,
-        createdAt: toIsoString(createdAtMap.get(id) ?? new Date(0)),
+        createdAt: r.created_at,
       };
     });
 
@@ -139,6 +110,7 @@ export default class ProductExplorerService {
   }
 
   async getProductDetail(productId: string): Promise<ProductDetail | null> {
+    if (!isUuid(productId)) return null;
     const [product] = await db
       .select({
         id: productsTable.id,
@@ -238,16 +210,4 @@ function parseCoupons(raw: unknown): { code: string; discount?: string }[] | nul
   } catch {
     return null;
   }
-}
-
-function readRows<T>(result: unknown): T[] {
-  if (Array.isArray(result)) {
-    return Array.isArray(result[0]) ? (result[0] as T[]) : (result as T[]);
-  }
-  return [];
-}
-
-function readScalar<K extends string>(result: unknown, key: K): unknown {
-  const rows = readRows<Record<K, unknown>>(result);
-  return rows[0]?.[key] ?? null;
 }

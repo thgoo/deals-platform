@@ -67,22 +67,16 @@ export default class BusinessStatsService {
   }
 
   private async computeDealsTimeSeries(days: number): Promise<DailyCount[]> {
-    const rows = await db.execute<{ day: string; count: number | string }>(sql`
-      SELECT DATE(ts) AS day, COUNT(*) AS count
+    // Days are UTC calendar days (the connection runs in UTC).
+    const rows = await db.execute<{ day: string; count: string }>(sql`
+      SELECT to_char(date(ts), 'YYYY-MM-DD') AS day, COUNT(*) AS count
       FROM deals
-      WHERE ts > NOW() - INTERVAL ${sql.raw(String(days))} DAY
-      GROUP BY DATE(ts)
-      ORDER BY day ASC
+      WHERE ts > now() - make_interval(days => ${days})
+      GROUP BY 1
+      ORDER BY 1 ASC
     `);
 
-    const list = Array.isArray(rows) && Array.isArray(rows[0])
-      ? (rows[0] as { day: string | Date; count: number | string }[])
-      : (rows as unknown as { day: string | Date; count: number | string }[]);
-
-    return list.map(r => ({
-      day: typeof r.day === 'string' ? r.day : r.day.toISOString().slice(0, 10),
-      count: Number(r.count),
-    }));
+    return rows.map(r => ({ day: r.day, count: Number(r.count) }));
   }
 }
 

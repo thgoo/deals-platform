@@ -1,5 +1,6 @@
 import type { InferSelectModel } from 'drizzle-orm';
-import { index, json, mysqlTable, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { index, pgTable, text, timestamp, uuid, vector } from 'drizzle-orm/pg-core';
+import { ciText } from './types';
 
 /**
  * Identifies which embedding model produced the vector stored alongside.
@@ -12,19 +13,21 @@ export const EMBEDDING_MODEL_VERSIONS = {
 
 export type EmbeddingModelVersion = typeof EMBEDDING_MODEL_VERSIONS[keyof typeof EMBEDDING_MODEL_VERSIONS];
 
-export const productsTable = mysqlTable('products', {
-  id: varchar({ length: 36 }).primaryKey(),
-  canonicalName: varchar('canonical_name', { length: 500 }).notNull(),
-  modelKey: varchar('model_key', { length: 200 }),
-  category: varchar({ length: 50 }),
-  embedding: json().$type<number[]>().notNull(),
-  embeddingModelVersion: varchar('embedding_model_version', { length: 100 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull().onUpdateNow(),
-}, table => ({
-  modelKeyIdx: index('model_key_idx').on(table.modelKey),
-  categoryIdx: index('category_idx').on(table.category),
-}));
+export const EMBEDDING_DIMENSIONS = 1536;
+
+export const productsTable = pgTable('products', {
+  id: uuid().primaryKey(),
+  canonicalName: ciText('canonical_name').notNull(),
+  modelKey: text('model_key'),
+  category: ciText(),
+  embedding: vector({ dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+  embeddingModelVersion: text('embedding_model_version').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, table => [
+  index('products_model_key_idx').on(table.modelKey),
+  index('products_category_idx').on(table.category),
+]);
 
 export type Product = InferSelectModel<typeof productsTable>;
 export type NewProduct = typeof productsTable.$inferInsert;

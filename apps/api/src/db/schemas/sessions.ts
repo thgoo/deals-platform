@@ -1,13 +1,13 @@
 import type { InferSelectModel } from 'drizzle-orm';
-import { bigint, datetime, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
+import { bigint, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { usersTable } from './users';
 
-export const sessionsTable = mysqlTable('sessions', {
-  id: varchar('id', { length: 255 }).primaryKey(),
-  userId: bigint('user_id', { mode: 'number', unsigned: true })
+export const sessionsTable = pgTable('sessions', {
+  id: text().primaryKey(),
+  userId: bigint('user_id', { mode: 'number' })
     .notNull()
     .references(() => usersTable.id),
-  expiresAt: datetime('expires_at').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 });
 
 export type Session = InferSelectModel<typeof sessionsTable>;

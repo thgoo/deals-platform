@@ -9,11 +9,8 @@
     "db:studio": "drizzle-kit studio",
     "backfill:products": "bun run scripts/backfill-product-catalog.ts",
     "audit:catalog": "bun run scripts/audit-catalog.ts",
-    "cleanup:catalog": "bun run scripts/cleanup-catalog.ts",
-    "split:overmerged": "bun run scripts/split-overmerged-products.ts",
-    "migrate:terabyte": "bun run scripts/migrate-terabyte-url-mappings.ts",
-    "unlink:outliers": "bun run scripts/unlink-outlier-deals.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:copy-from-mariadb": "bun run scripts/mariadb-to-postgres.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",
@@ -26,7 +23,7 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
-    "mysql2": "^3.11.4",
+    "postgres": "^3.4.9",
     "web-push": "^3.6.7",
     "zod": "^4.6.7"
   },
@@ -36,6 +33,7 @@
     "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.1",
+    "mysql2": "^3.11.4",
     "typescript": "^5.9.3"
   }
 }

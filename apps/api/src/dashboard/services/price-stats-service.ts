@@ -1,6 +1,9 @@
 import type { PriceHistory, PriceLeader, PricePoint } from '@bargah/shared';
-import { sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import db from '~/db';
+import { dealsTable } from '~/db/schemas/deals';
+import { toIsoString } from '~/utils/dates';
+import { isUuid } from '~/utils/ids';
 import { createTtlCache } from '../cache';
 
 /**
@@ -37,55 +40,44 @@ export default class PriceStatsService {
   }
 
   private async computePriceLeaders(limit: number, minDeals: number): Promise<PriceLeader[]> {
-    // Resolve the top-N products by deal count with a cheap GROUP BY FIRST, then
-    // run the expensive PERCENTILE_CONT window over only those N rows. Computing
-    // percentiles for every eligible product and then LIMITing is O(all
-    // products) and times out on a busy DB; this keeps the window tiny.
+    // Resolve the top-N products by deal count with a cheap GROUP BY first, then
+    // compute percentiles over only those N products.
+    // round() on percentile_cont's double precision rounds half to even, exactly
+    // like MariaDB's ROUND() on the PERCENTILE_CONT double it replaces.
     const rows = await db.execute<{
       product_id: string;
       canonical_name: string;
       category: string | null;
-      deals: number | string;
-      p10: number | string;
-      med: number | string;
-      p90: number | string;
+      deals: string;
+      p10: string;
+      med: string;
+      p90: string;
     }>(sql`
       WITH eligible AS (
         SELECT product_id
         FROM deals
         WHERE price IS NOT NULL AND product_id IS NOT NULL
         GROUP BY product_id
-        HAVING COUNT(*) >= ${sql.raw(String(minDeals))}
+        HAVING COUNT(*) >= ${minDeals}
         ORDER BY COUNT(*) DESC
-        LIMIT ${sql.raw(String(limit))}
+        LIMIT ${limit}
       )
-      SELECT id AS product_id, canonical_name, category, deals, p10, med, p90
-      FROM (
-        SELECT DISTINCT
-          p.id              AS id,
-          p.canonical_name  AS canonical_name,
-          p.category        AS category,
-          COUNT(d.id)          OVER (PARTITION BY p.id)                          AS deals,
-          ROUND(PERCENTILE_CONT(0.1) WITHIN GROUP (ORDER BY d.price) OVER (PARTITION BY p.id)) AS p10,
-          ROUND(MEDIAN(d.price)      OVER (PARTITION BY p.id))                   AS med,
-          ROUND(PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY d.price) OVER (PARTITION BY p.id)) AS p90
-        FROM products p
-        JOIN deals d    ON d.product_id = p.id
-        JOIN eligible e ON e.product_id = p.id
-        WHERE d.price IS NOT NULL
-      ) t
+      SELECT
+        p.id             AS product_id,
+        p.canonical_name AS canonical_name,
+        p.category       AS category,
+        COUNT(d.id)      AS deals,
+        round(percentile_cont(0.1) WITHIN GROUP (ORDER BY d.price)) AS p10,
+        round(percentile_cont(0.5) WITHIN GROUP (ORDER BY d.price)) AS med,
+        round(percentile_cont(0.9) WITHIN GROUP (ORDER BY d.price)) AS p90
+      FROM products p
+      JOIN eligible e ON e.product_id = p.id
+      JOIN deals d    ON d.product_id = p.id AND d.price IS NOT NULL
+      GROUP BY p.id
       ORDER BY deals DESC
     `);
 
-    return readRows<{
-      product_id: string;
-      canonical_name: string;
-      category: string | null;
-      deals: number | string;
-      p10: number | string;
-      med: number | string;
-      p90: number | string;
-    }>(rows).map(r => {
+    return rows.map(r => {
       const p10 = Number(r.p10);
       const median = Number(r.med);
       const p90 = Number(r.p90);
@@ -113,19 +105,18 @@ export default class PriceStatsService {
    * fixed-parameter methods. The query is a single indexed lookup on product_id.
    */
   async getPriceHistory(productId: string): Promise<PriceHistory> {
-    const rows = await db.execute<{ ts: Date | string; price: number | string; store: string | null }>(sql`
-      SELECT ts, price, store
-      FROM deals
-      WHERE product_id = ${productId} AND price IS NOT NULL
-      ORDER BY ts ASC
-    `);
+    if (!isUuid(productId)) return { productId, points: [], p10: 0, median: 0, p90: 0 };
+    const rows = await db
+      .select({ ts: dealsTable.ts, price: dealsTable.price, store: dealsTable.store })
+      .from(dealsTable)
+      .where(and(eq(dealsTable.productId, productId), isNotNull(dealsTable.price)))
+      .orderBy(asc(dealsTable.ts));
 
-    const points: PricePoint[] = readRows<{ ts: Date | string; price: number | string; store: string | null }>(rows)
-      .map(r => ({
-        ts: typeof r.ts === 'string' ? r.ts : r.ts.toISOString(),
-        price: Number(r.price),
-        store: r.store,
-      }));
+    const points: PricePoint[] = rows.map(r => ({
+      ts: toIsoString(r.ts),
+      price: Number(r.price),
+      store: r.store,
+    }));
 
     const sorted = points.map(p => p.price).sort((a, b) => a - b);
 
@@ -140,7 +131,7 @@ export default class PriceStatsService {
 }
 
 /**
- * Linear-interpolated percentile, matching MariaDB's PERCENTILE_CONT so the
+ * Linear-interpolated percentile, matching SQL percentile_cont so the
  * single-product band lines up with the leaders table band.
  */
 function percentile(sorted: number[], p: number): number {
@@ -154,13 +145,4 @@ function percentile(sorted: number[], p: number): number {
   const hiVal = sorted[hi] ?? 0;
   if (lo === hi) return loVal;
   return loVal + (hiVal - loVal) * (idx - lo);
-}
-
-// mysql2 may return either a plain rows array or `{ rows, fields }` depending on
-// the call. Normalize once at the boundary (same shape as catalog-stats-service).
-function readRows<T>(result: unknown): T[] {
-  if (Array.isArray(result)) {
-    return Array.isArray(result[0]) ? (result[0] as T[]) : (result as T[]);
-  }
-  return [];
 }

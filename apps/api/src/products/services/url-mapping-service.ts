@@ -17,14 +17,6 @@ export default class UrlMappingService {
     return row ?? null;
   }
 
-  /**
-   * Inserts mappings idempotently — if a (source, externalId) pair already exists,
-   * the existing row wins (we don't overwrite to a different product).
-   *
-   * Uses INSERT IGNORE: simpler than ON DUPLICATE KEY UPDATE with a self-reference
-   * (which Drizzle 0.36 mis-serializes as a parameter, sending the column object
-   * raw to mysql2 and producing `Unknown column 'name'`).
-   */
   async findByProductAndSource(productId: string, source: string): Promise<ProductUrlMapping[]> {
     return db
       .select()
@@ -35,6 +27,10 @@ export default class UrlMappingService {
       ));
   }
 
+  /**
+   * Inserts mappings idempotently — if a (source, externalId) pair already exists,
+   * the existing row wins (we don't overwrite to a different product).
+   */
   async saveAll(
     externalIds: ExternalId[],
     productId: string,
@@ -49,6 +45,8 @@ export default class UrlMappingService {
       confidence,
     }));
 
-    await db.insert(productUrlMappingsTable).ignore().values(rows);
+    await db.insert(productUrlMappingsTable)
+      .values(rows)
+      .onConflictDoNothing({ target: [productUrlMappingsTable.source, productUrlMappingsTable.externalId] });
   }
 }

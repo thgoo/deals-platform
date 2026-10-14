@@ -1,5 +1,5 @@
 import type { InferSelectModel } from 'drizzle-orm';
-import { bigint, decimal, index, json, mysqlEnum, mysqlTable, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { bigint, index, jsonb, numeric, pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { dealsTable } from './deals';
 import { productsTable } from './products';
 
@@ -11,6 +11,8 @@ export const MATCH_METHODS = [
   'skipped',
 ] as const;
 export type MatchMethod = typeof MATCH_METHODS[number];
+
+export const matchMethodEnum = pgEnum('match_method', MATCH_METHODS);
 
 /**
  * Frozen snapshot of one candidate considered during a match decision.
@@ -27,22 +29,22 @@ export interface CandidateSnapshot {
  * (or wasn't), the candidates considered, and the winning similarity score.
  * Drives threshold calibration and lets us audit/reverse bad matches.
  */
-export const productMatchDecisionsTable = mysqlTable('product_match_decisions', {
-  id: bigint({ mode: 'number', unsigned: true }).autoincrement().primaryKey(),
-  dealId: bigint('deal_id', { mode: 'number', unsigned: true })
+export const productMatchDecisionsTable = pgTable('product_match_decisions', {
+  id: bigint({ mode: 'number' }).primaryKey().generatedByDefaultAsIdentity(),
+  dealId: bigint('deal_id', { mode: 'number' })
     .notNull()
-    .references(() => dealsTable.id),
-  productId: varchar('product_id', { length: 36 })
-    .references(() => productsTable.id),
-  method: mysqlEnum('method', MATCH_METHODS).notNull(),
-  topCandidates: json('top_candidates').$type<CandidateSnapshot[]>(),
-  similarityScore: decimal('similarity_score', { precision: 5, scale: 4 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, table => ({
-  dealIdx: index('deal_idx').on(table.dealId),
-  productIdx: index('product_idx').on(table.productId),
-  methodIdx: index('method_idx').on(table.method),
-}));
+    .references(() => dealsTable.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').references(() => productsTable.id),
+  method: matchMethodEnum().notNull(),
+  topCandidates: jsonb('top_candidates').$type<CandidateSnapshot[]>(),
+  similarityScore: numeric('similarity_score', { precision: 5, scale: 4 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, table => [
+  index('decisions_deal_idx').on(table.dealId),
+  index('decisions_product_idx').on(table.productId),
+  index('decisions_method_idx').on(table.method),
+  index('decisions_created_at_idx').on(table.createdAt),
+]);
 
 export type ProductMatchDecision = InferSelectModel<typeof productMatchDecisionsTable>;
 export type NewProductMatchDecision = typeof productMatchDecisionsTable.$inferInsert;

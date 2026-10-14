@@ -2,13 +2,13 @@ import type { AnalyzedDeal, Anomaly, CleanResult, DealVerdict, ProductAnalysis }
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import db from '~/db';
 import { dealsTable } from '~/db/schemas/deals';
-import { productMatchDecisionsTable } from '~/db/schemas/product-match-decisions';
 import { productUrlMappingsTable } from '~/db/schemas/product-url-mappings';
 import { productsTable } from '~/db/schemas/products';
 import { extractExternalIds } from '~/link-pipeline/identifiers/identifier-extractor';
 import { buildIdentifierRegistry } from '~/link-pipeline/identifiers/registry';
 import { sharedTokenCount } from '~/products/utils/product-name-tokens';
 import { specsConflict } from '~/products/utils/spec-conflict';
+import { isUuid } from '~/utils/ids';
 import { createTtlCache } from '../cache';
 
 const URL_IN_TEXT_RE = /(https?:\/\/[^\s\n\]"'<>]+)/g;
@@ -33,10 +33,10 @@ export default class CatalogCleanupService {
       product_id: string;
       canonical_name: string;
       category: string | null;
-      deals: number | string;
-      p10: number | string;
-      med: number | string;
-      p90: number | string;
+      deals: string;
+      p10: string;
+      med: string;
+      p90: string;
     }>(sql`
       WITH eligible AS (
         SELECT product_id
@@ -44,41 +44,34 @@ export default class CatalogCleanupService {
         WHERE price IS NOT NULL AND product_id IS NOT NULL
         GROUP BY product_id
         -- Cheap pre-filter: a product can only have p90/p10 > N if MAX/MIN > N
-        -- (since p90 <= max and p10 >= min). This shrinks the set the expensive
-        -- PERCENTILE_CONT window runs over from "all products" to just the
-        -- spread suspects — without dropping any true anomaly.
-        HAVING COUNT(*) >= ${sql.raw(String(minDeals))}
-           AND MAX(price) > MIN(price) * ${sql.raw(String(SUSPECT_SPREAD_RATIO))}
+        -- (since p90 <= max and p10 >= min). This shrinks the set the percentile
+        -- aggregates run over from "all products" to just the spread suspects —
+        -- without dropping any true anomaly.
+        HAVING COUNT(*) >= ${minDeals}
+           AND MAX(price) > MIN(price) * ${SUSPECT_SPREAD_RATIO}
+      ),
+      bands AS (
+        SELECT
+          p.id             AS product_id,
+          p.canonical_name AS canonical_name,
+          p.category       AS category,
+          COUNT(d.id)      AS deals,
+          round(percentile_cont(0.1) WITHIN GROUP (ORDER BY d.price)) AS p10,
+          round(percentile_cont(0.5) WITHIN GROUP (ORDER BY d.price)) AS med,
+          round(percentile_cont(0.9) WITHIN GROUP (ORDER BY d.price)) AS p90
+        FROM products p
+        JOIN eligible e ON e.product_id = p.id
+        JOIN deals d    ON d.product_id = p.id AND d.price IS NOT NULL
+        GROUP BY p.id
       )
       SELECT product_id, canonical_name, category, deals, p10, med, p90
-      FROM (
-        SELECT DISTINCT
-          p.id              AS product_id,
-          p.canonical_name  AS canonical_name,
-          p.category        AS category,
-          COUNT(d.id)          OVER (PARTITION BY p.id) AS deals,
-          ROUND(PERCENTILE_CONT(0.1) WITHIN GROUP (ORDER BY d.price) OVER (PARTITION BY p.id)) AS p10,
-          ROUND(MEDIAN(d.price)      OVER (PARTITION BY p.id))                  AS med,
-          ROUND(PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY d.price) OVER (PARTITION BY p.id)) AS p90
-        FROM products p
-        JOIN deals d    ON d.product_id = p.id
-        JOIN eligible e ON e.product_id = p.id
-        WHERE d.price IS NOT NULL
-      ) t
-      WHERE p10 > 0 AND (p90 / p10) > ${sql.raw(String(SUSPECT_SPREAD_RATIO))}
+      FROM bands
+      WHERE p10 > 0 AND (p90 / p10) > ${SUSPECT_SPREAD_RATIO}
       ORDER BY (p90 / p10) DESC
-      LIMIT ${sql.raw(String(limit))}
+      LIMIT ${limit}
     `);
 
-    return readRows<{
-      product_id: string;
-      canonical_name: string;
-      category: string | null;
-      deals: number | string;
-      p10: number | string;
-      med: number | string;
-      p90: number | string;
-    }>(rows).map(r => {
+    return rows.map(r => {
       const p10 = Number(r.p10);
       const p90 = Number(r.p90);
       return {
@@ -104,6 +97,7 @@ export default class CatalogCleanupService {
    *   otherwise → keep
    */
   async analyzeProduct(productId: string): Promise<ProductAnalysis | null> {
+    if (!isUuid(productId)) return null;
     const [product] = await db
       .select({ canonicalName: productsTable.canonicalName })
       .from(productsTable)
@@ -159,6 +153,7 @@ export default class CatalogCleanupService {
    * `backfill:products` run and re-resolved against the (cleaner) catalog.
    */
   async cleanProduct(productId: string, dealIds: number[]): Promise<CleanResult> {
+    if (!isUuid(productId)) return { unlinked: 0 };
     if (dealIds.length === 0) return { unlinked: 0 };
 
     // 1. Fetch the links + text of the deals being unlinked so we can extract
@@ -218,8 +213,9 @@ export default class CatalogCleanupService {
         .where(and(
           eq(dealsTable.productId, productId),
           inArray(dealsTable.id, batch),
-        ));
-      unlinked += drizzleAffectedRows(result);
+        ))
+        .returning({ id: dealsTable.id });
+      unlinked += result.length;
     }
 
     return { unlinked };
@@ -227,11 +223,13 @@ export default class CatalogCleanupService {
 
   /** Renames a product's canonical name (curation after over-merge splits). */
   async updateProductName(productId: string, canonicalName: string): Promise<{ ok: boolean }> {
-    const result = await db
+    if (!isUuid(productId)) return { ok: false };
+    const updated = await db
       .update(productsTable)
       .set({ canonicalName })
-      .where(eq(productsTable.id, productId));
-    return { ok: drizzleAffectedRows(result) > 0 };
+      .where(eq(productsTable.id, productId))
+      .returning({ id: productsTable.id });
+    return { ok: updated.length > 0 };
   }
 
   /** Clears the anomalies cache. Called on modal close so the queue recomputes. */
@@ -253,31 +251,27 @@ export default class CatalogCleanupService {
     if (fields.product !== undefined) update.product = fields.product;
     if (Object.keys(update).length === 0) return { ok: false };
 
-    const result = await db
+    const updated = await db
       .update(dealsTable)
       .set(update)
-      .where(eq(dealsTable.id, dealId));
+      .where(eq(dealsTable.id, dealId))
+      .returning({ id: dealsTable.id });
 
-    return { ok: drizzleAffectedRows(result) > 0 };
+    return { ok: updated.length > 0 };
   }
 
   /**
-   * Hard-deletes a junk deal. Its match-decision rows are removed first to
-   * satisfy the FK (product_match_decisions.deal_id → deals.id, ON DELETE NO
-   * ACTION). Both run in one transaction.
+   * Hard-deletes a junk deal. Its match-decision rows go with it
+   * (product_match_decisions.deal_id is ON DELETE CASCADE).
    */
   async deleteDeal(dealId: number): Promise<{ ok: boolean }> {
-    const ok = await db.transaction(async tx => {
-      await tx
-        .delete(productMatchDecisionsTable)
-        .where(eq(productMatchDecisionsTable.dealId, dealId));
-      const result = await tx.delete(dealsTable).where(eq(dealsTable.id, dealId));
-      return drizzleAffectedRows(result) > 0;
-    });
+    const deleted = await db
+      .delete(dealsTable)
+      .where(eq(dealsTable.id, dealId))
+      .returning({ id: dealsTable.id });
 
-    // Same as updateDealPrice — keep interactive deletes snappy; the queue
-    // refreshes when the modal closes.
-    return { ok };
+    // Keep interactive deletes snappy; the queue refreshes when the modal closes.
+    return { ok: deleted.length > 0 };
   }
 }
 
@@ -303,16 +297,3 @@ function medianOf(sorted: number[]): number {
   return n % 2 === 0 ? Math.round(((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2) : (sorted[mid] ?? 0);
 }
 
-function readRows<T>(result: unknown): T[] {
-  if (Array.isArray(result)) {
-    return Array.isArray(result[0]) ? (result[0] as T[]) : (result as T[]);
-  }
-  return [];
-}
-
-function drizzleAffectedRows(result: unknown): number {
-  if (Array.isArray(result) && result[0] && typeof result[0] === 'object') {
-    return (result[0] as { affectedRows?: number }).affectedRows ?? 0;
-  }
-  return 0;
-}

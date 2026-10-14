@@ -48,14 +48,14 @@ async function findExactNameDuplicates(): Promise<DuplicateGroup[]> {
     count: number | string;
     ids: string;
   }>(sql`
-    SELECT canonical_name, COUNT(*) AS count, GROUP_CONCAT(id) AS ids
+    SELECT MIN(canonical_name) AS canonical_name, COUNT(*) AS count, string_agg(id::text, ',') AS ids
     FROM products
     GROUP BY canonical_name
     HAVING COUNT(*) > 1
     ORDER BY count DESC, canonical_name
   `);
 
-  const rows = readRows<{ canonical_name: string; count: number | string; ids: string }>(result);
+  const rows = [...result];
   if (rows.length === 0) return [];
 
   const allIds = rows.flatMap(r => r.ids.split(','));
@@ -273,15 +273,6 @@ async function main(): Promise<void> {
   console.log(`  Spec-conflicting deal matches: ${conflicts.length}`);
   console.log(`  Total runtime: ${((Date.now() - start) / 1000).toFixed(1)}s`);
   console.log();
-}
-
-// drizzle's execute() returns either an array of rows or `[rows, fields]` depending
-// on the underlying mysql2 path; normalize once at the boundary.
-function readRows<T>(result: unknown): T[] {
-  if (Array.isArray(result)) {
-    return Array.isArray(result[0]) ? (result[0] as T[]) : (result as T[]);
-  }
-  return [];
 }
 
 main()

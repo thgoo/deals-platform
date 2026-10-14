@@ -13,7 +13,7 @@ mock.module('~/db', () => {
       })),
       insert: mock(() => ({
         values: mock(() => ({
-          $returningId: mock(() => Promise.resolve([{ id: 1 }])),
+          returning: mock(() => Promise.resolve([{ id: 1 }])),
         })),
       })),
     },
@@ -114,8 +114,8 @@ describe('UserService', () => {
         email: 'new@example.com',
         password: 'hashed_password',
       };
-      const mockReturningId = mock(() => Promise.resolve([{ id: 1 }]));
-      const mockValues = mock(() => ({ $returningId: mockReturningId }));
+      const mockReturning = mock(() => Promise.resolve([{ id: 1 }]));
+      const mockValues = mock(() => ({ returning: mockReturning }));
       const mockInsert = mock(() => ({ values: mockValues }));
       (mockDb as any).insert = mockInsert; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -123,7 +123,7 @@ describe('UserService', () => {
       expect(result).toEqual([{ id: 1 }]);
       expect(mockInsert).toHaveBeenCalledWith(usersTable);
       expect(mockValues).toHaveBeenCalledWith(newUser);
-      expect(mockReturningId).toHaveBeenCalled();
+      expect(mockReturning).toHaveBeenCalled();
     });
   });
 });

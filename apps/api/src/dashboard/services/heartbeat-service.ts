@@ -23,11 +23,11 @@ export default class HeartbeatService {
     const [row] = await db
       .select({
         total: sql<string>`COUNT(*)`,
-        last1h: sql<string>`SUM(CASE WHEN ${dealsTable.ts} > NOW() - INTERVAL 1 HOUR THEN 1 ELSE 0 END)`,
-        last24h: sql<string>`SUM(CASE WHEN ${dealsTable.ts} > NOW() - INTERVAL 1 DAY THEN 1 ELSE 0 END)`,
-        last7d: sql<string>`SUM(CASE WHEN ${dealsTable.ts} > NOW() - INTERVAL 7 DAY THEN 1 ELSE 0 END)`,
-        lastAt: sql<Date | null>`MAX(${dealsTable.ts})`,
-        oldestAt: sql<Date | null>`MIN(${dealsTable.ts})`,
+        last1h: sql<string>`SUM(CASE WHEN ${dealsTable.ts} > now() - interval '1 hour' THEN 1 ELSE 0 END)`,
+        last24h: sql<string>`SUM(CASE WHEN ${dealsTable.ts} > now() - interval '1 day' THEN 1 ELSE 0 END)`,
+        last7d: sql<string>`SUM(CASE WHEN ${dealsTable.ts} > now() - interval '7 days' THEN 1 ELSE 0 END)`,
+        lastAt: sql<Date | null>`MAX(${dealsTable.ts})`.mapWith(dealsTable.ts),
+        oldestAt: sql<Date | null>`MIN(${dealsTable.ts})`.mapWith(dealsTable.ts),
         resolved: sql<string>`
           SUM(CASE WHEN ${dealsTable.productId} IS NOT NULL THEN 1 ELSE 0 END)
         `,
