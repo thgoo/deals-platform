@@ -60,7 +60,7 @@ The server listens on `PORT` (default `8000`). On boot it loads the entire produ
 | --------------------------- | ----------------------------------------------------------- |
 | `bun run dev`               | Start development server with hot-reload                    |
 | `bun run lint`              | Run ESLint                                                  |
-| `bun run test:bun`          | Run unit tests                                              |
+| `bun run test`              | Run unit tests                                              |
 | `bun run db:generate`       | Generate a new migration from current schema state          |
 | `bun run db:migrate`        | Apply pending migrations                                    |
 | `bun run db:studio`         | Open Drizzle Studio (DB inspector) at localhost:4983        |

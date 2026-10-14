@@ -1,5 +1,5 @@
 {
-  "name": "telegram-crawler",
+  "name": "@bargah/crawler",
   "version": "1.0.0",
   "description": "Telegram channel crawler for promo monitoring",
   "module": "src/index.ts",

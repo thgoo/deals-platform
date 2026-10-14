@@ -1,5 +1,5 @@
 {
-  "name": "ai-service",
+  "name": "@bargah/ai",
   "version": "1.0.0",
   "module": "src/index.ts",
   "type": "module",
@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "lint": "eslint src",
-    "test:bun": "LOG_LEVEL=error NODE_ENV=test bun test"
+    "test": "LOG_LEVEL=error NODE_ENV=test bun test"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.8.0",

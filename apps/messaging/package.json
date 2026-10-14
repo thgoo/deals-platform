@@ -1,5 +1,5 @@
 {
-  "name": "messaging-service",
+  "name": "@bargah/messaging",
   "module": "src/index.ts",
   "scripts": {
     "dev": "bun run --hot src/index.ts"

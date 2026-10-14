@@ -58,7 +58,7 @@ The server listens on `PORT` (default `3003`). `GET /health` reports the active 
 | ------------------ | ---------------------------------------- |
 | `bun run dev`      | Start development server with hot-reload |
 | `bun run lint`     | Run ESLint                               |
-| `bun run test:bun` | Run unit tests                           |
+| `bun run test` | Run unit tests                           |
 
 ## Project Structure
 

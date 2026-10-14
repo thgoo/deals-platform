@@ -1,9 +1,9 @@
 {
-  "name": "hono-boilerplate",
+  "name": "@bargah/api",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "lint": "eslint src",
-    "test:bun": "bun test",
+    "test": "bun test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
