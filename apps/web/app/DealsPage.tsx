@@ -2,6 +2,7 @@
 
 import { sendGAEvent } from '@next/third-parties/google';
 import { Zap, SearchX, ArrowUp } from 'lucide-react';
+import Link from 'next/link';
 import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 import { useEffect, useMemo, useState } from 'react';
 import type { Item, PaginatedResponse } from './types';
@@ -11,8 +12,8 @@ import DealList from './components/DealList';
 import DealModal from './components/DealModal';
 import SearchFilters from './components/SearchFilters';
 import { useAlerts } from './hooks/useAlerts';
-import { useDebounce } from './hooks/useDebounce';
 import { useDealsRealtime } from './hooks/useDealsRealtime';
+import { useDebounce } from './hooks/useDebounce';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
 import { usePaginatedDeals } from './hooks/usePaginatedDeals';
 
@@ -49,11 +50,16 @@ export default function DealsPage({ initialData }: DealsPageProps) {
 
   const observerTarget = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
 
-  const { alerts, isLoading: alertsLoading, isSupported, createAlert, deleteAlert } = useAlerts();
+  const {
+    alerts,
+    isLoading: alertsLoading,
+    isSupported,
+    createAlert,
+    deleteAlert,
+  } = useAlerts();
 
   const [selectedDeal, setSelectedDeal] = useState<Item | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
-
 
   const handleSearchChange = (value: string | null) => {
     setSearch(value);
@@ -156,8 +162,8 @@ export default function DealsPage({ initialData }: DealsPageProps) {
             )}
             {!hasMore && items.length > 0 && (
               <div className="flex flex-row items-center gap-x-2 text-lg font-black tracking-wider text-(--pixel-gray) uppercase">
-                <Zap className="h-8 w-8 text-(--pixel-yellow)" /> Você chegou
-                ao fim <Zap className="h-8 w-8 text-(--pixel-yellow)" />
+                <Zap className="h-8 w-8 text-(--pixel-yellow)" /> Você chegou ao
+                fim <Zap className="h-8 w-8 text-(--pixel-yellow)" />
               </div>
             )}
           </div>
@@ -171,9 +177,9 @@ export default function DealsPage({ initialData }: DealsPageProps) {
                   Disclosures
                 </div>
                 <div className="mt-3 space-y-2">
-                  <a href="/amzn" className="font-bold underline">
+                  <Link href="/amzn" className="font-bold underline">
                     Amazon
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
