@@ -1,4 +1,3 @@
-/* eslint-disable no-console -- access-log middleware; console is the sink */
 import type { MiddlewareHandler } from 'hono';
 
 // Matches ConsoleLogger's behavior: structured JSON in production (so log

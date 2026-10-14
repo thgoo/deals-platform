@@ -1,4 +1,3 @@
-/* eslint-disable no-console -- this is the console logger; console usage is its purpose */
 import type { Logger } from './types';
 
 export class ConsoleLogger implements Logger {

@@ -1,9 +1,9 @@
+import type { TelegramGateway } from './telegram';
 import { config } from './config';
 import { logger } from './logger';
 import { downloadQueue } from './media/queue';
 import { messageHandler } from './processing/message-handler';
 import { handleError } from './shared/errors';
-import type { TelegramGateway } from './telegram';
 import { getTelegramGateway } from './telegram';
 import { setCurrentTelegramGateway } from './telegram/runtime';
 

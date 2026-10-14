@@ -12,7 +12,8 @@
     "cleanup:catalog": "bun run scripts/cleanup-catalog.ts",
     "split:overmerged": "bun run scripts/split-overmerged-products.ts",
     "migrate:terabyte": "bun run scripts/migrate-terabyte-url-mappings.ts",
-    "unlink:outliers": "bun run scripts/unlink-outlier-deals.ts"
+    "unlink:outliers": "bun run scripts/unlink-outlier-deals.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",
@@ -28,15 +29,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.14.0",
-    "@stylistic/eslint-plugin": "^2.10.1",
-    "@types/bun": "latest",
-    "@types/eslint__js": "^8.42.3",
-    "@types/jest": "^29.5.14",
+    "@bargah/config": "workspace:*",
+    "@types/bun": "^1.3.14",
     "drizzle-kit": "^0.28.0",
-    "eslint": "^9.14.0",
-    "eslint-plugin-perfectionist": "^3.9.1",
-    "tsx": "^4.19.2",
-    "typescript-eslint": "^8.13.0"
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3"
   }
 }
