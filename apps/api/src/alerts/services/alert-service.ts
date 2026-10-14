@@ -1,10 +1,11 @@
 import { randomUUID } from 'crypto';
-import { eq, gt, inArray } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import type { Alert, NewAlert, PushSubscription } from '~/db/schemas/alerts';
 import type { Deal } from '~/db/schemas/deals';
 import type { Logger } from '~/logger';
 import { config } from '~/config';
 import db from '~/db';
+import { alertProductNotificationsTable } from '~/db/schemas/alert-product-notifications';
 import { alertsTable } from '~/db/schemas/alerts';
 import { WebPushSender } from '~/notifications/web-push';
 import { isUuid } from '~/utils/ids';
@@ -73,35 +74,60 @@ export class AlertService {
     return expiresAt;
   }
 
+  /**
+   * Sends a push to every active alert whose keyword appears in the deal.
+   *
+   * Price gate, per product: an alert that already notified this product only
+   * fires again at a strictly lower price. Deals without a product (coupon-only)
+   * or without a price always notify. Runs after product resolution (ingestion
+   * notify step), so deal.productId is final.
+   */
   async matchAndNotify(deal: Deal, logger: Logger): Promise<void> {
-    const now = new Date();
-    const rows = await db
+    const alerts = await db
       .select()
       .from(alertsTable)
-      .where(gt(alertsTable.expiresAt, now));
-    const alerts = rows;
+      .where(gt(alertsTable.expiresAt, new Date()));
 
     const normalize = (str: string) =>
-      str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
     const searchText = normalize(
       [deal.product, deal.description, deal.text].filter(Boolean).join(' '),
     );
 
-    for (const alert of alerts) {
-      if (!searchText.includes(normalize(alert.keyword))) continue;
+    const matching = alerts.filter(alert => searchText.includes(normalize(alert.keyword)));
+    if (matching.length === 0) return;
 
-      // Skip if new price is same or higher than last notified price
-      if (
-        deal.price != null &&
-        alert.lastNotifiedPrice != null &&
-        deal.price >= alert.lastNotifiedPrice
-      ) continue;
-
-      this.sendNotification(alert, deal, logger).catch(err =>
-        logger.error('Failed to send notification', { alertId: alert.id, error: err.message }),
-      );
+    const gated = deal.productId !== null && deal.price !== null;
+    const lastPrices = new Map<string, number>();
+    if (gated) {
+      const rows = await db
+        .select({
+          alertId: alertProductNotificationsTable.alertId,
+          price: alertProductNotificationsTable.lastNotifiedPrice,
+        })
+        .from(alertProductNotificationsTable)
+        .where(and(
+          eq(alertProductNotificationsTable.productId, deal.productId as string),
+          inArray(alertProductNotificationsTable.alertId, matching.map(a => a.id)),
+        ));
+      for (const r of rows) lastPrices.set(r.alertId, r.price);
     }
+
+    const toNotify = matching.filter(alert => {
+      const last = lastPrices.get(alert.id);
+      return last === undefined || (deal.price as number) < last;
+    });
+
+    const results = await Promise.allSettled(toNotify.map(alert => this.sendNotification(alert, deal, logger)));
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        logger.error('Failed to send notification', {
+          alertId: toNotify[i]?.id,
+          error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+        });
+      }
+    });
   }
 
   private async sendNotification(alert: Alert, deal: Deal, logger: Logger): Promise<void> {
@@ -126,10 +152,15 @@ export class AlertService {
     });
 
     if (result.ok) {
-      await db
-        .update(alertsTable)
-        .set({ lastNotifiedPrice: deal.price ?? null })
-        .where(eq(alertsTable.id, alert.id));
+      if (deal.productId !== null && deal.price !== null) {
+        await db
+          .insert(alertProductNotificationsTable)
+          .values({ alertId: alert.id, productId: deal.productId, lastNotifiedPrice: deal.price })
+          .onConflictDoUpdate({
+            target: [alertProductNotificationsTable.alertId, alertProductNotificationsTable.productId],
+            set: { lastNotifiedPrice: deal.price, notifiedAt: new Date() },
+          });
+      }
 
       logger.info('Alert notification sent', { alertId: alert.id, keyword: alert.keyword });
     } else if (result.reason === 'recipient_gone') {
