@@ -62,7 +62,10 @@ MySQL                                   ├── packages/
   they're most likely deploys or old crash loops, not an ongoing problem. Still worth a look at `pm2 logs`, since every
   api restart drops in-flight product resolution / alerts (fire-and-forget until Phase 7).
   `api` sits at ~510 MB, mostly the in-memory embedding cache (gone in Phase 6).
-- Still unknown: where MySQL runs (same host? RDS?).
+- Database: **MariaDB 10.11.19** (not MySQL) on the same host, `127.0.0.1:3306`, database `bargah_db`. Server is aarch64.
+  Size on 2026-10-14: 105k deals, 30k products, 27k URL mappings, 104k match decisions; dump ≈ 255 MB gzipped / 1 GB raw.
+  MariaDB's `JSON` is an alias for `LONGTEXT`, which is why the code parses JSON columns by hand (`parseDeal` etc.).
+- Bun: 1.3.9 in prod, 1.3.14 locally. Align them when convenient (Phase 2).
 
 ## Phase 0 — Safety net
 
@@ -72,9 +75,12 @@ MySQL                                   ├── packages/
 - [x] Baseline tests (2026-10-14): api **125 pass / 5 fail** (failures are pre-existing: 3 tests need DB env vars,
       2 resolver tests have mocks that miss `findByProductAndSource`); ai 42/42; crawler 6/6; messaging has no tests.
       Type-check passes everywhere with TypeScript 5.9.
-- [ ] Take a **MySQL dump of production** and test that it restores locally. This dump is also the dataset for Phase 5 rehearsals.
+- [x] Production dump taken (2026-10-14, sessions excluded) and restored locally with `scripts/db-restore.sh` (~20 s).
 - [x] Recorded the PM2 start command / cwd of each bargah process (see "Production today").
-- [ ] A throwaway `docker-compose.yml` with MySQL + the apps, so you can smoke-test the full flow: post a fake deal to `POST /api/deals` → appears in web.
+- [x] `docker-compose.yml` with MariaDB 10.11 (apps run natively with bun), `scripts/setup-local-env.ts`,
+      `scripts/send-test-deal.ts`. Verified: api boots on prod data (30k products cached in 3.2 s), feed + dashboard respond,
+      a test deal goes through the pipeline up to the ai call.
+- [ ] Fill AI keys in `apps/ai/.env` and run one test deal fully end to end (extract → product match → shows in web).
 
 **Done when:** you can run the full pipeline locally against a copy of prod data.
 
@@ -169,7 +175,7 @@ Local work done 2026-10-14 in `bargah.com.br/bargah`:
 
 ---
 
-## Phase 5 — MySQL → Postgres
+## Phase 5 — MariaDB → Postgres
 
 **Goal:** same behavior on Postgres. **Not** in this phase: pgvector search, queue, schema redesign.
 
@@ -332,8 +338,8 @@ Can be done any time after Phase 1.
 | Question | Needed by |
 |---|---|
 | ~~Where does production run / how are deploys done?~~ Answered — see "Production today". | 1 |
-| Where does MySQL run (same host, RDS, other)? | 5 |
-| Production DB size (rows in `deals`, `products`)? Affects copy-script batching and cutover time. | 5 |
+| ~~Where does the DB run?~~ MariaDB 10.11 on the same host. | 5 |
+| ~~Production DB size?~~ ~105k deals / 30k products (2026-10-14): the copy takes minutes, not hours. | 5 |
 | Managed Postgres (Neon / Supabase / RDS) or self-hosted next to the apps? Must support `pgvector`. | 5 |
 | Acceptable downtime for the cutover (minutes? an hour?) | 5 |
 | Does mtcute deliver missed channel messages after a restart? (verify in rehearsal) | 5, 7 |
