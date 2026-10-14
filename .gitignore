@@ -21,3 +21,6 @@ out
 .idea
 .eslintcache
 coverage
+
+# local data (prod dumps contain personal data)
+/.data

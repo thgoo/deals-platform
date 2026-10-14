@@ -1,0 +1,34 @@
+# Local infrastructure only. The apps run natively with `bun` (hot reload, easy debugging).
+#
+#   docker compose up -d        # start
+#   docker compose down         # stop (data is kept in the named volume)
+#   docker compose down -v      # stop and wipe the database
+
+services:
+  mariadb:
+    # Same engine and major version as production (MariaDB 10.11 LTS).
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: deals
+      MARIADB_USER: deals
+      MARIADB_PASSWORD: deals
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # The prod dump has large multi-row INSERTs (products carry 1536-dim embeddings).
+      - --max-allowed-packet=512M
+      - --innodb-buffer-pool-size=1G
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mariadb-data:
