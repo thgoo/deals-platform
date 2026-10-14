@@ -31,13 +31,10 @@ export const dynamic = 'force-dynamic';
  * health, business volume, audit) stacked vertically.
  */
 export default async function IntelligencePage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ secret: string }>;
   searchParams: Promise<{ product?: string }>;
 }) {
-  const { secret } = await params;
   // Per-endpoint fallback: a single timeout (e.g., backfill saturating MySQL)
   // would otherwise reject Promise.all and kill the whole page. Each fetch
   // now degrades to a typed empty value, the failed section shows zeros, and
@@ -300,7 +297,7 @@ export default async function IntelligencePage({
             <PriceLeadersTable
               leaders={priceLeaders}
               featuredId={featured?.productId}
-              basePath={`/${secret}/admin`}
+              basePath="/admin"
             />
           </BracketCard>
         </div>

@@ -2,14 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-interface AdminNavProps {
-  secret: string;
-}
+import { logout } from '@/app/login/actions';
 
 const LINKS = [
-  { label: 'intelligence', href: (s: string) => `/${s}/admin` },
-  { label: 'products', href: (s: string) => `/${s}/admin/products` },
+  { label: 'intelligence', href: '/admin' },
+  { label: 'products', href: '/admin/products' },
 ] as const;
 
 /**
@@ -17,13 +14,12 @@ const LINKS = [
  * label-eyebrow typography, accent underline on the active page, muted text
  * for inactive links. Client component so it can read the live pathname.
  */
-export default function AdminNav({ secret }: AdminNavProps) {
+export default function AdminNav() {
   const pathname = usePathname();
 
   return (
     <nav className="flex items-center gap-6 border-b border-zinc-200 pb-4">
-      {LINKS.map(({ label, href }) => {
-        const target = href(secret);
+      {LINKS.map(({ label, href: target }) => {
         // Exact match for intelligence (root), prefix match for sub-pages.
         const isActive =
           label === 'intelligence'
@@ -49,6 +45,15 @@ export default function AdminNav({ secret }: AdminNavProps) {
           </Link>
         );
       })}
+      <form action={logout} className="ml-auto">
+        <button
+          type="submit"
+          className="label-eyebrow transition-colors"
+          style={{ color: 'var(--i-text-muted)' }}
+        >
+          log out
+        </button>
+      </form>
     </nav>
   );
 }

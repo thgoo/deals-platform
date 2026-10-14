@@ -6,7 +6,7 @@ interface PriceLeadersTableProps {
   leaders: PriceLeader[];
   /** Highlight this product's row — it's the one shown in the chart above. */
   featuredId?: string;
-  /** Dashboard route (e.g. `/<secret>/admin`) used to build product links. */
+  /** Dashboard route (`/admin`) used to build product links. */
   basePath: string;
 }
 

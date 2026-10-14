@@ -14,6 +14,7 @@
 import { randomBytes } from 'crypto';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { hashPassword } from '../apps/web/lib/password';
 
 const root = join(import.meta.dir, '..');
 
@@ -70,6 +71,9 @@ const hex = (bytes: number) => randomBytes(bytes).toString('hex');
 
 const LOCAL_DATABASE_URL = 'postgres://deals:deals@127.0.0.1:5432/deals';
 
+/** Generated only when web has no admin password yet; printed once at the end. */
+let adminPassword: string | undefined;
+
 // The one value this script does change: the api moved from MariaDB to Postgres
 // (phase 5), so a local mysql:// URL is pointed at the compose Postgres.
 const apiEnvPath = join(root, ENV_FILES.api);
@@ -119,6 +123,8 @@ const values: Record<App, Record<string, string>> = {
     INTERNAL_BACKEND_URL: 'http://localhost:8000',
     DASHBOARD_SECRET: dashboardSecret,
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: vapidPublic,
+    ADMIN_SESSION_SECRET: existing.web.ADMIN_SESSION_SECRET || hex(32),
+    ADMIN_PASSWORD_HASH: existing.web.ADMIN_PASSWORD_HASH || await hashPassword(adminPassword ??= hex(8)),
   },
 };
 
@@ -160,4 +166,6 @@ Still to fill in by hand (if empty):
   apps/api/.env       OPENAI_API_KEY (+ ABACUS_API_KEY if LLM_PROVIDER=abacus)
   apps/crawler/.env   only if you run the crawler locally — see README before doing that
 
-Admin dashboard: http://localhost:3000/${dashboardSecret}/admin`);
+Admin dashboard: http://localhost:3000/admin${adminPassword
+    ? `  —  local admin password: ${adminPassword} (only shown now; re-hash with scripts/hash-admin-password.ts)`
+    : ''}`);

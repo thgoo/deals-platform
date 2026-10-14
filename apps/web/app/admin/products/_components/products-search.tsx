@@ -6,7 +6,7 @@ import { useRef, useState } from 'react';
 interface ProductsSearchProps {
   /** Current search value (for controlled input). */
   defaultValue: string;
-  /** Base path for this page, e.g. "/<secret>/admin/products". */
+  /** Base path for this page ("/admin/products"). */
   basePath: string;
 }
 

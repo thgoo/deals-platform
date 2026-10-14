@@ -26,7 +26,7 @@ interface ProductsTableProps {
   order: SortOrder;
   /** Builds a URL that changes the sort, toggles order if same column. */
   buildSortHref: (col: ExplorerSortField) => string;
-  /** Base path for product detail links, e.g. "/<secret>/admin/products". */
+  /** Base path for product detail links ("/admin/products"). */
   basePath: string;
 }
 

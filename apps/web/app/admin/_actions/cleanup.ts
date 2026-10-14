@@ -1,10 +1,14 @@
 'use server';
 
 import type { ProductAnalysis } from '../_lib/types';
+import { isAdmin, requireAdmin } from '../_lib/auth';
 
 // Server actions: the dashboard secret stays on the server. The client review
 // modal calls these over the framework RPC boundary — the secret and the
 // internal backend URL never reach the browser.
+//
+// Server actions are public POST endpoints: the admin layout's login check does
+// NOT run for them, so every action starts with requireAdmin().
 
 const BACKEND = process.env.INTERNAL_BACKEND_URL ?? 'http://localhost:8000';
 const SECRET = process.env.DASHBOARD_SECRET ?? '';
@@ -12,6 +16,7 @@ const SECRET = process.env.DASHBOARD_SECRET ?? '';
 export async function analyzeProduct(
   productId: string,
 ): Promise<ProductAnalysis> {
+  await requireAdmin();
   const res = await fetch(
     `${BACKEND}/api/dashboard/catalog/products/${encodeURIComponent(productId)}/analyze`,
     { headers: { 'X-Dashboard-Secret': SECRET }, cache: 'no-store' },
@@ -26,6 +31,7 @@ export async function cleanProduct(
   productId: string,
   dealIds: number[],
 ): Promise<{ unlinked: number }> {
+  await requireAdmin();
   const res = await fetch(
     `${BACKEND}/api/dashboard/catalog/products/${encodeURIComponent(productId)}/clean`,
     {
@@ -51,6 +57,7 @@ export async function updateDeal(
   dealId: number,
   fields: { price?: number; product?: string },
 ): Promise<{ ok: boolean }> {
+  await requireAdmin();
   const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
     method: 'PATCH',
     headers: {
@@ -71,6 +78,7 @@ export async function deleteDeal(
 ): Promise<{ ok: boolean; error?: string }> {
   // Returns the error instead of throwing — Next masks thrown server-action
   // errors in production, so we surface the real cause to the modal.
+  if (!(await isAdmin())) return { ok: false, error: 'not logged in' };
   try {
     const res = await fetch(`${BACKEND}/api/dashboard/deals/${dealId}`, {
       method: 'DELETE',
@@ -97,6 +105,7 @@ export async function updateProductName(
   productId: string,
   canonicalName: string,
 ): Promise<{ ok: boolean }> {
+  await requireAdmin();
   const res = await fetch(
     `${BACKEND}/api/dashboard/catalog/products/${encodeURIComponent(productId)}`,
     {
@@ -121,6 +130,7 @@ export async function updateProductName(
  * recompute fresh — without slowing the inline edits while the modal is open.
  */
 export async function refreshDashboardCaches(): Promise<void> {
+  await requireAdmin();
   await fetch(`${BACKEND}/api/dashboard/cache/invalidate`, {
     method: 'POST',
     headers: { 'X-Dashboard-Secret': SECRET },

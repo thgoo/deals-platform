@@ -13,7 +13,7 @@ import FilterableTimeline from './_components/filterable-timeline';
 export const dynamic = 'force-dynamic';
 
 interface Props {
-  params: Promise<{ secret: string; id: string }>;
+  params: Promise<{ id: string }>;
 }
 
 // ── Narrative builder ──────────────────────────────────────────────────────
@@ -104,14 +104,14 @@ const SPECIFIC_SOURCES = new Set([
 ]);
 
 export default async function ProductDetailPage({ params }: Props) {
-  const { secret, id } = await params;
+  const { id } = await params;
 
   const detail = await dashboardApi.productDetail(id).catch(() => null);
 
   if (!detail) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <BackButton fallbackHref={`/${secret}/admin/products`} />
+        <BackButton fallbackHref="/admin/products" />
         <p className="mt-8 text-sm text-zinc-400">Product not found.</p>
       </main>
     );
@@ -141,7 +141,7 @@ export default async function ProductDetailPage({ params }: Props) {
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
       {/* ── Back nav ─────────────────────────────────────────────── */}
-      <BackButton fallbackHref={`/${secret}/admin/products`} />
+      <BackButton fallbackHref="/admin/products" />
 
       {/* ── Header ──────────────────────────────────────────────── */}
       <header className="scanlines mt-4 mb-8 border-b border-zinc-200 pb-5">

@@ -8,7 +8,6 @@ import ProductsTable from './_components/products-table';
 export const dynamic = 'force-dynamic';
 
 interface Props {
-  params: Promise<{ secret: string }>;
   searchParams: Promise<{
     q?: string;
     sort?: string;
@@ -39,8 +38,8 @@ function parseOrder(raw: string | undefined): SortOrder {
  * Product explorer: server-rendered search + sortable table + pagination.
  * All state lives in the URL so pages are shareable and the back button works.
  */
-export default async function ProductsPage({ params, searchParams }: Props) {
-  const [{ secret }, sp] = await Promise.all([params, searchParams]);
+export default async function ProductsPage({ searchParams }: Props) {
+  const sp = await searchParams;
 
   const q = sp.q ?? '';
   const sort = parseSort(sp.sort);
@@ -53,7 +52,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
 
   /** Build a new URL with any overrides applied to the current params. */
   const buildUrl = (overrides: Record<string, string | number | undefined>) => {
-    const base = `/${secret}/admin/products`;
+    const base = '/admin/products';
     const merged: Record<string, string> = {
       ...(q ? { q } : {}),
       ...(sort !== 'deals' ? { sort } : {}),
@@ -77,7 +76,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
     return qs ? `${base}?${qs}` : base;
   };
 
-  const basePath = `/${secret}/admin/products`;
+  const basePath = '/admin/products';
 
   const buildSortHref = (col: ExplorerSortField) => {
     const nextOrder: SortOrder =
