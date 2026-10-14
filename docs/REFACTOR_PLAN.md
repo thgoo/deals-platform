@@ -80,7 +80,9 @@ MySQL                                   ├── packages/
 - [x] `docker-compose.yml` with MariaDB 10.11 (apps run natively with bun), `scripts/setup-local-env.ts`,
       `scripts/send-test-deal.ts`. Verified: api boots on prod data (30k products cached in 3.2 s), feed + dashboard respond,
       a test deal goes through the pipeline up to the ai call.
-- [ ] Fill AI keys in `apps/ai/.env` and run one test deal fully end to end (extract → product match → shows in web).
+- [x] Full end-to-end test locally (2026-10-14): test deal → extracted (store, price, product, category) → product match
+      (`created_new`, top similarity 0.82) → shown in web, in ~1.8 s.
+- [ ] Local images: sync a few days of `media/` from the server (see README).
 
 **Done when:** you can run the full pipeline locally against a copy of prod data.
 

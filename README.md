@@ -42,6 +42,18 @@ cd apps/api && bun run db:migrate
 
 Dumps contain personal data (alert push subscriptions). Keep them outside the repo, or in `.data/` (gitignored).
 
+### Images
+
+Deal photos live in `media/` at the repo root (gitignored; crawler writes, web serves). Locally it starts empty,
+so photos don't load. To get recent ones from production:
+
+```sh
+mkdir -p media
+ssh <server> 'cd /var/www/bargah.com.br/media && find . -maxdepth 1 -type f -mtime -3' > /tmp/recent-media.txt
+rsync -av --files-from=/tmp/recent-media.txt <server>:/var/www/bargah.com.br/media/ media/
+rsync -av <server>:/var/www/bargah.com.br/media/coupon.png media/    # image used by coupon-only deals
+```
+
 ### Run
 
 One terminal per app:
