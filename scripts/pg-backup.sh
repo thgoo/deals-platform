@@ -5,7 +5,7 @@
 #   scripts/pg-backup.sh                       # writes to $BACKUP_DIR (default /var/backups/deals)
 #
 # Cron (as ec2-user), every day at 04:15 UTC:
-#   15 4 * * * /var/www/bargah.com.br/bargah/scripts/pg-backup.sh >> /var/log/deals-backup.log 2>&1
+#   15 4 * * * /var/www/bargah.com.br/deals-platform/scripts/pg-backup.sh >> $HOME/deals-backup.log 2>&1
 set -euo pipefail
 
 BACKUP_DIR=${BACKUP_DIR:-/var/backups/deals}
