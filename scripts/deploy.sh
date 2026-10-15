@@ -23,10 +23,14 @@ done
 git pull --ff-only
 bun install --frozen-lockfile
 
+# Build before restarting anything: a failed build leaves every app on the old code.
 for a in "${apps[@]}"; do
   if [ "$a" = web ]; then
     (cd apps/web && bun run build)
   fi
+done
+
+for a in "${apps[@]}"; do
   pm2 restart "${PM2_NAME[$a]}" --update-env
 done
 
