@@ -136,7 +136,7 @@ Must end with `ALL CHECKS PASSED`. Note how long it took.
    ```sh
    bun install --frozen-lockfile
    pm2 restart api.bargah.com.br --update-env && pm2 logs api.bargah.com.br --lines 30
-   curl -s "localhost:8000/api/deals?limit=1" | head -c 200
+   curl -s "localhost:3005/api/deals?limit=1" | head -c 200     # the api PORT from its .env
    ```
    Site feed, admin dashboard, product page and search must load.
 5. Start the crawler; watch the first deals arrive (`Deal created`, `Deal resolved to product`):

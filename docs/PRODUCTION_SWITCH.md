@@ -116,7 +116,7 @@ grep -E '^(SESSION_DIR|SESSION_NAME|BACKEND_BASE_URL|TELEGRAM_BACKEND)=' .env
 cd $D/apps/web
 cp $R/web/.env* .                                   # whatever the old web had (.env, .env.local, .env.production…)
 ls -a | grep '^\.env'
-grep -h -E '^(NEXT_PUBLIC_BACKEND_URL|INTERNAL_BACKEND_URL)=' .env*      # public api URL / http://localhost:8000
+grep -h -E '^(NEXT_PUBLIC_BACKEND_URL|INTERNAL_BACKEND_URL)=' .env*      # public api URL / http://localhost:<api PORT>
 cd $D && bun scripts/hash-admin-password.ts 'choose a long passphrase'    # prints scrypt:…
 ```
 
@@ -139,13 +139,21 @@ DATABASE_URL=$PG_URL bun run db:copy-from-mariadb -- --truncate
 
 Must end with **`ALL CHECKS PASSED`**. Note the duration.
 
+Ports: the api listens on `PORT` from its `.env` (3005 in production; 8000 is only the local default) and web on 3004
+(`ecosystem.config.cjs`). The curl checks below use `$API_PORT`:
+
+```sh
+API_PORT=$(grep -E '^PORT=' $D/apps/api/.env | cut -d= -f2 | tr -d '"')
+```
+
 ### 1.5 Build web
 
 ```sh
 cd $D/apps/web && bun run build
 ```
 
-(The build calls the api for `/amzn`; the old api is still running on port 8000, so this works now.)
+`/amzn` is prerendered from the api's deals. If no api is answering, the build still passes with an empty page that
+refreshes by itself within 5 minutes of the api coming up.
 
 ---
 
@@ -160,7 +168,9 @@ cd $D/apps/api
 MARIADB_URL="$(grep ^DATABASE_URL $R/api/.env | cut -d= -f2- | tr -d '"')" \
 DATABASE_URL=$PG_URL bun run db:copy-from-mariadb -- --truncate        # ALL CHECKS PASSED
 
-# 2.3 replace the PM2 processes (same names, new code)
+# 2.3 replace the PM2 processes. The new apps reuse the old names, so the old entries must go — `pm2 start`
+#     would otherwise just restart the old code. Nothing is lost: the old code, .env files and logs stay
+#     (~/.pm2/logs/<name>-*.log keeps growing with the new process — old lines above, new below).
 pm2 delete crawler.bargah.com.br api.bargah.com.br ai.bargah.com.br messaging.bargah.com.br bargah.com.br
 cd $D && pm2 start ecosystem.config.cjs --only api.bargah.com.br
 pm2 logs api.bargah.com.br --lines 30 --nostream
@@ -169,8 +179,9 @@ pm2 logs api.bargah.com.br --lines 30 --nostream
 API log must show `Ingestion worker started`. Then:
 
 ```sh
-curl -s "localhost:8000/api/deals?limit=1" | head -c 200; echo
+curl -s "localhost:$API_PORT/api/deals?limit=1" | head -c 200; echo
 pm2 start ecosystem.config.cjs --only bargah.com.br
+curl -sI localhost:3004 | head -n 1                    # HTTP/1.1 200 OK
 pm2 start ecosystem.config.cjs --only crawler.bargah.com.br
 pm2 ls                                                   # 3 bargah processes online
 ```
@@ -182,7 +193,7 @@ pm2 ls                                                   # 3 bargah processes on
 | Check | Expected |
 |---|---|
 | Site home | deals load, photos show |
-| `https://<api domain>/media/<a file in _media>` | 200 `image/jpeg` — if 404 from nginx (not the api), forward `/media/` to the api like `/api/` |
+| `https://<api domain>/media/<a .jpg in _media>` (flat folder, no subdirectory) | 200 `image/jpeg` — if 404 from nginx (not the api), forward `/media/` to the api like `/api/` |
 | `https://bargah.com.br/admin` | redirects to `/login`; your passphrase logs in; dashboard loads |
 | old `/<secret>/admin` | 404 |
 | `pm2 logs crawler.bargah.com.br` | connects to Telegram; `Message received` → `Deal sent to backend` |
@@ -194,6 +205,8 @@ When all is green — **downtime over**:
 ```sh
 pm2 save
 ```
+
+PM2 counts only the `bun` launcher for web; the real Next.js server is a child process (`ps -eo rss,comm | grep next`).
 
 ---
 
