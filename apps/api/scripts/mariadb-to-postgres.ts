@@ -193,6 +193,9 @@ for (const t of IDENTITY_TABLES) {
   await dst.unsafe(`SELECT setval(pg_get_serial_sequence('${t}', 'id'), COALESCE((SELECT MAX(id) FROM ${t}), 0) + 1, false)`);
 }
 
+// Planner statistics for the freshly loaded tables (autovacuum would get there, eventually).
+await dst.unsafe(`ANALYZE ${TABLES.join(', ')}`);
+
 // ── Verification ─────────────────────────────────────────────────────────────
 console.log('\nVerification (MariaDB → Postgres):');
 let ok = true;
