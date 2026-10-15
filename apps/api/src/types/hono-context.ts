@@ -6,7 +6,6 @@ import type CatalogStatsService from '~/dashboard/services/catalog-stats-service
 import type HeartbeatService from '~/dashboard/services/heartbeat-service';
 import type PriceStatsService from '~/dashboard/services/price-stats-service';
 import type ProductExplorerService from '~/dashboard/services/product-explorer-service';
-import type { Session, User } from '~/db/schemas';
 import type DealService from '~/deals/services/deal-service';
 import type RawMessageService from '~/ingest/raw-message-service';
 import type LinkPipelineService from '~/link-pipeline/services/link-pipeline-service';
@@ -30,8 +29,8 @@ declare module 'hono' {
     catalogCleanupService: CatalogCleanupService;
     productExplorerService: ProductExplorerService;
     logger: Logger;
-    user: User;
-    session: Session;
-    token: string;
   }
 }
+
+// A regular .ts module (not .d.ts) so it is type-checked despite skipLibCheck.
+export {};
