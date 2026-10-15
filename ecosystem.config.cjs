@@ -19,6 +19,7 @@ const app = (name, dir, args) => ({
   interpreter: 'none',
   exec_mode: 'fork',
   autorestart: true,
+  restart_delay: 3000, // a crash-looping app waits 3 s between restarts
 });
 
 module.exports = {
