@@ -212,6 +212,8 @@ PM2 counts only the `bun` launcher for web; the real Next.js server is a child p
 
 ## 4. After
 
+Amazon Linux 2023 has no cron by default: `sudo dnf install -y cronie && sudo systemctl enable --now crond`.
+
 **Backups** (daily at 04:15 UTC, 14 days kept):
 
 ```sh
