@@ -220,6 +220,13 @@ $D/scripts/pg-backup.sh                                   # once by hand → "ba
 (crontab -l 2>/dev/null; echo "15 4 * * * $D/scripts/pg-backup.sh >> /home/ec2-user/deals-backup.log 2>&1") | crontab -
 ```
 
+**Photo retention** (daily at 04:30 UTC; deals stay, their photos older than 30 days go):
+
+```sh
+cd $D/apps/api && bun run media:prune -- --dry-run        # see what would go first
+(crontab -l 2>/dev/null; echo "30 4 * * * cd $D/apps/api && $HOME/.bun/bin/bun run media:prune >> $HOME/deals-prune.log 2>&1") | crontab -
+```
+
 **Deploying later changes:** `cd $D && scripts/deploy.sh` (pull, install, migrate if needed:
 `cd apps/api && bun run db:migrate`, build web, restart).
 

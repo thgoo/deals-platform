@@ -11,7 +11,8 @@
     "audit:catalog": "bun run scripts/audit-catalog.ts",
     "typecheck": "tsc --noEmit",
     "db:copy-from-mariadb": "bun run scripts/mariadb-to-postgres.ts",
-    "ingest:requeue-failed": "bun run scripts/requeue-failed.ts"
+    "ingest:requeue-failed": "bun run scripts/requeue-failed.ts",
+    "media:prune": "bun run scripts/prune-photos.ts"
   },
   "dependencies": {
     "@bargah/shared": "workspace:*",
