@@ -25,7 +25,7 @@ const envSchema = z.object({
   ABACUS_TIMEOUT_MS: z.coerce.number().default(30000),
   ABACUS_BASE_URL: z.url().default('https://routellm.abacus.ai/v1/chat/completions'),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_LLM_MODEL: z.string().default('gpt-4.1-nano'),
+  OPENAI_LLM_MODEL: z.string().default('gpt-5.6-luna'),
   OPENAI_LLM_TIMEOUT_MS: z.coerce.number().default(30000),
   OPENAI_LLM_BASE_URL: z.url().default('https://api.openai.com/v1/chat/completions'),
   OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),

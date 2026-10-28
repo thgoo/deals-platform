@@ -11,7 +11,11 @@ export interface OpenAIProviderConfig {
   timeoutMs: number;
 }
 
-interface OpenAIChatCompletionRequest extends ChatCompletionRequest {
+// Reasoning models (gpt-5.x) reject `max_tokens` and only accept a non-default
+// temperature when reasoning is disabled.
+interface OpenAIChatCompletionRequest extends Omit<ChatCompletionRequest, 'max_tokens'> {
+  max_completion_tokens?: number;
+  reasoning_effort?: 'none';
   prompt_cache_key?: string;
 }
 
@@ -39,7 +43,8 @@ export default class OpenAIProvider implements LLMProvider {
       model: this.model,
       messages,
       temperature: options.temperature ?? 0,
-      max_tokens: options.maxTokens ?? 1024,
+      max_completion_tokens: options.maxTokens ?? 1024,
+      reasoning_effort: 'none',
       ...(options.responseFormat && { response_format: { type: options.responseFormat } }),
       ...(options.cacheKey && { prompt_cache_key: options.cacheKey }),
     };

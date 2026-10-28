@@ -16,7 +16,7 @@ interface CapturedRequest { url: string; init: FetchInit }
 
 const baseConfig = {
   apiKey: 'sk-test',
-  model: 'gpt-4.1-nano',
+  model: 'gpt-5.6-luna',
   baseUrl: 'https://api.test/v1/chat/completions',
   timeoutMs: 5000,
 };
@@ -74,6 +74,18 @@ describe('OpenAIProvider', () => {
     const req = requireRequest(lastRequest);
     const body = JSON.parse(req.init?.body as string);
     expect(body.prompt_cache_key).toBeUndefined();
+  });
+
+  test('sends max_completion_tokens and disables reasoning', async () => {
+    stubFetch(() => okResponse('result'));
+    const provider = new OpenAIProvider(baseConfig);
+    await provider.chat([{ role: 'user', content: 'hello' }], { maxTokens: 256 });
+
+    const req = requireRequest(lastRequest);
+    const body = JSON.parse(req.init?.body as string);
+    expect(body.max_completion_tokens).toBe(256);
+    expect(body.max_tokens).toBeUndefined();
+    expect(body.reasoning_effort).toBe('none');
   });
 
   test('returns content on successful response', async () => {
